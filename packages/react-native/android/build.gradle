@@ -1,0 +1,2 @@
+// Gradle snippet for React Native apps — copy into your app's android/ settings.
+// externalNativeBuild { cmake { path "node_modules/@scriptca/react-native/android/src/main/jni/CMakeLists.txt" } }

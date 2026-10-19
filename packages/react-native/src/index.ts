@@ -43,3 +43,5 @@ export function createMockBridge(impl: Record<string, (...args: unknown[]) => un
     },
   };
 }
+
+export type { ScriptcaNativeHost } from './native-host.js';

@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --experimental-strip-types --test src/bridge.test.ts"
+    "prebuild:core": "pnpm --filter @scriptca/example-calculator-core build",
+    "build:native": "pnpm prebuild:core && cmake -S ../../packages/lynx/cpp -B build-native -DSCRIPTCA_LIB_DIR=$PWD/../calculator-core/.scriptca && cmake --build build-native",
+    "start:native": "pnpm build:native && ./build-native/scriptca_lynx_smoke",
+    "test": "pnpm build:native && ./build-native/scriptca_lynx_smoke && node --experimental-strip-types --test src/bridge.test.ts"
   },
   "dependencies": {
     "@scriptca/lynx": "workspace:*",

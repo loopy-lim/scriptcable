@@ -1,6 +1,9 @@
 /**
  * @scriptca/lynx — Lynx (https://lynxjs.org) adapter.
  *
+ * Native module: packages/lynx/cpp links lib{name}.a (see cpp/CMakeLists.txt).
+ * Wire ScriptcaRspackPlugin in lynx.config.ts / rsbuild.config.ts.
+ *
  * Lynx apps are bundled with Rspeedy (Rsbuild). Use @scriptca/webpack (Rspack)
  * or @scriptca/vite-equivalent Rsbuild plugin to compile the core, then load
  * WASM in the Lynx JS runtime with a WASI polyfill.
