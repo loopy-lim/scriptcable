@@ -8,9 +8,15 @@ importers:
 
   .:
     devDependencies:
+      '@scriptc/runtime-wasm32-wasi':
+        specifier: ^0.3.6
+        version: 0.3.6
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
+      scriptc:
+        specifier: ^0.3.6
+        version: 0.3.6
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
