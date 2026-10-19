@@ -1,7 +1,7 @@
 import { mkdir, writeFile, access } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
-const CORE_TS = `/** scriptca core — compiled by scriptc into WASM / native library. */
+const CORE_TS = `/** scriptca core — compiled by scriptc into a native library (default). */
 export function add(a: number, b: number): number {
   return a + b;
 }
@@ -15,11 +15,21 @@ export function greet(name: string): string {
 }
 `;
 
+export type InitHost =
+  | 'node'
+  | 'bun'
+  | 'vite'
+  | 'next'
+  | 'tauri'
+  | 'react-native'
+  | 'lynx';
+
 export async function runInit(opts: {
   name: string;
   cwd?: string;
-  host?: string;
+  host?: InitHost;
 }): Promise<number> {
+  const host = opts.host ?? 'node';
   const root = resolve(opts.cwd ?? process.cwd(), opts.name);
   try {
     await access(root);
@@ -32,12 +42,14 @@ export async function runInit(opts: {
   await mkdir(join(root, 'src'), { recursive: true });
   await writeFile(join(root, 'src', 'core.ts'), CORE_TS);
 
+  const slugName = opts.name.replace(/[^A-Za-z0-9_-]/g, '-');
+  const prefix = `${slug(opts.name)}_`;
   const config = {
-    name: opts.name.replace(/[^A-Za-z0-9_-]/g, '-'),
+    name: slugName,
     entry: 'src/core.ts',
-    prefix: `${slug(opts.name)}_`,
+    prefix,
     outDir: '.scriptca',
-    target: 'native',
+    target: host === 'vite' ? 'both' : 'native',
     exports: [
       { name: 'add', params: ['f64', 'f64'], returns: 'f64' },
       { name: 'mul', params: ['f64', 'f64'], returns: 'f64' },
@@ -45,6 +57,63 @@ export async function runInit(opts: {
     ],
   };
   await writeFile(join(root, 'scriptca.json'), JSON.stringify(config, null, 2) + '\n');
+
+  const deps: Record<string, string> = {
+    scriptc: '^0.3.6',
+    '@scriptca/cli': '^0.1.0',
+    '@scriptca/core': '^0.1.0',
+  };
+  const scripts: Record<string, string> = {
+    build: 'scriptca build',
+    doctor: 'scriptca doctor',
+    'contract:check': 'scriptca diff --fail-on-breaking',
+  };
+
+  if (host === 'node' || host === 'bun') {
+    deps['@scriptca/node'] = '^0.1.0';
+    deps.koffi = '^3.3.3';
+    if (host === 'bun') deps['@scriptca/bun'] = '^0.1.0';
+    scripts.start =
+      host === 'bun'
+        ? 'bun src/main.ts'
+        : 'node --experimental-strip-types src/main.ts';
+    await writeFile(
+      join(root, 'src', 'main.ts'),
+      `import { createNodeEngine } from '@scriptca/node';
+
+const engine = await createNodeEngine({ outDir: '.scriptca' });
+console.log(JSON.stringify({
+  sum: engine.call('add', 20, 22),
+  hi: engine.call('greet', '${host}'),
+}));
+engine.dispose?.();
+`,
+    );
+  } else if (host === 'vite') {
+    deps['@scriptca/vite'] = '^0.1.0';
+    deps['@scriptc/runtime-wasm32-wasi'] = '^0.3.6';
+    scripts.dev = 'scriptca build --target both && vite';
+    scripts['build:web'] = 'scriptca build --target both && vite build';
+    await writeFile(
+      join(root, 'vite.config.ts'),
+      `import { defineConfig } from 'vite';\nimport scriptca from '@scriptca/vite';\nexport default defineConfig({ plugins: [scriptca()] });\n`,
+    );
+  } else if (host === 'next') {
+    deps['@scriptca/next'] = '^0.1.0';
+    deps['@scriptca/node'] = '^0.1.0';
+    deps.koffi = '^3.3.3';
+    scripts['build:core'] = 'scriptca build && node -e "import(\'@scriptca/next\').then(m=>m.scriptcaBuild())"';
+  } else if (host === 'tauri') {
+    await writeFile(
+      join(root, 'README.host.md'),
+      `# Tauri host\n\n1. \`scriptca build\` → \`.scriptca/lib${slugName}.a\`\n2. Point \`SCRIPTCA_LIB_DIR\` at \`.scriptca\` and depend on \`scriptca-sys\` / \`scriptca-tauri\` from the scriptca repo (or vendor the crates).\n3. \`cargo test\` / wire \`#[tauri::command]\` to \`scriptca_add\` etc.\n`,
+    );
+  } else if (host === 'react-native' || host === 'lynx') {
+    await writeFile(
+      join(root, 'README.host.md'),
+      `# ${host} host\n\n1. \`scriptca build\`\n2. Link \`.scriptca/lib${slugName}.a\` via CMake (see @scriptca/${host === 'lynx' ? 'lynx' : 'react-native'}/cpp).\n3. Bridge JS with create${host === 'lynx' ? 'Lynx' : 'ReactNative'}Engine.\n`,
+    );
+  }
 
   await writeFile(
     join(root, 'package.json'),
@@ -54,35 +123,13 @@ export async function runInit(opts: {
         version: '0.1.0',
         private: true,
         type: 'module',
-        scripts: {
-          build: 'scriptca build',
-          doctor: 'scriptca doctor',
-          start: 'node --experimental-strip-types src/main.ts',
-          'contract:check': 'scriptca diff --fail-on-breaking',
-        },
+        scripts,
         engines: { node: '>=24' },
-        devDependencies: {
-          scriptc: '^0.3.6',
-          '@scriptc/runtime-wasm32-wasi': '^0.3.6',
-          '@scriptca/cli': '^0.1.0',
-          '@scriptca/core': '^0.1.0',
-          '@scriptca/node': '^0.1.0',
-        },
+        dependencies: deps,
       },
       null,
       2,
     ) + '\n',
-  );
-
-  await writeFile(
-    join(root, 'src', 'main.ts'),
-    `import { createClient } from '../.scriptca/generated/node.ts';
-
-const client = await createClient();
-console.log('add', client.add(20, 22));
-console.log('greet', client.greet('scriptca'));
-client.dispose();
-`,
   );
 
   await writeFile(
@@ -106,26 +153,11 @@ client.dispose();
 
   await writeFile(
     join(root, 'README.md'),
-    `# ${opts.name}
-
-scriptca project — TypeScript core compiled by [scriptc](https://scriptc.dev).
-
-## Setup
-
-\`\`\`bash
-# Node >= 24, zig 0.13.x on PATH
-npm install
-npx scriptca doctor
-npx scriptca build
-npm start
-\`\`\`
-
-Edit \`src/core.ts\` and \`scriptca.json\` exports, then rebuild.
-`,
+    `# ${opts.name}\n\nscriptca project (host: **${host}**, native default).\n\n\`\`\`bash\nnpm install\nnpx scriptca doctor\nnpx scriptca build\n${scripts.start ? 'npm start' : 'npm run build'}\n\`\`\`\n\nMac (Apple Silicon): install clang via Xcode CLT; for iOS library archives see scriptc \`SCRIPTC_TARGET=aarch64-apple-ios\`.\n`,
   );
 
-  console.log(`Created ${root}`);
-  console.log(`  cd ${opts.name} && npm install && npx scriptca build && npm start`);
+  console.log(`Created ${root} (host=${host})`);
+  console.log(`  cd ${opts.name} && npm install && npx scriptca doctor && npx scriptca build`);
   return 0;
 }
 

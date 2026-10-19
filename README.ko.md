@@ -77,6 +77,13 @@ scriptca diff --fail-on-breaking
 - 기본 네이티브 빌드에는 **clang**이 필요합니다.
 - WASM(`--target wasm`)에는 zig **0.13.x**와 (브라우저에서) WASI 폴리필이 필요합니다.
 
+
+## 네이티브 호스트 (Rust / C++)
+
+- `crates/scriptca-sys` — `lib{name}.a` 링크
+- `crates/scriptca-tauri` — Tauri invoke 스타일
+- `packages/react-native/cpp`, `packages/lynx/cpp` — CMake 호스트
+
 ## 라이선스
 
 MIT

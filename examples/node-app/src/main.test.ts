@@ -9,7 +9,7 @@ const outDir = join(dirname(fileURLToPath(import.meta.url)), '../../calculator-c
 
 describe('node e2e', () => {
   before(async () => {
-    await access(join(outDir, 'calculator.so'));
+    await access(join(outDir, 'libcalculator.so'));
   });
 
   it('add/mul/greet', async () => {

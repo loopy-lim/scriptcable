@@ -4,7 +4,11 @@ on:
   pull_request:
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -14,15 +18,42 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: sudo apt-get update && sudo apt-get install -y clang
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install clang (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang cmake g++
+      - name: Ensure clang (macOS)
+        if: runner.os == 'macOS'
+        run: clang --version
       - run: pnpm install
       - run: pnpm build
-      - run: pnpm test
+      - run: pnpm --filter @scriptca/core test
       - run: pnpm --filter @scriptca/example-calculator-core build
       - run: pnpm --filter @scriptca/example-node-app test
-      - run: pnpm --filter @scriptca/example-bun-app start
+      - name: Bun e2e
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+          pnpm --filter @scriptca/example-bun-app start
+      - name: Rust / Tauri FFI
+        run: |
+          cargo test -p scriptca-sys
+          cargo test -p scriptca-tauri
+          cargo run -p scriptca-tauri-example
+      - name: C++ RN host smoke
+        run: |
+          cmake -S packages/react-native/cpp -B /tmp/rn-build -DSCRIPTCA_LIB_DIR=$PWD/examples/calculator-core/.scriptca
+          cmake --build /tmp/rn-build
+          /tmp/rn-build/scriptca_host_smoke
+      - name: Vite + Next
+        run: |
+          pnpm --filter @scriptca/example-vite-app test:ssr
+          pnpm --filter @scriptca/example-vite-app test:wasm
+          pnpm --filter @scriptca/example-vite-app build
+          pnpm --filter @scriptca/example-next-app test
       - run: pnpm --filter @scriptca/example-calculator-core exec scriptca diff
-      - name: Optional WASM smoke
+      - name: Optional WASM toolchain (Linux)
+        if: runner.os == 'Linux'
         run: |
           curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
           echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH

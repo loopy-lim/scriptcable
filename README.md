@@ -144,6 +144,17 @@ pnpm --filter @scriptca/example-bun-app start
 - **clang** is required for the default native shared-library link.
 - WASM (`--target wasm`) still needs zig **0.13.x** with scriptc 0.3.x, plus a WASI polyfill in browsers.
 
+
+## Native hosts (Rust / C++)
+
+- `crates/scriptca-sys` — links `lib{name}.a`, safe wrappers
+- `crates/scriptca-tauri` — invoke-style commands for Tauri
+- `packages/react-native/cpp` & `packages/lynx/cpp` — CMake hosts
+
+```bash
+cargo test -p scriptca-sys && cargo run -p scriptca-tauri-example
+```
+
 ## License
 
 MIT

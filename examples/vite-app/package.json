@@ -4,19 +4,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "pnpm --filter @scriptca/example-calculator-core build",
+    "build:core": "pnpm --filter @scriptca/example-calculator-core exec scriptca build --target both && node ./scripts/sync-public.mjs",
     "dev": "pnpm build:core && vite",
     "build": "pnpm build:core && vite build",
-    "preview": "vite preview"
+    "test:ssr": "pnpm build:core && node --experimental-strip-types src/ssr.ts",
+    "test:wasm": "pnpm build:core && node --experimental-strip-types src/wasm-smoke.ts",
+    "test": "pnpm test:ssr && pnpm test:wasm && pnpm build"
   },
   "dependencies": {
     "@scriptca/core": "workspace:*",
-    "@scriptca/example-calculator-core": "workspace:*"
+    "@scriptca/node": "workspace:*",
+    "@scriptca/example-calculator-core": "workspace:*",
+    "@scriptca/types": "workspace:*"
   },
   "devDependencies": {
     "@scriptca/vite": "workspace:*",
-    "vite": "^6.0.0",
     "scriptc": "^0.3.6",
-    "@scriptc/runtime-wasm32-wasi": "^0.3.6"
+    "@scriptc/runtime-wasm32-wasi": "^0.3.6",
+    "vite": "^6.0.0"
   }
 }

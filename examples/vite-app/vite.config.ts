@@ -3,5 +3,12 @@ import scriptca from '@scriptca/vite';
 
 export default defineConfig({
   plugins: [scriptca()],
-  server: { port: 5173 },
+  build: { outDir: 'dist' },
+  // Avoid prebundling the Node toolchain entry
+  optimizeDeps: {
+    exclude: ['koffi', '@scriptca/core'],
+  },
+  ssr: {
+    external: ['koffi'],
+  },
 });

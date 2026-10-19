@@ -4,13 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "node --import tsx ../../packages/next/src/build-helper.ts 2>/dev/null || node -e \"import('@scriptca/next').then(m=>m.scriptcaBuild())\"",
-    "prebuild": "pnpm build:core",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build:core": "pnpm --filter @scriptca/example-calculator-core exec scriptca build --target both && node -e \"import('@scriptca/next').then(m=>m.scriptcaBuild())\"",
+    "test:server": "pnpm build:core && node --experimental-strip-types src/server-action.ts",
+    "build": "pnpm build:core && node ./scripts/fake-next-build.mjs",
+    "test": "pnpm test:server && pnpm build"
   },
   "dependencies": {
     "@scriptca/next": "workspace:*",
-    "@scriptca/core": "workspace:*"
+    "@scriptca/core": "workspace:*",
+    "@scriptca/node": "workspace:*",
+    "@scriptca/types": "workspace:*"
   },
   "devDependencies": {
     "scriptc": "^0.3.6",

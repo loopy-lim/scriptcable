@@ -38,6 +38,10 @@
     "./link": {
       "types": "./dist/link-shared.d.ts",
       "import": "./dist/link-shared.js"
+    },
+    "./wasi": {
+      "types": "./dist/wasi-polyfill.d.ts",
+      "import": "./dist/wasi-polyfill.js"
     }
   },
   "files": [

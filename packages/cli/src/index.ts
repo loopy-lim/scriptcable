@@ -9,7 +9,7 @@ function usage(): void {
   console.log(`scriptca — TypeScript core → native clients (via scriptc; WASM opt-in)
 
 Usage:
-  scriptca init <name>              scaffold a new project
+  scriptca init <name> [--host node|bun|vite|next|tauri|react-native|lynx]
   scriptca build [--target wasm|native|both] [--hosts node,bun,browser,...]
   scriptca diff [--snapshot path]   compare scriptca.json to committed contract
   scriptca doctor                   check Node / scriptc / zig / clang
@@ -29,12 +29,16 @@ async function main(argv: string[]): Promise<number> {
     case 'doctor':
       return runDoctor();
     case 'init': {
-      const name = rest[0];
+      const name = rest.find((a) => !a.startsWith('-'));
       if (!name) {
-        console.error('Usage: scriptca init <name>');
+        console.error('Usage: scriptca init <name> [--host node|bun|vite|next|tauri|react-native|lynx]');
         return 1;
       }
-      return runInit({ name });
+      let host: import('./commands/init.js').InitHost | undefined;
+      for (let i = 0; i < rest.length; i++) {
+        if (rest[i] === '--host') host = rest[++i] as typeof host;
+      }
+      return runInit({ name, host });
     }
     case 'build': {
       let target: 'wasm' | 'native' | 'both' | undefined;

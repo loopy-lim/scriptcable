@@ -53,6 +53,12 @@ importers:
       '@scriptca/next':
         specifier: workspace:*
         version: link:../../packages/next
+      '@scriptca/node':
+        specifier: workspace:*
+        version: link:../../packages/node
+      '@scriptca/types':
+        specifier: workspace:*
+        version: link:../../packages/types
     devDependencies:
       '@scriptc/runtime-wasm32-wasi':
         specifier: ^0.3.6
@@ -96,6 +102,12 @@ importers:
       '@scriptca/example-calculator-core':
         specifier: workspace:*
         version: link:../calculator-core
+      '@scriptca/node':
+        specifier: workspace:*
+        version: link:../../packages/node
+      '@scriptca/types':
+        specifier: workspace:*
+        version: link:../../packages/types
     devDependencies:
       '@scriptc/runtime-wasm32-wasi':
         specifier: ^0.3.6
