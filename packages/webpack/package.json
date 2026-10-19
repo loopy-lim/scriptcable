@@ -1,0 +1,32 @@
+{
+  "name": "@scriptca/webpack",
+  "version": "0.1.0",
+  "description": "Webpack / Rspack / Rsbuild plugin for scriptca",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/*.test.js 2>/dev/null || node --test --experimental-strip-types src/*.test.ts"
+  },
+  "dependencies": {
+    "@scriptca/core": "workspace:*",
+    "@scriptca/types": "workspace:*"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

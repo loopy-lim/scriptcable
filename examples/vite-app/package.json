@@ -1,0 +1,22 @@
+{
+  "name": "@scriptca/example-vite-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:core": "pnpm --filter @scriptca/example-calculator-core build",
+    "dev": "pnpm build:core && vite",
+    "build": "pnpm build:core && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@scriptca/core": "workspace:*",
+    "@scriptca/example-calculator-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@scriptca/vite": "workspace:*",
+    "vite": "^6.0.0",
+    "scriptc": "^0.3.6",
+    "@scriptc/runtime-wasm32-wasi": "^0.3.6"
+  }
+}

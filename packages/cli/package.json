@@ -1,0 +1,27 @@
+{
+  "name": "@scriptca/cli",
+  "version": "0.1.0",
+  "description": "scriptca CLI — init, build, codegen, contract diff, doctor",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "scriptca": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./codegen": { "types": "./dist/codegen/index.d.ts", "import": "./dist/codegen/index.js" }
+  },
+  "files": ["dist", "templates", "LICENSE", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node ../../scripts/chmod-cli.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/**/*.test.js"
+  },
+  "dependencies": {
+    "@scriptca/core": "workspace:*",
+    "@scriptca/types": "workspace:*"
+  },
+  "engines": { "node": ">=24" }
+}

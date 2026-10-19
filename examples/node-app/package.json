@@ -1,0 +1,16 @@
+{
+  "name": "@scriptca/example-node-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prestart": "pnpm --filter @scriptca/example-calculator-core build",
+    "start": "node --experimental-strip-types src/main.ts",
+    "test": "node --experimental-strip-types --test src/main.test.ts"
+  },
+  "dependencies": {
+    "@scriptca/node": "workspace:*",
+    "@scriptca/core": "workspace:*",
+    "@scriptca/example-calculator-core": "workspace:*"
+  }
+}

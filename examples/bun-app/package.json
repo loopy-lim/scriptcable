@@ -1,0 +1,14 @@
+{
+  "name": "@scriptca/example-bun-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prestart": "pnpm --filter @scriptca/example-calculator-core build",
+    "start": "bun src/main.ts"
+  },
+  "dependencies": {
+    "@scriptca/bun": "workspace:*",
+    "@scriptca/example-calculator-core": "workspace:*"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "scriptca",
+  "version": "0.1.0",
+  "private": true,
+  "description": "One TypeScript core (compiled by scriptc) → type-safe clients for Node, Bun, Tauri, React Native, Lynx, Vite, and Next.js",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r --filter './packages/*' run build",
+    "test": "pnpm -r --filter './packages/*' run test",
+    "test:e2e:node": "pnpm --filter @scriptca/example-node-app start",
+    "test:e2e:bun": "pnpm --filter @scriptca/example-bun-app start",
+    "typecheck": "pnpm -r --filter './packages/*' run typecheck",
+    "clean": "pnpm -r exec rm -rf dist .scriptc *.lib.a"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "@types/node": "^24.0.0"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "@scriptca/core",
+  "version": "0.1.0",
+  "description": "scriptca core — profile generation, scriptc toolchain, WASM loader, contract hashing",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./wasm": {
+      "types": "./dist/wasm-loader.d.ts",
+      "import": "./dist/wasm-loader.js"
+    },
+    "./toolchain": {
+      "types": "./dist/toolchain.d.ts",
+      "import": "./dist/toolchain.js"
+    },
+    "./contract": {
+      "types": "./dist/contract.d.ts",
+      "import": "./dist/contract.js"
+    },
+    "./profile": {
+      "types": "./dist/profile.d.ts",
+      "import": "./dist/profile.js"
+    },
+    "./codegen": {
+      "types": "./dist/codegen.d.ts",
+      "import": "./dist/codegen.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test dist/*.test.js"
+  },
+  "dependencies": {
+    "@scriptca/types": "workspace:*"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

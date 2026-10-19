@@ -1,0 +1,19 @@
+{
+  "name": "@scriptca/example-next-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:core": "node --import tsx ../../packages/next/src/build-helper.ts 2>/dev/null || node -e \"import('@scriptca/next').then(m=>m.scriptcaBuild())\"",
+    "prebuild": "pnpm build:core",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@scriptca/next": "workspace:*",
+    "@scriptca/core": "workspace:*"
+  },
+  "devDependencies": {
+    "scriptc": "^0.3.6",
+    "@scriptc/runtime-wasm32-wasi": "^0.3.6"
+  }
+}

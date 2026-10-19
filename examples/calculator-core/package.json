@@ -1,0 +1,16 @@
+{
+  "name": "@scriptca/example-calculator-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "scriptca build --hosts node,bun,browser,tauri,react-native,lynx",
+    "doctor": "scriptca doctor",
+    "contract:check": "scriptca diff"
+  },
+  "devDependencies": {
+    "@scriptca/cli": "workspace:*",
+    "scriptc": "^0.3.6",
+    "@scriptc/runtime-wasm32-wasi": "^0.3.6"
+  }
+}

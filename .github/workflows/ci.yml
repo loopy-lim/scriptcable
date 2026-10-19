@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install zig 0.13
+        run: |
+          curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
+          echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
+      - run: sudo apt-get update && sudo apt-get install -y clang
+      - run: pnpm install
+      - run: pnpm build
+      - run: pnpm test
+      - run: pnpm --filter @scriptca/example-calculator-core build
+      - run: pnpm --filter @scriptca/example-node-app test
+      - run: pnpm --filter @scriptca/example-calculator-core exec scriptca diff
