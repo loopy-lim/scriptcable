@@ -3,13 +3,13 @@
 # scriptca
 
 하나의 **TypeScript** 코어 → **Node, Bun, Tauri, React Native, Lynx, Vite, Next.js**용 타입 안전 클라이언트.
-[Vercel scriptc](https://scriptc.dev)가 WASM(및 선택적 네이티브 `.lib.a`)으로 컴파일하고, CI 계약이 깨지는 API 변경을 막습니다.
+[Vercel scriptc](https://scriptc.dev)가 **네이티브** 라이브러리(기본, `.lib.a` → `.so`)로 컴파일하고, WASM은 브라우저용 선택 사항이며, CI 계약이 깨지는 API 변경을 막습니다.
 
 [rustra](https://github.com/loopy-lim/rustra)에서 영감을 받았습니다. Rust 코어 자리에 **scriptc**를 둡니다.
 
 ## 5분 퀵스타트
 
-**필요:** Node.js ≥ 24, PATH의 [zig 0.13.x](https://ziglang.org/download/) (WASM용). Linux에서 네이티브 `.lib.a`를 쓰려면 `clang`.
+**필요:** Node.js ≥ 24와 `clang`(네이티브 공유 라이브러리 링크). WASM(`--target wasm`)을 쓸 때만 [zig 0.13.x](https://ziglang.org/download/).
 
 ```bash
 pnpm --filter @scriptca/cli exec scriptca init my-app
@@ -28,7 +28,7 @@ npm start
 TypeScript 코어  →  scriptc 라이브러리 (WASM / .lib.a)  →  생성 클라이언트 + 어댑터
 ```
 
-기본 산출물은 **WASM**이라 일상 개발에 C 링커가 필요 없습니다.
+기본 산출물은 **네이티브**입니다. 브라우저처럼 네이티브를 쓸 수 없는 곳에서만 WASM을 선택하세요.
 
 ## 어댑터 퀵스타트
 
@@ -74,8 +74,8 @@ scriptca diff --fail-on-breaking
 ## 제한 (scriptc)
 
 - 코어 TS는 [scriptc 지원 범위](https://scriptc.dev/docs/limitations) 안이어야 합니다.
-- WASM에는 zig **0.13.x**가 필요합니다 (0.14는 scriptc 0.3.x WASI에서 실패).
-- 브라우저/Lynx/Tauri 웹뷰는 WASI Preview 1 폴리필이 필요합니다.
+- 기본 네이티브 빌드에는 **clang**이 필요합니다.
+- WASM(`--target wasm`)에는 zig **0.13.x**와 (브라우저에서) WASI 폴리필이 필요합니다.
 
 ## 라이선스
 

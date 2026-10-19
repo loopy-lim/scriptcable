@@ -1,11 +1,7 @@
 # @scriptca/lynx
 
-Lynx + Rspeedy/Rsbuild integration.
+**Native-first on device:** link the scriptc archive into a Lynx native module.
+Use `ScriptcaRspackPlugin` (`@scriptca/webpack`) so Rspeedy/Rsbuild rebuilds the
+core, then bridge through `createLynxEngine`.
 
-```ts
-// lynx.config.ts / rsbuild.config.ts
-import { lynxScriptcaRsbuildPlugin } from '@scriptca/lynx';
-// Use alongside @scriptca/webpack ScriptcaRspackPlugin for compile-on-build.
-```
-
-Generate clients with `scriptca build --hosts lynx`.
+WASM is an opt-in fallback for hosts without a native linker.

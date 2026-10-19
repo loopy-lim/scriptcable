@@ -30,6 +30,14 @@
     "./codegen": {
       "types": "./dist/codegen.d.ts",
       "import": "./dist/codegen.js"
+    },
+    "./native": {
+      "types": "./dist/native-loader.d.ts",
+      "import": "./dist/native-loader.js"
+    },
+    "./link": {
+      "types": "./dist/link-shared.d.ts",
+      "import": "./dist/link-shared.js"
     }
   },
   "files": [
@@ -40,12 +48,19 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/*.test.js"
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/contract.test.js"
   },
   "dependencies": {
-    "@scriptca/types": "workspace:*"
+    "@scriptca/types": "workspace:*",
+    "koffi": "^3.3.3"
   },
   "engines": {
     "node": ">=24"
+  },
+  "optionalDependencies": {
+    "koffi": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0"
   }
 }

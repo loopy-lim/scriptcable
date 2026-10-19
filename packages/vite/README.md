@@ -1,18 +1,12 @@
 # @scriptca/vite
 
+Builds the scriptc core on `buildStart` / HMR.
+
+- Default project `target: "native"` → native shared lib for SSR + WASM when
+  `target: "both"` (recommended for apps with a browser UI).
+- Pure browser apps can set `"target": "wasm"` in `scriptca.json`.
+
 ```ts
-// vite.config.ts
-import { defineConfig } from 'vite';
 import scriptca from '@scriptca/vite';
-
-export default defineConfig({
-  plugins: [scriptca()],
-});
+export default { plugins: [scriptca()] };
 ```
-
-```ts
-import { createClient } from 'virtual:scriptca';
-// provide a browser WASI polyfill when instantiating
-```
-
-On `buildStart` and when `scriptca.json` / core entry changes, the plugin runs `scriptc` (WASM) and regenerates clients.

@@ -37,7 +37,7 @@ export async function runInit(opts: {
     entry: 'src/core.ts',
     prefix: `${slug(opts.name)}_`,
     outDir: '.scriptca',
-    target: 'wasm',
+    target: 'native',
     exports: [
       { name: 'add', params: ['f64', 'f64'], returns: 'f64' },
       { name: 'mul', params: ['f64', 'f64'], returns: 'f64' },

@@ -5,6 +5,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { ScriptcaToolchainError } from '@scriptca/types';
 import type { ScriptcaConfig, ScriptcaProfile } from '@scriptca/types';
 import { configToProfile } from './profile.js';
+import { linkSharedLibrary, sharedLibraryExt } from './link-shared.js';
 
 export type ToolchainInfo = {
   scriptcBin: string;
@@ -149,7 +150,10 @@ export type BuildOptions = {
 export type BuildResult = {
   profilePath: string;
   wasmPath?: string;
+  /** Static archive from scriptc (.lib.a) */
   nativePath?: string;
+  /** Loadable shared library linked from the archive (.so/.dylib/.dll) */
+  sharedPath?: string;
   profile: ScriptcaProfile;
 };
 
@@ -194,7 +198,7 @@ export async function buildCore(
 ): Promise<BuildResult> {
   const cwd = options.cwd ?? process.cwd();
   const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptca');
-  const target = options.target ?? config.target ?? 'wasm';
+  const target = options.target ?? config.target ?? 'native';
   await mkdir(outDir, { recursive: true });
 
   const info = await doctor(cwd);
@@ -249,6 +253,11 @@ export async function buildCore(
   }
   if (target === 'native' || target === 'both') {
     result.nativePath = await runBuild('native');
+    result.sharedPath = await linkSharedLibrary({
+      archivePath: result.nativePath!,
+      outPath: join(outDir, `${config.name}${sharedLibraryExt()}`),
+      cwd,
+    });
   }
 
   // Persist contract snapshot beside artifacts

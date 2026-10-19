@@ -23,7 +23,7 @@ export class ScriptcaWebpackPlugin {
       const abs = resolve(root, configPath);
       const config = loadConfig(JSON.parse(await readFile(abs, 'utf8')));
       const outDir = resolve(root, config.outDir ?? '.scriptca');
-      const result = await buildCore(config, { cwd: root, outDir, target: 'wasm' });
+      const result = await buildCore(config, { cwd: root, outDir, target: 'native' });
       const genDir = join(outDir, 'generated');
       await mkdir(genDir, { recursive: true });
       const files = generateClients(config, ['browser', 'node'], {

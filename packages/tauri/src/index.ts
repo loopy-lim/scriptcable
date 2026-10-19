@@ -1,12 +1,10 @@
 /**
- * @scriptca/tauri — Tauri 2 adapter.
+ * @scriptca/tauri — Tauri 2 adapter (native-first).
  *
- * Primary path: load the scriptc WASM reactor inside the webview (same as browser).
- * Secondary path: `createSidecarBridge` routes through `invoke` to a Rust command
- * or sidecar that hosts the native `.lib.a`.
+ * Preferred: link scriptc `.lib.a` into the Rust side (cc crate / build.rs) and
+ * expose commands via `invoke`. `createTauriSidecarEngine` models that IPC.
  *
- * Full Tauri app linking of `.lib.a` was not end-to-end verified on this Linux box
- * (needs a Tauri project + linker). Unit tests cover the bridge shapes.
+ * Opt-in: load WASM in the webview only when native linking is unavailable.
  */
 import type { EngineClient, ScriptcaProfile } from '@scriptca/types';
 import { ScriptcaError } from '@scriptca/types';
@@ -15,12 +13,11 @@ export type TauriInvoke = (cmd: string, args?: Record<string, unknown>) => Promi
 
 export type TauriBridgeOptions = {
   invoke: TauriInvoke;
-  /** Command prefix, default "scriptca_" */
   prefix?: string;
   profile: ScriptcaProfile;
 };
 
-/** JSON/IPC bridge: each export becomes invoke(`${prefix}${name}`, { args }). */
+/** Native IPC bridge — each export becomes invoke(`${prefix}${name}`, { args }). */
 export function createTauriSidecarEngine(options: TauriBridgeOptions): EngineClient {
   const prefix = options.prefix ?? 'scriptca_';
   const known = new Set(options.profile.exports.map((e) => e.export));
@@ -36,8 +33,4 @@ export function createTauriSidecarEngine(options: TauriBridgeOptions): EngineCli
   };
 }
 
-/**
- * Webview WASM path — re-export loader; caller supplies a browser WASI polyfill.
- * Prefer generating clients with `scriptca build --hosts tauri`.
- */
 export { loadWasmModule } from '@scriptca/core/wasm';

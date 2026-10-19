@@ -18,3 +18,8 @@ tmp/
 *.lib.a
 *.lib.ll
 packages/*/dist/
+*.so
+*.dylib
+*.dll
+scriptca-stubs.*
+dist-test/

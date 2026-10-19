@@ -6,7 +6,7 @@ import { runInit } from './commands/init.js';
 import type { CodegenTarget } from './codegen/index.js';
 
 function usage(): void {
-  console.log(`scriptca — TypeScript core → type-safe clients (via scriptc)
+  console.log(`scriptca — TypeScript core → native clients (via scriptc; WASM opt-in)
 
 Usage:
   scriptca init <name>              scaffold a new project

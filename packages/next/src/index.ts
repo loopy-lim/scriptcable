@@ -20,7 +20,7 @@ async function runScriptcaBuild(projectRoot: string, configPath: string): Promis
   const abs = resolve(projectRoot, configPath);
   const config = loadConfig(JSON.parse(await readFile(abs, 'utf8')));
   const outDir = resolve(projectRoot, config.outDir ?? '.scriptca');
-  const result = await buildCore(config, { cwd: projectRoot, outDir, target: 'wasm' });
+  const result = await buildCore(config, { cwd: projectRoot, outDir, target: 'native' });
   const genDir = join(outDir, 'generated');
   await mkdir(genDir, { recursive: true });
   const files = generateClients(config, ['node', 'browser'], {

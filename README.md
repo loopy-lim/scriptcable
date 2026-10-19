@@ -2,7 +2,7 @@ English | [Korean](./README.ko.md)
 
 # scriptca
 
-One **TypeScript** core → type-safe clients for **Node, Bun, Tauri, React Native, Lynx, Vite, and Next.js** — compiled by [Vercel scriptc](https://scriptc.dev) to WASM (and optionally native `.lib.a`), with CI contracts that block breaking API changes.
+One **TypeScript** core → type-safe clients for **Node, Bun, Tauri, React Native, Lynx, Vite, and Next.js** — compiled by [Vercel scriptc](https://scriptc.dev) to a **native** library by default (`.lib.a` → `.so`/`.dylib`/`.dll`), with WASM as an opt-in fallback for browsers, with CI contracts that block breaking API changes.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -10,7 +10,7 @@ Inspired by [rustra](https://github.com/loopy-lim/rustra) (Rust core → multi-h
 
 ## 5-minute quickstart
 
-**Requirements:** Node.js ≥ 24, [zig 0.13.x](https://ziglang.org/download/) on `PATH` (for WASM). On Linux, `clang` if you want native `.lib.a`.
+**Requirements:** Node.js ≥ 24 and `clang` (links the native shared library). Optional: [zig 0.13.x](https://ziglang.org/download/) only if you build `--target wasm`.
 
 ```bash
 # from this monorepo after pnpm install && pnpm build
@@ -33,10 +33,10 @@ TypeScript core  →  scriptc library (WASM / .lib.a)  →  generated clients + 
 ```
 
 1. You declare the ABI surface in `scriptca.json` (export names + param/return classes).
-2. `scriptca build` writes a scriptc [library profile](https://scriptc.dev/docs/wasm), compiles with `scriptc build --lib`, and generates typed clients.
-3. Adapters load the WASM reactor via WASI (Node/Bun) or a browser WASI polyfill (Vite/Tauri webview/Lynx).
+2. `scriptca build` writes a scriptc library profile, compiles with `scriptc build --lib` to a **native** `.lib.a`, links a loadable shared library, and generates typed clients.
+3. Node loads via **koffi**; Bun via **bun:ffi**. Tauri / React Native / Lynx link the archive natively. Browser UIs opt into WASM.
 
-Default artifact is **WASM** so you don't need a C linker for day-to-day use.
+Default artifact is **native**. Use `"target": "wasm"` or `scriptca build --target wasm` only where native cannot run (browsers).
 
 ## Packages
 
@@ -65,9 +65,9 @@ pnpm --filter @scriptca/example-node-app start
 ```
 
 ```ts
-import { createNodeEngineFromOutDir } from '@scriptca/node';
-const engine = await createNodeEngineFromOutDir('.scriptca');
-engine.call('add', 20, 22); // 42
+import { createNodeEngine } from '@scriptca/node';
+const engine = await createNodeEngine({ outDir: '.scriptca' });
+engine.call('add', 20, 22); // 42  (native .so via koffi)
 ```
 
 ### Bun
@@ -139,10 +139,10 @@ pnpm --filter @scriptca/example-bun-app start
 ## Limitations (from scriptc)
 
 - Core TypeScript must stay within [scriptc's supported subset](https://scriptc.dev/docs/limitations) (library mode is static-only).
-- Outbound native FFI is for **executables**, not libraries; hosts call **into** your library exports.
-- String/bytes returns use scriptc's result arena (copied by the loader).
-- zig **0.13.x** is required for WASM with scriptc 0.3.x (0.14 WASI libc assertion fails).
-- Browser / Lynx / Tauri webview need a WASI Preview 1 polyfill for full execution.
+- Hosts call **into** your library exports (C ABI); outbound FFI is for scriptc executables, not libraries.
+- String/bytes use `(ptr, len)` in / `(out_ptr, out_len)` out on the native boundary.
+- **clang** is required for the default native shared-library link.
+- WASM (`--target wasm`) still needs zig **0.13.x** with scriptc 0.3.x, plus a WASI polyfill in browsers.
 
 ## License
 

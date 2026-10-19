@@ -71,8 +71,8 @@ export type ScriptcaConfig = {
   }>;
   /** Output directory for artifacts + generated clients */
   outDir?: string;
-  /** Default artifact kind */
-  target?: 'wasm' | 'native' | 'both';
+  /** Default artifact kind (native is the default; wasm is opt-in for browsers) */
+  target?: 'native' | 'wasm' | 'both';
   optimization?: 'release' | 'dev' | 'speed';
 };
 

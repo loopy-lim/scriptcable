@@ -61,37 +61,63 @@ function tsType(cls: string): string {
   }
 }
 
-function genNodeClient(profile: ScriptcaProfile, wasmRelPath: string): string {
-  const methods = profile.exports
+function methodBlock(profile: ScriptcaProfile): string {
+  return profile.exports
     .map((e) => {
-      const params = e.params.map((_, i) => `arg${i}`).join(', ');
-      const args = e.params.length ? `, ${params}` : '';
-      return `  ${e.export}(${e.params.map((p, i) => `arg${i}: ${tsType(p)}`).join(', ')}): ${tsType(e.returns)} {\n    return mod.call('${e.export}'${args}) as ${tsType(e.returns)};\n  },`;
+      const typed = e.params.map((p, i) => `arg${i}: ${tsType(p)}`).join(', ');
+      const args = e.params.length ? `, ${e.params.map((_, i) => `arg${i}`).join(', ')}` : '';
+      return `  ${e.export}(${typed}): ${tsType(e.returns)} {
+    return mod.call('${e.export}'${args}) as ${tsType(e.returns)};
+  },`;
     })
     .join('\n');
+}
 
+function genNodeClient(
+  profile: ScriptcaProfile,
+  sharedRelPath: string,
+  wasmRelPath: string,
+): string {
+  const methods = methodBlock(profile);
   return `${header('node')}
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { WASI } from 'node:wasi';
-import { loadWasmModule, type LoadedModule } from '@scriptca/core/wasm';
+import { loadNativeLibrary } from '@scriptca/core/native';
+import { loadWasmModule } from '@scriptca/core/wasm';
 import type { ScriptcaProfile } from '@scriptca/types';
 import type { ScriptcaClient } from './types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const DEFAULT_SHARED = join(__dirname, '${sharedRelPath}');
 const DEFAULT_WASM = join(__dirname, '${wasmRelPath}');
 const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcaProfile;
 
 export type CreateClientOptions = {
+  sharedPath?: string;
   wasmPath?: string;
+  /** Opt into WASM even when a native shared library exists */
+  preferWasm?: boolean;
   callbacks?: Record<string, (...args: unknown[]) => unknown>;
 };
 
+async function exists(path: string): Promise<boolean> {
+  try { await access(path); return true; } catch { return false; }
+}
+
 export async function createClient(options: CreateClientOptions = {}): Promise<ScriptcaClient> {
+  const shared = options.sharedPath ?? DEFAULT_SHARED;
+  if (!options.preferWasm && await exists(shared)) {
+    const mod = await loadNativeLibrary(shared, PROFILE);
+    return {
+${methods}
+  dispose() { mod.dispose(); },
+    };
+  }
   const bytes = await readFile(options.wasmPath ?? DEFAULT_WASM);
   const wasi = new WASI({ version: 'preview1', returnOnExit: true });
-  const mod: LoadedModule = await loadWasmModule(bytes, {
+  const mod = await loadWasmModule(bytes, {
     profile: PROFILE,
     wasi,
     callbacks: options.callbacks ?? {},
@@ -106,9 +132,12 @@ export { PROFILE };
 `;
 }
 
-function genBunClient(profile: ScriptcaProfile, wasmRelPath: string): string {
-  // Bun can use Node WASI compatibility or its own; we reuse the same loader.
-  return genNodeClient(profile, wasmRelPath).replace("Target: node", "Target: bun");
+function genBunClient(
+  profile: ScriptcaProfile,
+  sharedRelPath: string,
+  wasmRelPath: string,
+): string {
+  return genNodeClient(profile, sharedRelPath, wasmRelPath).replace('Target: node', 'Target: bun');
 }
 
 function genBrowserClient(profile: ScriptcaProfile, wasmRelPath: string): string {
@@ -214,9 +243,9 @@ function genLynxClient(profile: ScriptcaProfile, wasmRelPath: string): string {
     genBrowserClient(profile, wasmRelPath).replace('Target: browser', 'Target: lynx') +
     `
 /**
- * Lynx (https://lynxjs.org) runs a JS runtime with Rspeedy/Rsbuild.
- * Load the WASM the same way as a browser host; provide a WASI polyfill
- * (e.g. @wasmer/wasi or a minimal stub for programs that don't touch FS).
+ * Lynx: prefer a native module bridge on device (link .lib.a via NDK/JNI).
+ * WASM remains an opt-in fallback for environments without native linking;
+ * provide a WASI polyfill if you use it.
  */
 `
   );
@@ -225,10 +254,13 @@ function genLynxClient(profile: ScriptcaProfile, wasmRelPath: string): string {
 export function generateClients(
   config: ScriptcaConfig,
   targets: CodegenTarget[],
-  opts: { wasmFileName?: string } = {},
+  opts: { wasmFileName?: string; sharedFileName?: string } = {},
 ): CodegenResult {
   const profile = configToProfile(config);
   const wasmRel = opts.wasmFileName ?? `${config.name}.wasm`;
+  const sharedRel =
+    opts.sharedFileName ??
+    `${config.name}${process.platform === 'darwin' ? '.dylib' : process.platform === 'win32' ? '.dll' : '.so'}`;
   const files: Record<string, string> = {
     'types.ts': genTypes(profile),
   };
@@ -236,10 +268,10 @@ export function generateClients(
   for (const t of targets) {
     switch (t) {
       case 'node':
-        files['node.ts'] = genNodeClient(profile, wasmRel);
+        files['node.ts'] = genNodeClient(profile, sharedRel, wasmRel);
         break;
       case 'bun':
-        files['bun.ts'] = genBunClient(profile, wasmRel);
+        files['bun.ts'] = genBunClient(profile, sharedRel, wasmRel);
         break;
       case 'browser':
         files['browser.ts'] = genBrowserClient(profile, wasmRel);
