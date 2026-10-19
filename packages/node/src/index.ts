@@ -24,7 +24,7 @@ import { loadWasmFile, type LoadedModule } from '@scriptca/core/wasm';
 import type { ScriptcaProfile, EngineClient } from '@scriptca/types';
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { sharedLibraryExt } from '@scriptca/core';
+import { sharedLibraryFileName } from '@scriptca/core';
 
 export type NodeClientOptions = {
   /** Directory containing profile.json + shared lib / wasm */
@@ -59,7 +59,7 @@ export async function createNodeEngine(
   const profile = JSON.parse(
     await (await import('node:fs/promises')).readFile(join(outDir, 'profile.json'), 'utf8'),
   ) as ScriptcaProfile;
-  const soPath = join(outDir, `${profile.name}${sharedLibraryExt()}`);
+  const soPath = join(outDir, sharedLibraryFileName(profile.name));
   const wasmPath = join(outDir, `${profile.name}.wasm`);
 
   if (!options.preferWasm && (await exists(soPath))) {

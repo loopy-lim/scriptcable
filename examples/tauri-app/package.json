@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --experimental-strip-types --test src/bridge.test.ts"
+    "prebuild:core": "pnpm --filter @scriptca/example-calculator-core build",
+    "build:rust": "pnpm prebuild:core && cargo build -p scriptca-tauri-example",
+    "start": "pnpm prebuild:core && cargo run -p scriptca-tauri-example",
+    "test": "pnpm prebuild:core && cargo test -p scriptca-sys && cargo test -p scriptca-tauri && node --experimental-strip-types --test src/bridge.test.ts"
   },
   "dependencies": {
     "@scriptca/tauri": "workspace:*",

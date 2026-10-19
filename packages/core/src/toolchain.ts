@@ -1,11 +1,11 @@
 import { spawn } from 'node:child_process';
 import { access, constants, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ScriptcaToolchainError } from '@scriptca/types';
 import type { ScriptcaConfig, ScriptcaProfile } from '@scriptca/types';
 import { configToProfile } from './profile.js';
-import { linkSharedLibrary, sharedLibraryExt } from './link-shared.js';
+import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
 
 export type ToolchainInfo = {
   scriptcBin: string;
@@ -255,8 +255,13 @@ export async function buildCore(
     result.nativePath = await runBuild('native');
     result.sharedPath = await linkSharedLibrary({
       archivePath: result.nativePath!,
-      outPath: join(outDir, `${config.name}${sharedLibraryExt()}`),
+      outPath: join(outDir, sharedLibraryFileName(config.name)),
       cwd,
+    });
+    // Self-contained static archive for Rust/C++ (includes promise stubs)
+    await buildCompleteStaticArchive({
+      archivePath: result.nativePath!,
+      outPath: join(outDir, `lib${config.name}.a`),
     });
   }
 

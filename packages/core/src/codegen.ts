@@ -260,7 +260,11 @@ export function generateClients(
   const wasmRel = opts.wasmFileName ?? `${config.name}.wasm`;
   const sharedRel =
     opts.sharedFileName ??
-    `${config.name}${process.platform === 'darwin' ? '.dylib' : process.platform === 'win32' ? '.dll' : '.so'}`;
+    (process.platform === 'win32'
+      ? `${config.name}.dll`
+      : process.platform === 'darwin'
+        ? `lib${config.name}.dylib`
+        : `lib${config.name}.so`);
   const files: Record<string, string> = {
     'types.ts': genTypes(profile),
   };

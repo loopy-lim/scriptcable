@@ -1,0 +1,11 @@
+[package]
+name = "scriptca-sys"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Low-level FFI bindings that link a scriptc/scriptca native library"
+links = "scriptca_core"
+
+[dependencies]
+
+[build-dependencies]

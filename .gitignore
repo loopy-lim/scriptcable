@@ -23,3 +23,7 @@ packages/*/dist/
 *.dll
 scriptca-stubs.*
 dist-test/
+target/
+.scriptca-static-work/
+lib*.a
+!crates/**

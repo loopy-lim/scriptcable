@@ -5,7 +5,7 @@
 import type { AbiClass, ExportDef, ScriptcaProfile } from '@scriptca/types';
 import { ScriptcaError } from '@scriptca/types';
 import { readFile } from 'node:fs/promises';
-import { sharedLibraryExt } from './link-shared.js';
+import { sharedLibraryFileName } from './link-shared.js';
 
 export type NativeModule = {
   profile: ScriptcaProfile;
@@ -280,6 +280,6 @@ export async function loadNativeLibrary(
 
 export async function loadNativeFromOutDir(outDir: string): Promise<NativeModule> {
   const profile = JSON.parse(await readFile(`${outDir}/profile.json`, 'utf8')) as ScriptcaProfile;
-  const soPath = `${outDir}/${profile.name}${sharedLibraryExt()}`;
+  const soPath = `${outDir}/${sharedLibraryFileName(profile.name)}`;
   return loadNativeLibrary(soPath, profile);
 }

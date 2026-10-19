@@ -53,6 +53,13 @@ export function sharedLibraryExt(platform = process.platform): string {
   return '.so';
 }
 
+/** File name rustc/dlopen expect: lib{name}.so / lib{name}.dylib / {name}.dll */
+export function sharedLibraryFileName(name: string, platform = process.platform): string {
+  const ext = sharedLibraryExt(platform);
+  if (platform === 'win32') return `${name}${ext}`;
+  return `lib${name}${ext}`;
+}
+
 export async function linkSharedLibrary(options: LinkSharedOptions): Promise<string> {
   const archivePath = resolve(options.archivePath);
   const outPath = resolve(options.outPath);
@@ -99,5 +106,39 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
       'Ensure clang can link for this host. Try: scriptca doctor',
     );
   }
+  return outPath;
+}
+
+/** Merge scriptc .lib.a + stubs into lib{name}.a usable with -lstatic={name}. */
+export async function buildCompleteStaticArchive(options: {
+  archivePath: string;
+  outPath: string;
+}): Promise<string> {
+  const archivePath = resolve(options.archivePath);
+  const outPath = resolve(options.outPath);
+  await access(archivePath, constants.R_OK);
+  const clang = (await which('clang')) ?? (await which('cc'));
+  if (!clang) {
+    throw new ScriptcaToolchainError(
+      'clang is required to prepare the static archive for Rust/C++ hosts.',
+      'Install clang, or use the shared library (.so) from Node/Bun.',
+    );
+  }
+  await mkdir(dirname(outPath), { recursive: true });
+  const work = join(dirname(outPath), '.scriptca-static-work');
+  await mkdir(work, { recursive: true });
+  const stubC = join(work, 'stubs.c');
+  const stubO = join(work, 'stubs.o');
+  await writeFile(stubC, STUB_SOURCE);
+  const c1 = await run(clang, ['-c', stubC, '-o', stubO]);
+  if (c1.code !== 0) throw new ScriptcaToolchainError(c1.stderr);
+  // Extract archive objects into work dir then re-pack with stubs
+  const extract = await run('bash', ['-c', `cd "${work}" && ar x "${archivePath}"`]);
+  if (extract.code !== 0) throw new ScriptcaToolchainError(extract.stderr || extract.stdout);
+  const pack = await run('bash', [
+    '-c',
+    `cd "${work}" && rm -f "${outPath}" && ar rcs "${outPath}" *.o`,
+  ]);
+  if (pack.code !== 0) throw new ScriptcaToolchainError(pack.stderr || pack.stdout);
   return outPath;
 }
