@@ -45,5 +45,5 @@ jobs:
           bun run --filter @scriptcable/example-vite-app test:wasm
           bun run --filter @scriptcable/example-vite-app build
           bun run --filter @scriptcable/example-next-app test
-      - run: bun run --filter @scriptcable/example-calculator-core exec scriptcable diff
-      - run: bun run --filter @scriptcable/example-calculator-core exec scriptcable build --target wasm
+      - run: bun run --filter @scriptcable/example-calculator-core contract:check
+      - run: bun run --filter @scriptcable/example-calculator-core build:wasm
