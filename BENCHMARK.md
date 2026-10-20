@@ -44,6 +44,40 @@ Same export (`add`, f64×2 → f64), same generated client surface, per-runtime 
 - The RN client's extra cost is architectural (async bridge + JSON per hop), not the core: still sub-µs of JS per hop. Coarse-grained exports matter most on RN — one hop amortizes the marshal.
 - Not measured: Hermes as the JS engine (RN's production engine), Metro bundle startup, physical-device bridge transport.
 
+### vs other native-binding technologies
+
+Same `add(f64, f64) → f64` export, this machine. Measured rows are our runs; cited rows are upstream claims we could not run here.
+
+| technology | measured | mean/call | notes |
+| --- | --- | --- | --- |
+| napi-rs 2 addon (Rust, statically typed export) | ✅ | **22 ns** | built for this comparison (LTO, Node 22) — direct N-API boundary, no per-call type conversion |
+| scriptcable browser client (Chromium, raw WASM) | ✅ | **48 ns** | thin generated glue over plain wasm — competitive with statically bound addons |
+| koffi 3.3 (generic FFI, Node) | ✅ | 70–76 ns | generic symbol binding + per-call dynamic conversion |
+| bun:ffi (generic FFI, Bun) | ✅ | 73–80 ns | same class as koffi |
+| **scriptcable native client (Node / Bun)** | ✅ | **= host FFI** (70–80 ns) | the generated client binds the same symbols through the host's own loader — zero added layer |
+| JSI hybrid object (Nitro-class, RN) | — cited | tens of ns (claimed) | statically compiled JSI bindings, no serialization — upstream (margelo/nitro) claims JSI-class overhead and "up to 55×" vs the legacy bridge; not runnable here (no RN host) |
+| legacy RN bridge / TurboModule hop | ✅ JS-side | 165–181 ns + device transport | async + JSON per hop; transport not measured |
+| Tauri `invoke` (webview IPC) | — cited | IPC-class (µs+) | requires a running Tauri shell; out of scope here |
+
+**Reading:**
+
+- **scriptcable adds no layer of its own** — its native call cost is exactly the host's FFI cost, because the generated client binds the core's symbols through the host's loader (koffi/bun:ffi) or plain WASM.
+- A hand-written napi-rs addon beats generic FFI ~3× (22 vs 73 ns) thanks to statically typed bindings. That is the trade scriptcable makes deliberately: one TypeScript core compiled once → the same ABI surface on Bun, Node, browser, and RN, versus a per-host, per-language addon codebase. If you target Node only and need every nanosecond, write a napi addon; if you need four hosts from one source, scriptcable's ~50 ns/call premium over the fastest addon is usually irrelevant at the boundary's scale.
+- The statically-typed-binding idea (napi-class ~22 ns) is a known future direction for generated clients (e.g. a compiled binding path instead of generic FFI).
+
+Reproducibility of the napi-rs row — the whole addon:
+
+```rust
+use napi_derive::napi;
+
+#[napi]
+pub fn add(a: f64, b: f64) -> f64 {
+  a + b
+}
+```
+
+`cargo build --release` (LTO, `crate-type = ["cdylib"]`, macOS `-Wl,-undefined,dynamic_lookup`) → `.node`, then 2M in-process calls from Node 22.
+
 ## 3. JS host baseline (for context)
 
 | benchmark | mean | ops/s |
@@ -98,3 +132,4 @@ The package published into `.scriptcable/generated/` and linked as `node_modules
 3. **Coarse exports beat chatty ones** — batch string/bytes work to amortize the ~1.3 µs marshalling.
 4. **`@scriptcable/client` adds no runtime cost** — flavor selection is import-time resolution; calls run at the measured engine speed everywhere (Bun CLI, Next server, browser).
 5. Startup is snappy: ~6 ms from import to a loaded, callable native engine.
+6. **Against the alternatives**: scriptcable's native calls cost exactly the host's FFI (no own layer). A dedicated napi-rs addon is ~3× faster at the boundary (22 ns) but is Node-only and per-language; scriptcable compiles one TS core for Bun + Node + browser + RN at 48–80 ns/call — and the browser WASM path (48 ns) is already in napi-rs territory.
