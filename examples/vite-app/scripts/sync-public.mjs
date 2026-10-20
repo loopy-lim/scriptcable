@@ -10,6 +10,10 @@ const from = existsSync(join(fromLocal, 'calculator.wasm'))
   : fromCore;
 const dest = join(root, 'public/.scriptcable');
 rmSync(dest, { recursive: true, force: true });
-mkdirSync(join(root, 'public'), { recursive: true });
-cpSync(from, dest, { recursive: true });
+mkdirSync(dest, { recursive: true });
+// Runtime artifacts only — generated TS in public/ would shadow vite's
+// transformed module URLs with raw TypeScript in dev.
+for (const f of ['calculator.wasm', 'profile.json']) {
+  if (existsSync(join(from, f))) cpSync(join(from, f), join(dest, f));
+}
 console.log('synced public/.scriptcable from', from);

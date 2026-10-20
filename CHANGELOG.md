@@ -18,6 +18,7 @@
 - `createNodeEngine()` / `createBunEngineFromOutDir()` default `outDir` to `.scriptcable`.
 - Generated browser clients accept `createClient()` with no arguments — the WASI adapter is optional and defaults to the built-in minimal polyfill.
 - Generated node/bun clients also search the project-relative `.scriptcable/generated/` for the shared library/WASM, so bundled server runtimes (e.g. Next.js) resolve artifacts even when the module URL is rewritten.
+- The Vite plugin resolves `@scriptcable/client` (and `virtual:scriptcable`) to the real generated browser client instead of a virtual re-export — a virtual re-export of its absolute path served raw, untransformed TypeScript to the browser. The generated browser client now also re-exports the `ScriptcableClient` type, keeping the previous virtual module's surface. Found by headless-browser verification (`vite dev` + Chromium, `createClient()` → WASM → `add(20, 22) = 42`).
 
 ## 0.3.0 — 2026-10-20
 

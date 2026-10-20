@@ -227,6 +227,7 @@ ${methods}
 }
 
 export { PROFILE };
+export type { ScriptcableClient } from './types.js';
 `;
 }
 

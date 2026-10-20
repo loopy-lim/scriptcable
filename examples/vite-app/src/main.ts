@@ -1,17 +1,16 @@
-import { createMinimalWasi } from '@scriptcable/core/wasi';
-import { loadWasmModule } from '@scriptcable/core/wasm';
+import { createClient } from '@scriptcable/client';
 
 const out = document.getElementById('out')!;
-out.textContent = 'loading wasm…';
+out.textContent = 'loading core via @scriptcable/client…';
 
 async function main() {
-  const profile = await (await fetch('/.scriptcable/profile.json')).json();
-  const bytes = await (await fetch('/.scriptcable/calculator.wasm')).arrayBuffer();
-  const mod = await loadWasmModule(bytes, { profile, wasi: createMinimalWasi() });
+  // Browser graph → browser flavor (WASM); no paths, no WASI adapter needed.
+  const client = await createClient();
   out.textContent = JSON.stringify({
-    sum: mod.call('add', 20, 22),
-    hi: mod.call('greet', 'vite-browser'),
+    sum: client.add(20, 22),
+    hi: client.greet('vite-browser'),
   });
+  client.dispose();
 }
 main().catch((e) => {
   out.textContent = String(e);

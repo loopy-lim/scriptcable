@@ -164,6 +164,18 @@
 
 **후속 후보**: 브라우저 실호출 e2e(playwright 등) 도입, `@scriptcable/client` file: 의존성을 doctor가 원클릭 추가, Metro 조건 실증.
 
+### 추가 실증 — 브라우저 런타임 (2026-10-20, G5 이후)
+
+사용자 요청("simulator로 해야 하는 거 아니야?")으로 `vite dev` + 헤드리스 Chromium(Playwright) 실증 수행:
+
+- **결과**: `examples/vite-app`에서 `import { createClient } from '@scriptcable/client'` → browser 플레이버 → WASM 컴파일 → `add(20,22)=42`, `greet('vite-browser')` 실행 확인. 페이지 DOM에 `{"sum":42,"hi":"hello, vite-browser"}` 렌더링(스크린샷 /tmp/scriptca-browser-final.png), 콘솔 에러 0.
+- 실증에서 발견해 수정한 결함 3건:
+  - vite 플러그인의 가상 모듈이 절대경로 재수출을 URL로 바꾸며 raw TS(미변환)를 브라우저에 제공 → resolveId가 실제 browser.ts를 그래프에 직결하도록 수정 + browser 플레이버가 `ScriptcableClient` 타입을 재수출해 기존 가상 모듈 표면 유지
+  - vite.config optimizeDeps exclude에 core 서브패스(`/wasm`, `/wasi`) 누락 → dep optimizer에서 모듈 로드 실패
+  - 예제 sync-public.mjs가 generated TS까지 public에 복사 → vite public 정적 미들웨어가 같은 URL을 raw TS로 덮어씀(그림자) → 런타임 산출물(wasm·profile.json)만 복사하도록 수정
+- 회귀 재검증: 전체 36 test / typecheck 12 패키지 통과. 예제 main.ts를 `@scriptcable/client` 사용으로 전환(수동 wasm 스모크 대체).
+- 여전히 미검증: 실제 `next dev`(webpack·Turbopack), Windows, Metro 실기기.
+
 - 커밋: 미수행 (사용자 요청 시 commit 스킬로)
 
 ## 검증 결과 (구현 후 기록)

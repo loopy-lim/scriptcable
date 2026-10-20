@@ -54,7 +54,6 @@ async function rebuild(root: string, configPath?: string): Promise<{ genDir: str
 export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
   const configPath = options.configPath;
   const virtualId = options.virtualId ?? 'virtual:scriptcable';
-  const resolvedVirtual = '\0' + virtualId;
   let root = process.cwd();
   let genDir = '';
   // Cached resolved entry — lets handleHotUpdate skip config resolution
@@ -71,17 +70,11 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
       genDir = r.genDir;
     },
     resolveId(id) {
-      if (id === virtualId || id === '@scriptcable/client') return resolvedVirtual;
-      return null;
-    },
-    async load(id) {
-      if (id !== resolvedVirtual) return null;
-      if (!genDir) {
-        const r = await rebuild(root, configPath);
-        genDir = r.genDir;
-      }
-      // Re-export browser client
-      return `export { createClient, PROFILE } from ${JSON.stringify(join(genDir, 'browser.ts'))};\nexport type { ScriptcableClient } from ${JSON.stringify(join(genDir, 'types.ts'))};\n`;
+      if (id !== virtualId && id !== '@scriptcable/client') return null;
+      // Resolve to the real browser client so it stays inside vite's module
+      // graph and gets transformed. (A virtual re-export of its absolute
+      // path serves raw, untransformed TS to the browser.)
+      return genDir ? join(genDir, 'browser.ts') : null;
     },
     async handleHotUpdate(ctx) {
       const isConfigFile =
