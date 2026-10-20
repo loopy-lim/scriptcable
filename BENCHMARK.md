@@ -58,6 +58,27 @@ Same `add(f64, f64) → f64` export, this machine. Measured rows are our runs; c
 | JSI hybrid object (Nitro-class, RN) | — cited | tens of ns (claimed) | statically compiled JSI bindings, no serialization — upstream (margelo/nitro) claims JSI-class overhead and "up to 55×" vs the legacy bridge; not runnable here (no RN host) |
 | legacy RN bridge / TurboModule hop | ✅ JS-side | 165–181 ns + device transport | async + JSON per hop; transport not measured |
 | Tauri `invoke` (webview IPC) | — cited | IPC-class (µs+) | requires a running Tauri shell; out of scope here |
+| rustra (predecessor project) — Bun FFI Frame | — cited | 2.27 µs | RPC-style: binary-wire encode/decode + async per call ([host matrix receipt](https://github.com/loopy-lim/rustra/blob/main/docs/benchmarks.md), M1 Max) |
+| rustra — Node N-API Frame hot path | — cited | 1.26 µs (793k/s) | same RPC-style over a compiled N-API transport |
+| rustra — core Frame round trip only | — cited | 134 ns | no host/transport — the wire+core dispatch floor |
+| rustra — RN vs Nitro HybridObject | — cited | parity ±5% | iPhone 17 Simulator, Hermes, RN 0.81 (add 1.0418×) |
+
+All direct-call rows were re-measured across two days: bun:ffi 69.8–80 ns, koffi 70–76 ns, browser WASM 47.7–48.7 ns, napi-rs 22.1–26.4 ns — stable within run noise.
+
+**Why is the WASM path (48 ns) faster than the native FFI paths (70–80 ns)?**
+
+All three cross one boundary; they differ in how much work the boundary does per call:
+
+- **napi-rs (22 ns)**: the export is a compiled C function with a fixed signature, registered as a JS function. V8 calls it like any native JS function; arguments are two loads from a pre-parsed `ArgInfo`. The thinnest possible JS↔native seam.
+- **WASM in a browser (48 ns)**: the JS caller and the wasm module share one JIT (V8). The JS→wasm wrapper is signature-specialized and compiled once, then cached — parameters travel in registers, no boxing, no runtime type inspection.
+- **Generic FFI — bun:ffi / koffi (70–80 ns)**: the binding must handle *any* signature at runtime. Each call converts tagged JS values to C types dynamically, sets up a GC/trampoline scope, and dispatches through a generic layer. That generality is the extra ~25–30 ns.
+
+**Can scriptcable reach the 22 ns class natively? Yes — the types are already fixed at compile time.** The build emits a per-export ABI profile (`f64×2→f64`, …), which is everything a statically typed binding needs. Two validated routes, both proven by rustra, this project's predecessor:
+
+1. **Generated N-API addon**: `scriptcable build` already compiles the core with clang/zig; emitting a thin typed N-API wrapper (node_api headers) into the same build gives Node and Bun a ~22 ns-class sync path with no wire, no framing — just per-export typed exports.
+2. **JSI for RN**: rustra measured parity with a Nitro HybridObject (±5%, iOS simulator) over JSI — the same route takes scriptcable's RN flavor from bridge-class (~165 ns + transport) to JSI-class.
+
+Until then, the honest current position: scriptcable's direct-ABI calls (70–80 ns) already beat rustra's host-level RPC paths (1.26–2.27 µs) ~16–30× for scalar calls, because rustra spends its budget on the wire, async semantics, and rich types rather than a bare sync boundary.
 
 **Reading:**
 
