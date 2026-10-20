@@ -1,9 +1,9 @@
 import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
 import { createTauriSidecarEngine } from '@scriptcable/tauri';
-import type { ScriptcaProfile } from '@scriptcable/types';
+import type { ScriptcableProfile } from '@scriptcable/types';
 
-const profile: ScriptcaProfile = {
+const profile: ScriptcableProfile = {
   profile_format: 1,
   name: 'calculator',
   entry: 'core.ts',

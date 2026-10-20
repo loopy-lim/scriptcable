@@ -3,11 +3,11 @@
  */
 import { resolve, join, dirname } from 'node:path';
 import { readFile, mkdir, writeFile, copyFile } from 'node:fs/promises';
-import type { ScriptcaConfig } from '@scriptcable/types';
+import type { ScriptcableConfig } from '@scriptcable/types';
 import { loadConfig, buildCore, configToProfile } from '@scriptcable/core';
 import { generateClients } from '@scriptcable/core/codegen';
 
-export type ScriptcaViteOptions = {
+export type ScriptcableViteOptions = {
   /** Path to scriptcable.json (default: project root) */
   configPath?: string;
   /** Virtual module id for the generated client */
@@ -26,7 +26,7 @@ type VitePlugin = {
   }) => Promise<void> | void;
 };
 
-async function rebuild(root: string, configPath: string): Promise<{ genDir: string; config: ScriptcaConfig }> {
+async function rebuild(root: string, configPath: string): Promise<{ genDir: string; config: ScriptcableConfig }> {
   const abs = resolve(root, configPath);
   const config = loadConfig(JSON.parse(await readFile(abs, 'utf8')));
   const outDir = resolve(root, config.outDir ?? '.scriptcable');
@@ -45,7 +45,7 @@ async function rebuild(root: string, configPath: string): Promise<{ genDir: stri
   return { genDir, config };
 }
 
-export function scriptcable(options: ScriptcaViteOptions = {}): VitePlugin {
+export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
   const configPath = options.configPath ?? 'scriptcable.json';
   const virtualId = options.virtualId ?? 'virtual:scriptcable';
   const resolvedVirtual = '\0' + virtualId;
@@ -72,13 +72,13 @@ export function scriptcable(options: ScriptcaViteOptions = {}): VitePlugin {
         genDir = r.genDir;
       }
       // Re-export browser client
-      return `export { createClient, PROFILE } from ${JSON.stringify(join(genDir, 'browser.ts'))};\nexport type { ScriptcaClient } from ${JSON.stringify(join(genDir, 'types.ts'))};\n`;
+      return `export { createClient, PROFILE } from ${JSON.stringify(join(genDir, 'browser.ts'))};\nexport type { ScriptcableClient } from ${JSON.stringify(join(genDir, 'types.ts'))};\n`;
     },
     async handleHotUpdate(ctx) {
       if (ctx.file.includes('scriptcable.json') || /\.(ts|js)$/.test(ctx.file)) {
         // Only rebuild when core entry or config changes
         try {
-          const raw = JSON.parse(await readFile(resolve(root, configPath), 'utf8')) as ScriptcaConfig;
+          const raw = JSON.parse(await readFile(resolve(root, configPath), 'utf8')) as ScriptcableConfig;
           const entryAbs = resolve(root, dirname(configPath), raw.entry);
           if (ctx.file === resolve(root, configPath) || ctx.file === entryAbs) {
             await rebuild(root, configPath);

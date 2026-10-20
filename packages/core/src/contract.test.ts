@@ -1,9 +1,9 @@
 import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
 import { snapshotFromConfig, diffContracts } from './contract.js';
-import type { ScriptcaConfig } from '@scriptcable/types';
+import type { ScriptcableConfig } from '@scriptcable/types';
 
-const base: ScriptcaConfig = {
+const base: ScriptcableConfig = {
   name: 'calc',
   entry: 'src/core.ts',
   prefix: 'calc_',

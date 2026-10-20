@@ -2,8 +2,8 @@
  * Shared WASI Preview 1 reactor loader for scriptc library WASM modules.
  * Works in Node 24+ (node:wasi) and can be adapted for Bun / browsers.
  */
-import type { AbiClass, CallbackDef, ExportDef, ScriptcaProfile } from '@scriptcable/types';
-import { ScriptcaError } from '@scriptcable/types';
+import type { AbiClass, CallbackDef, ExportDef, ScriptcableProfile } from '@scriptcable/types';
+import { ScriptcableError } from '@scriptcable/types';
 
 export type WasmExports = WebAssembly.Exports & {
   memory: WebAssembly.Memory;
@@ -14,14 +14,14 @@ export type WasmExports = WebAssembly.Exports & {
 
 export type LoadedModule = {
   exports: WasmExports;
-  profile: ScriptcaProfile;
+  profile: ScriptcableProfile;
   /** Call a typed export by TypeScript name */
   call: (exportName: string, ...args: unknown[]) => unknown;
   dispose: () => void;
 };
 
 export type LoadWasmOptions = {
-  profile: ScriptcaProfile;
+  profile: ScriptcableProfile;
   /** Host callback implementations keyed by callback name */
   callbacks?: Record<string, (...args: unknown[]) => unknown>;
   /**
@@ -51,7 +51,7 @@ function readCString(memory: WebAssembly.Memory, ptr: number): string {
 function writeBytes(api: WasmExports, data: Uint8Array): { ptr: number; len: number } {
   const ptr = api.scriptc_alloc(data.byteLength || 1);
   if (!ptr && data.byteLength > 0) {
-    throw new ScriptcaError('ALLOC', 'scriptc_alloc failed');
+    throw new ScriptcableError('ALLOC', 'scriptc_alloc failed');
   }
   if (data.byteLength > 0) {
     new Uint8Array(api.memory.buffer, ptr, data.byteLength).set(data);
@@ -138,7 +138,7 @@ function marshalArgs(
         break;
       }
       default:
-        throw new ScriptcaError('ABI', `Unsupported param class: ${cls}`);
+        throw new ScriptcableError('ABI', `Unsupported param class: ${cls}`);
     }
   }
   return { wasmArgs, freeList };
@@ -151,7 +151,7 @@ function callExport(
 ): unknown {
   const fn = api[def.symbol];
   if (typeof fn !== 'function') {
-    throw new ScriptcaError('MISSING_EXPORT', `Export symbol ${def.symbol} not found in WASM`);
+    throw new ScriptcableError('MISSING_EXPORT', `Export symbol ${def.symbol} not found in WASM`);
   }
 
   const { wasmArgs, freeList } = marshalArgs(api, def.params, args);
@@ -159,7 +159,7 @@ function callExport(
     if (def.returns === 'string' || def.returns === 'bytes') {
       // Two i32 out-slots for pointer + length
       const slots = api.scriptc_alloc(8);
-      if (!slots) throw new ScriptcaError('ALLOC', 'failed to allocate result slots');
+      if (!slots) throw new ScriptcableError('ALLOC', 'failed to allocate result slots');
       freeList.push(slots);
       const outPtr = slots;
       const outLen = slots + 4;
@@ -192,7 +192,7 @@ function callExport(
 }
 
 function buildScriptcImports(
-  profile: ScriptcaProfile,
+  profile: ScriptcableProfile,
   getApi: () => WasmExports,
   callbacks: Record<string, (...args: unknown[]) => unknown>,
   onPanic?: (message: string) => void,
@@ -203,7 +203,7 @@ function buildScriptcImports(
       const bytes = new Uint8Array(api.memory.buffer, pointer, length);
       const msg = new TextDecoder().decode(bytes);
       if (onPanic) onPanic(msg);
-      throw new ScriptcaError('PANIC', msg);
+      throw new ScriptcableError('PANIC', msg);
     },
   };
 
@@ -212,7 +212,7 @@ function buildScriptcImports(
       const api = getApi();
       const host = callbacks[cb.name];
       if (!host) {
-        throw new ScriptcaError(
+        throw new ScriptcableError(
           'MISSING_CALLBACK',
           `Host callback "${cb.name}" was not provided`,
           `Pass callbacks: { ${cb.name}: (...) => ... } when loading the module.`,
@@ -314,7 +314,7 @@ export async function loadWasmModule(
     call(exportName: string, ...args: unknown[]) {
       const def = byName.get(exportName);
       if (!def) {
-        throw new ScriptcaError(
+        throw new ScriptcableError(
           'UNKNOWN_EXPORT',
           `Unknown export "${exportName}"`,
           `Known: ${[...byName.keys()].join(', ')}`,

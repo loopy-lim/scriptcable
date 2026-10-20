@@ -4,8 +4,8 @@ import type {
   ContractDiff,
   ContractSnapshot,
   ExportDef,
-  ScriptcaConfig,
-  ScriptcaProfile,
+  ScriptcableConfig,
+  ScriptcableProfile,
 } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
 
@@ -34,7 +34,7 @@ function sigCallback(c: CallbackDef): string {
   return `${c.name}(${c.params.join(',')})->${c.returns}`;
 }
 
-export function snapshotFromProfile(profile: ScriptcaProfile): ContractSnapshot {
+export function snapshotFromProfile(profile: ScriptcableProfile): ContractSnapshot {
   const exports = normalizeExports(profile.exports);
   const callbacks = normalizeCallbacks(profile.callbacks);
   // Hash the ABI surface only (not profile-relative entry paths).
@@ -56,7 +56,7 @@ export function snapshotFromProfile(profile: ScriptcaProfile): ContractSnapshot 
   };
 }
 
-export function snapshotFromConfig(config: ScriptcaConfig): ContractSnapshot {
+export function snapshotFromConfig(config: ScriptcableConfig): ContractSnapshot {
   return snapshotFromProfile(configToProfile(config));
 }
 

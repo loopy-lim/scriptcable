@@ -37,7 +37,11 @@
       "version": "0.1.0",
       "devDependencies": {
         "@scriptc/runtime-wasm32-wasi": "^0.3.6",
+        "@scriptcable/bun": "workspace:*",
         "@scriptcable/cli": "workspace:*",
+        "@scriptcable/core": "workspace:*",
+        "@scriptcable/node": "workspace:*",
+        "@scriptcable/types": "workspace:*",
         "scriptc": "^0.3.6",
       },
     },

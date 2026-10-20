@@ -1,10 +1,10 @@
-import type { ScriptcaConfig, ScriptcaProfile } from '@scriptcable/types';
+import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
 
 /** Build a scriptc library profile from scriptcable.json. */
-export function configToProfile(config: ScriptcaConfig): ScriptcaProfile {
+export function configToProfile(config: ScriptcableConfig): ScriptcableProfile {
   const prefix = normalizePrefix(config.prefix ?? `${slug(config.name)}_`);
   const hasCallbacks = (config.callbacks?.length ?? 0) > 0;
-  const profile: ScriptcaProfile = {
+  const profile: ScriptcableProfile = {
     profile_format: 1,
     name: config.name,
     entry: config.entry,
@@ -53,7 +53,7 @@ function slug(name: string): string {
     .toLowerCase() || 'app';
 }
 
-export function loadConfig(raw: unknown): ScriptcaConfig {
+export function loadConfig(raw: unknown): ScriptcableConfig {
   if (!raw || typeof raw !== 'object') {
     throw new Error('scriptcable.json must be an object');
   }
@@ -63,5 +63,5 @@ export function loadConfig(raw: unknown): ScriptcaConfig {
   if (!Array.isArray(o.exports) || o.exports.length === 0) {
     throw new Error('scriptcable.json: exports must be a non-empty array');
   }
-  return o as ScriptcaConfig;
+  return o as ScriptcableConfig;
 }

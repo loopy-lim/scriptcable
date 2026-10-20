@@ -3,20 +3,20 @@
  *
  * Turbopack does not support arbitrary Webpack plugins the same way, so we
  * expose:
- * 1. `withScriptca(nextConfig)` — Webpack plugin path for `next build` / `next dev` (webpack).
+ * 1. `withScriptcable(nextConfig)` — Webpack plugin path for `next build` / `next dev` (webpack).
  * 2. `scriptcableBuild()` — call from `instrumentation.ts` or a prebuild script for Turbopack.
  */
 import { resolve, join } from 'node:path';
 import { readFile, mkdir, writeFile, copyFile } from 'node:fs/promises';
-import type { ScriptcaConfig } from '@scriptcable/types';
+import type { ScriptcableConfig } from '@scriptcable/types';
 import { loadConfig, buildCore } from '@scriptcable/core';
 import { generateClients } from '@scriptcable/core/codegen';
 
-export type WithScriptcaOptions = {
+export type WithScriptcableOptions = {
   configPath?: string;
 };
 
-async function runScriptcaBuild(projectRoot: string, configPath: string): Promise<string> {
+async function runScriptcableBuild(projectRoot: string, configPath: string): Promise<string> {
   const abs = resolve(projectRoot, configPath);
   const config = loadConfig(JSON.parse(await readFile(abs, 'utf8')));
   const outDir = resolve(projectRoot, config.outDir ?? '.scriptcable');
@@ -37,18 +37,18 @@ async function runScriptcaBuild(projectRoot: string, configPath: string): Promis
 
 /** Prebuild helper — works with Turbopack (`next dev --turbo`) via npm script. */
 export async function scriptcableBuild(
-  options: WithScriptcaOptions & { cwd?: string } = {},
+  options: WithScriptcableOptions & { cwd?: string } = {},
 ): Promise<string> {
-  return runScriptcaBuild(options.cwd ?? process.cwd(), options.configPath ?? 'scriptcable.json');
+  return runScriptcableBuild(options.cwd ?? process.cwd(), options.configPath ?? 'scriptcable.json');
 }
 
 type NextConfig = Record<string, unknown> & {
   webpack?: (config: any, ctx: any) => any;
 };
 
-export function withScriptca(
+export function withScriptcable(
   nextConfig: NextConfig = {},
-  options: WithScriptcaOptions = {},
+  options: WithScriptcableOptions = {},
 ): NextConfig {
   const configPath = options.configPath ?? 'scriptcable.json';
   return {
@@ -56,8 +56,8 @@ export function withScriptca(
     webpack(config: any, ctx: any) {
       const plugin = {
         apply(compiler: any) {
-          compiler.hooks.beforeCompile.tapPromise('ScriptcaWebpackPlugin', async () => {
-            await runScriptcaBuild(compiler.context || process.cwd(), configPath);
+          compiler.hooks.beforeCompile.tapPromise('ScriptcableWebpackPlugin', async () => {
+            await runScriptcableBuild(compiler.context || process.cwd(), configPath);
           });
         },
       };
@@ -70,4 +70,4 @@ export function withScriptca(
   };
 }
 
-export default withScriptca;
+export default withScriptcable;

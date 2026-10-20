@@ -6,19 +6,19 @@ import { readFile, mkdir, writeFile, copyFile } from 'node:fs/promises';
 import { loadConfig, buildCore } from '@scriptcable/core';
 import { generateClients } from '@scriptcable/core/codegen';
 
-export type ScriptcaWebpackOptions = {
+export type ScriptcableWebpackOptions = {
   configPath?: string;
 };
 
-export class ScriptcaWebpackPlugin {
-  constructor(private options: ScriptcaWebpackOptions = {}) {}
+export class ScriptcableWebpackPlugin {
+  constructor(private options: ScriptcableWebpackOptions = {}) {}
 
   apply(compiler: {
     context?: string;
     hooks: { beforeCompile: { tapPromise: (name: string, fn: () => Promise<void>) => void } };
   }): void {
     const configPath = this.options.configPath ?? 'scriptcable.json';
-    compiler.hooks.beforeCompile.tapPromise('ScriptcaWebpackPlugin', async () => {
+    compiler.hooks.beforeCompile.tapPromise('ScriptcableWebpackPlugin', async () => {
       const root = compiler.context || process.cwd();
       const abs = resolve(root, configPath);
       const config = loadConfig(JSON.parse(await readFile(abs, 'utf8')));
@@ -40,5 +40,5 @@ export class ScriptcaWebpackPlugin {
 }
 
 /** Alias for Rspack / Rsbuild (same compiler hooks). */
-export const ScriptcaRspackPlugin = ScriptcaWebpackPlugin;
-export default ScriptcaWebpackPlugin;
+export const ScriptcableRspackPlugin = ScriptcableWebpackPlugin;
+export default ScriptcableWebpackPlugin;

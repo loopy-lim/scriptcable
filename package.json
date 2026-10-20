@@ -2,7 +2,7 @@
   "name": "scriptcable",
   "version": "0.1.0",
   "private": true,
-  "description": "One TypeScript core (compiled by scriptc) → type-safe clients for Bun, Node, Tauri, React Native, Lynx, Vite, and Next.js",
+  "description": "One TypeScript core (compiled by scriptc) \u2192 type-safe clients for Bun, Node, Tauri, React Native, Lynx, Vite, and Next.js",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.4.3",
@@ -19,7 +19,8 @@
     "test:e2e:node": "bun run --filter @scriptcable/example-node-app start",
     "test:e2e:bun": "bun run --filter @scriptcable/example-bun-app start",
     "typecheck": "bun run --filter './packages/*' typecheck",
-    "clean": "rm -rf packages/*/dist packages/*/dist-test examples/*/.scriptcable examples/*/node_modules/.cache"
+    "clean": "rm -rf packages/*/dist packages/*/dist-test examples/*/.scriptcable examples/*/node_modules/.cache",
+    "postbuild": "bun install --silent"
   },
   "devDependencies": {
     "typescript": "^5.9.2",

@@ -7,15 +7,15 @@
  *
  * Opt-in: load WASM in the webview only when native linking is unavailable.
  */
-import type { EngineClient, ScriptcaProfile } from '@scriptcable/types';
-import { ScriptcaError } from '@scriptcable/types';
+import type { EngineClient, ScriptcableProfile } from '@scriptcable/types';
+import { ScriptcableError } from '@scriptcable/types';
 
 export type TauriInvoke = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 
 export type TauriBridgeOptions = {
   invoke: TauriInvoke;
   prefix?: string;
-  profile: ScriptcaProfile;
+  profile: ScriptcableProfile;
 };
 
 /** Native IPC bridge — each export becomes invoke(`${prefix}${name}`, { args }). */
@@ -26,7 +26,7 @@ export function createTauriSidecarEngine(options: TauriBridgeOptions): EngineCli
     supports: { sync: false },
     async invoke(command: string, args?: unknown) {
       if (!known.has(command)) {
-        throw new ScriptcaError('UNKNOWN_EXPORT', `Unknown export ${command}`);
+        throw new ScriptcableError('UNKNOWN_EXPORT', `Unknown export ${command}`);
       }
       const list = Array.isArray(args) ? args : args === undefined ? [] : [args];
       return options.invoke(`${prefix}${command}`, { args: list });

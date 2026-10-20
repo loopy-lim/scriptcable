@@ -2,8 +2,8 @@
 
 ```js
 // next.config.mjs
-import { withScriptca } from '@scriptcable/next';
-export default withScriptca({ /* next options */ });
+import { withScriptcable } from '@scriptcable/next';
+export default withScriptcable({ /* next options */ });
 ```
 
 Turbopack (`next dev --turbo`) — add a prebuild script:

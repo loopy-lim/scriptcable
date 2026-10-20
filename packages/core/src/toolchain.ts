@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process';
 import { access, constants, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, relative, resolve } from 'node:path';
-import { ScriptcaToolchainError } from '@scriptcable/types';
-import type { ScriptcaConfig, ScriptcaProfile } from '@scriptcable/types';
+import { ScriptcableToolchainError } from '@scriptcable/types';
+import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
 import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
 
@@ -88,7 +88,7 @@ export async function resolveScriptc(cwd = process.cwd()): Promise<string> {
 
   const install = await run('bun', ['add', '--dev', 'scriptc@^0.3.6'], { cwd });
   if (install.code !== 0) {
-    throw new ScriptcaToolchainError(
+    throw new ScriptcableToolchainError(
       'scriptc is not installed and auto-install failed.',
       'Install Bun 1.2+ (https://bun.sh), then run: bun add -d scriptc\n' +
         'Bun runs scriptc install scripts for trusted deps; keep them enabled.\n' +
@@ -103,7 +103,7 @@ export async function scriptcVersion(bin: string): Promise<string> {
   if (r.code !== 0) {
     // bin may be a native binary
     const r2 = await run(bin, ['--version']);
-    if (r2.code !== 0) throw new ScriptcaToolchainError(`scriptc --version failed: ${r2.stderr}`);
+    if (r2.code !== 0) throw new ScriptcableToolchainError(`scriptc --version failed: ${r2.stderr}`);
     return r2.stdout.trim();
   }
   return r.stdout.trim();
@@ -126,7 +126,7 @@ export async function doctor(cwd = process.cwd()): Promise<ToolchainInfo> {
 
   // Bun is the primary engine; plain Node >= 24 is still accepted for adapters.
   if (runtime === 'bun' && compareVersions(bunVersion, '1.2.0') < 0) {
-    throw new ScriptcaToolchainError(
+    throw new ScriptcableToolchainError(
       `Bun ${bunVersion} is too old (scriptcable requires >= 1.2.0).`,
       'Upgrade: curl -fsSL https://bun.sh/install | bash',
     );
@@ -134,7 +134,7 @@ export async function doctor(cwd = process.cwd()): Promise<ToolchainInfo> {
   if (runtime === 'node') {
     const major = Number(nodeVersion.slice(1).split('.')[0]);
     if (major < 24) {
-      throw new ScriptcaToolchainError(
+      throw new ScriptcableToolchainError(
         `Node.js ${nodeVersion} is too old (scriptc requires >= 24).`,
         'Prefer Bun (https://bun.sh) or install Node 24+: https://nodejs.org/',
       );
@@ -182,7 +182,7 @@ export type BuildResult = {
   nativePath?: string;
   /** Loadable shared library linked from the archive (.so/.dylib/.dll) */
   sharedPath?: string;
-  profile: ScriptcaProfile;
+  profile: ScriptcableProfile;
   /** True when this result came from the build cache (no recompile) */
   cached?: boolean;
 };
@@ -202,7 +202,7 @@ async function ensureRuntimePack(cwd: string, target: 'wasm' | 'native'): Promis
       { cwd },
     );
     if (r.code !== 0) {
-      throw new ScriptcaToolchainError(
+      throw new ScriptcableToolchainError(
         'Failed to install @scriptc/runtime-wasm32-wasi (required for WASM builds).',
         r.stderr.slice(0, 500) +
           '\nAlso install zig 0.13.x on PATH: https://ziglang.org/download/',
@@ -223,7 +223,7 @@ function scriptcInvoke(
 }
 
 export async function buildCore(
-  config: ScriptcaConfig,
+  config: ScriptcableConfig,
   options: BuildOptions = {},
 ): Promise<BuildResult> {
   const cwd = options.cwd ?? process.cwd();
@@ -269,7 +269,7 @@ export async function buildCore(
   const runBuild = async (kind: 'wasm' | 'native') => {
     if (kind === 'wasm') {
       if (!info.hasZig) {
-        throw new ScriptcaToolchainError(
+        throw new ScriptcableToolchainError(
           'zig is required for WASM (wasm32-wasi) library builds.',
           'Install zig 0.13.x and put it on PATH.\n' +
             '  curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ\n' +
@@ -278,7 +278,7 @@ export async function buildCore(
       }
       await ensureRuntimePack(cwd, 'wasm');
     } else if (!info.hasClang && process.platform === 'linux') {
-      throw new ScriptcaToolchainError(
+      throw new ScriptcableToolchainError(
         'clang is required for native library builds on Linux.',
         'Install clang (e.g. `sudo apt install clang`) or use target: "wasm".',
       );
@@ -295,7 +295,7 @@ export async function buildCore(
     };
     const r = await run(inv.cmd, inv.args, { cwd, env });
     if (r.code !== 0) {
-      throw new ScriptcaToolchainError(
+      throw new ScriptcableToolchainError(
         `scriptc ${kind} build failed:\n${r.stderr || r.stdout}`,
         'Run `scriptcable doctor` and `scriptc coverage <entry>` for details.',
       );

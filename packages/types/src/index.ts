@@ -32,7 +32,7 @@ export type CallbackDef = {
   returns: AbiClass;
 };
 
-export type ScriptcaProfile = {
+export type ScriptcableProfile = {
   profile_format: 1 | 2;
   name: string;
   entry: string;
@@ -51,7 +51,7 @@ export type ScriptcaProfile = {
 };
 
 /** Project config (scriptcable.json). */
-export type ScriptcaConfig = {
+export type ScriptcableConfig = {
   /** Package / project name */
   name: string;
   /** Core entry relative to project root */
@@ -99,28 +99,28 @@ export interface EngineClient {
   dispose?(): void | Promise<void>;
 }
 
-export class ScriptcaError extends Error {
+export class ScriptcableError extends Error {
   readonly code: string;
   readonly hint?: string;
   constructor(code: string, message: string, hint?: string) {
     super(message);
-    this.name = 'ScriptcaError';
+    this.name = 'ScriptcableError';
     this.code = code;
     this.hint = hint;
   }
 }
 
-export class ScriptcaToolchainError extends ScriptcaError {
+export class ScriptcableToolchainError extends ScriptcableError {
   constructor(message: string, hint?: string) {
     super('SCRIPTC_TOOLCHAIN', message, hint);
-    this.name = 'ScriptcaToolchainError';
+    this.name = 'ScriptcableToolchainError';
   }
 }
 
-export class ScriptcaContractError extends ScriptcaError {
+export class ScriptcableContractError extends ScriptcableError {
   constructor(message: string, hint?: string) {
     super('CONTRACT', message, hint);
-    this.name = 'ScriptcaContractError';
+    this.name = 'ScriptcableContractError';
   }
 }
 

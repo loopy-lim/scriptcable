@@ -1,8 +1,8 @@
-import { ScriptcaError } from '@scriptcable/types';
+import { ScriptcableError } from '@scriptcable/types';
 
 /** Format a scriptcable error for terminal output with its hint. */
 export function formatError(e: unknown): string {
-  if (e instanceof ScriptcaError) {
+  if (e instanceof ScriptcableError) {
     const lines = [`✗ ${e.name} [${e.code}]: ${e.message}`];
     if (e.hint) lines.push(`  hint: ${e.hint}`);
     return lines.join('\n');
