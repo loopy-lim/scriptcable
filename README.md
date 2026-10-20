@@ -26,6 +26,67 @@ bun start
 
 `init` scaffolds a typed `scriptcable.config.ts` (preferred) or `scriptcable.json`. **You never declare exports by hand** — they're inferred from your `src/core.ts` types (see below).
 
+## Zero-config
+
+You don't need a config file at all. With `package.json` and a core at a standard location, this just works:
+
+```bash
+bunx scriptcable build          # name from package.json, entry from src/core.ts
+```
+
+Everything is inferred, in priority order (explicit config > inference):
+
+| Field | Inferred from |
+|-------|---------------|
+| `exports` | TS types of the entry's exported functions |
+| `name` | `package.json` `name` (scoped `@scope/my-pkg` → `scope_my_pkg`), else the directory name |
+| `entry` | first of `src/core.ts`, `core.ts`, `src/index.ts`, `index.ts` |
+| `prefix` | `name` + `_` |
+| `outDir` | `.scriptcable` |
+| `target` | `native` (WASM opt-in) |
+
+A config file only pins what you want to override — `name` and `entry` are optional there too:
+
+```ts
+// scriptcable.config.ts — everything optional
+import { defineConfig } from '@scriptcable/core';
+export default defineConfig({});            // all inferred
+export default defineConfig({ name: 'mycore' }); // entry still inferred
+```
+
+The Vite / Next.js / Webpack plugins use the same resolution (including `scriptcable.config.ts`), and adapters default to `.scriptcable`:
+
+```ts
+import { createBunEngineFromOutDir } from '@scriptcable/bun';
+const engine = await createBunEngineFromOutDir(); // → ./.scriptcable
+```
+
+## One import: `@scriptcable/client`
+
+Every build publishes the generated clients as a **real package**: `scriptcable build` writes a package manifest into `.scriptcable/generated/` and links it as `node_modules/@scriptcable/client`. App code never references `.scriptcable/` paths:
+
+```ts
+import { createClient } from '@scriptcable/client';
+
+const client = await createClient();
+client.add(20, 22); // 42
+```
+
+Export conditions resolve the right flavor per environment — no branching in your code:
+
+| Environment | Flavor |
+|---|---|
+| Bun runtime | `bun.ts` (bun:ffi native) |
+| Node runtime — Next server components, route handlers, server actions | `node.ts` (native shared lib, WASM fallback) |
+| Browser bundles served from project files (e.g. `vite dev`) | `browser.ts` (WASM — a minimal WASI polyfill is built in, so no-arg works) |
+| Metro (React Native) | `react-native.ts` (bridge-based) |
+
+The `browser` flavor fetches the WASM next to the generated module, which works where the bundler serves project files (`vite dev`). In Next.js client graphs, copy `<name>.wasm` to your static directory and call `createClient({ wasmUrl: '/<name>.wasm' })` — server code needs nothing, the node flavor loads the shared library automatically.
+
+Explicit subpaths pin a flavor: `@scriptcable/client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`. Editors resolve the same package, so TypeScript works with no `paths` config. The bundler plugins run the same emit: `withScriptcable` (which also adds `transpilePackages` for you) and the Webpack/Rspack plugin link the package during `next dev` / `next build`; on Turbopack, the predev `scriptcableBuild()` call does it.
+
+If the link is missing — a fresh checkout before the first build — `scriptcable doctor` reports and repairs it. For CI durability, add `"@scriptcable/client": "file:.scriptcable/generated"` to your dependencies.
+
 ## How it works
 
 ```
@@ -44,13 +105,13 @@ Default artifact is **native**. Use `"target": "wasm"` or `scriptcable build --t
 import { defineConfig } from '@scriptcable/core';
 
 export default defineConfig({
-  name: 'mycore',
-  entry: 'src/core.ts',
+  name: 'mycore',   // optional — inferred from package.json
+  entry: 'src/core.ts', // optional — inferred from standard locations
   // exports: inferred — add an explicit array only to pin/subset the surface
 });
 ```
 
-JSON (`scriptcable.json`) still works for zero-dependency setups. The TS config wins when both exist.
+JSON (`scriptcable.json`) still works for zero-dependency setups, and omitting config entirely works too (see [Zero-config](#zero-config)). The TS config wins when both exist.
 
 ## Packages
 

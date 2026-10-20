@@ -34,6 +34,9 @@ jobs:
       # bin links are only created when dist/index.js exists — re-link after build
       - run: bun install
       - run: bun run --filter @scriptcable/core test
+      - run: bun run --filter @scriptcable/cli test
+      - run: bun run --filter @scriptcable/vite test
+      - run: bun run --filter @scriptcable/next test
       - run: bun run --filter @scriptcable/example-calculator-core build
       - run: bun run --filter @scriptcable/example-bench-core build
       - run: bun run --filter @scriptcable/example-node-app test

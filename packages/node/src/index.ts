@@ -27,8 +27,8 @@ import { join } from 'node:path';
 import { sharedLibraryFileName } from '@scriptcable/core';
 
 export type NodeClientOptions = {
-  /** Directory containing profile.json + shared lib / wasm */
-  outDir: string;
+  /** Directory containing profile.json + shared lib / wasm (default: `.scriptcable`) */
+  outDir?: string;
   /** Force wasm even if a native shared library is present */
   preferWasm?: boolean;
   callbacks?: Record<string, (...args: unknown[]) => unknown>;
@@ -46,16 +46,17 @@ async function exists(path: string): Promise<boolean> {
 /**
  * Load a compiled core. Prefers the native shared library; falls back to WASM
  * only when preferWasm is set or the shared library is missing.
+ * Zero-config: `outDir` defaults to `.scriptcable` (relative to cwd).
  */
 export async function createNodeEngine(
-  options: NodeClientOptions,
+  options: NodeClientOptions = {},
 ): Promise<
   EngineClient & {
     call: (exportName: string, ...args: unknown[]) => unknown;
     module: NativeModule | LoadedModule;
   }
 > {
-  const { outDir } = options;
+  const outDir = options.outDir ?? '.scriptcable';
   const profile = JSON.parse(
     await (await import('node:fs/promises')).readFile(join(outDir, 'profile.json'), 'utf8'),
   ) as ScriptcableProfile;
@@ -101,9 +102,9 @@ export async function createNodeEngine(
   };
 }
 
-/** @deprecated use createNodeEngine({ outDir }) — kept for compatibility */
+/** @deprecated use createNodeEngine({ outDir? }) — kept for compatibility */
 export async function createNodeEngineFromOutDir(
-  outDir: string,
+  outDir?: string,
   callbacks?: Record<string, (...args: unknown[]) => unknown>,
 ): Promise<
   EngineClient & {

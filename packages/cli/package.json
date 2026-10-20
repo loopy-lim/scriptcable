@@ -27,7 +27,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "echo \"@scriptcable/cli: no tests (skip)\""
+    "test": "bun test"
   },
   "dependencies": {
     "@scriptcable/core": "workspace:*",

@@ -1,12 +1,9 @@
 /** Simulates a Next.js server action / route handler calling the native core */
-import { createNodeEngine } from '@scriptcable/node';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { createClient } from '@scriptcable/client';
 
-const outDir = join(dirname(fileURLToPath(import.meta.url)), '../.scriptcable');
-const engine = await createNodeEngine({ outDir });
+const client = await createClient();
 console.log(JSON.stringify({
-  sum: engine.call('add', 20, 22),
-  hi: engine.call('greet', 'next-server'),
+  sum: client.add(20, 22),
+  hi: client.greet('next-server'),
 }));
-engine.dispose?.();
+client.dispose();

@@ -1,14 +1,15 @@
 /**
  * @scriptcable/vite — Vite plugin: builds scriptc core (WASM) on startup and HMR.
+ *
+ * Zero-config: reads scriptcable.config.ts > scriptcable.json > inference
+ * (package.json name + standard entry locations) unless `configPath` is set.
  */
-import { resolve, join, dirname } from 'node:path';
-import { readFile, mkdir, writeFile, copyFile } from 'node:fs/promises';
-import type { ScriptcableConfig } from '@scriptcable/types';
-import { loadConfig, buildCore, configToProfile } from '@scriptcable/core';
-import { generateClients } from '@scriptcable/core/codegen';
+import { resolve, join } from 'node:path';
+import type { ResolvedConfig } from '@scriptcable/types';
+import { buildCore, loadProjectConfig, loadConfigFile, writeGeneratedClients } from '@scriptcable/core';
 
 export type ScriptcableViteOptions = {
-  /** Path to scriptcable.json (default: project root) */
+  /** Explicit config file (.ts or .json) — default: auto-discover or infer */
   configPath?: string;
   /** Virtual module id for the generated client */
   virtualId?: string;
@@ -26,31 +27,39 @@ type VitePlugin = {
   }) => Promise<void> | void;
 };
 
-async function rebuild(root: string, configPath: string): Promise<{ genDir: string; config: ScriptcableConfig }> {
-  const abs = resolve(root, configPath);
-  const config = loadConfig(JSON.parse(await readFile(abs, 'utf8')));
+async function loadProject(root: string, configPath?: string): Promise<ResolvedConfig> {
+  if (configPath) return loadConfigFile(resolve(root, configPath), root);
+  return (await loadProjectConfig(root)).config;
+}
+
+async function rebuild(root: string, configPath?: string): Promise<{ genDir: string; config: ResolvedConfig }> {
+  const config = await loadProject(root, configPath);
   const outDir = resolve(root, config.outDir ?? '.scriptcable');
   const result = await buildCore(config, { cwd: root, outDir, target: config.target === 'wasm' ? 'wasm' : 'both' });
-  const genDir = join(outDir, 'generated');
-  await mkdir(genDir, { recursive: true });
-  const files = generateClients(config, ['browser', 'node'], {
+  const { genDir, clientLink } = await writeGeneratedClients({
+    config,
+    targets: ['browser', 'node'],
+    outDir,
+    cwd: root,
     wasmFileName: `${config.name}.wasm`,
+    copy: { wasmPath: result.wasmPath, sharedPath: result.sharedPath },
+    profile: result.profile,
   });
-  for (const [name, body] of Object.entries(files.files)) {
-    await writeFile(join(genDir, name), body);
-  }
-  if (result.wasmPath) {
-    await copyFile(result.wasmPath, join(genDir, `${config.name}.wasm`));
+  if (clientLink === 'blocked') {
+    console.warn('[scriptcable] could not link node_modules/@scriptcable/client — run `scriptcable doctor`');
   }
   return { genDir, config };
 }
 
 export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
-  const configPath = options.configPath ?? 'scriptcable.json';
+  const configPath = options.configPath;
   const virtualId = options.virtualId ?? 'virtual:scriptcable';
   const resolvedVirtual = '\0' + virtualId;
   let root = process.cwd();
   let genDir = '';
+  // Cached resolved entry — lets handleHotUpdate skip config resolution
+  // (a cache-busting dynamic import) for unrelated HMR events.
+  let lastEntryAbs = '';
 
   return {
     name: 'vite-plugin-scriptcable',
@@ -75,18 +84,23 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
       return `export { createClient, PROFILE } from ${JSON.stringify(join(genDir, 'browser.ts'))};\nexport type { ScriptcableClient } from ${JSON.stringify(join(genDir, 'types.ts'))};\n`;
     },
     async handleHotUpdate(ctx) {
-      if (ctx.file.includes('scriptcable.json') || /\.(ts|js)$/.test(ctx.file)) {
-        // Only rebuild when core entry or config changes
-        try {
-          const raw = JSON.parse(await readFile(resolve(root, configPath), 'utf8')) as ScriptcableConfig;
-          const entryAbs = resolve(root, dirname(configPath), raw.entry);
-          if (ctx.file === resolve(root, configPath) || ctx.file === entryAbs) {
-            await rebuild(root, configPath);
-            ctx.server.ws.send({ type: 'full-reload' });
-          }
-        } catch {
-          /* ignore */
+      const isConfigFile =
+        ctx.file === resolve(root, 'scriptcable.config.ts') ||
+        ctx.file === resolve(root, 'scriptcable.json') ||
+        (configPath !== undefined && ctx.file === resolve(root, configPath));
+      if (!isConfigFile && !/\.(ts|js)$/.test(ctx.file)) return;
+      // Only resolve the config when the file could be the entry (or is a config)
+      if (!isConfigFile && lastEntryAbs && ctx.file !== lastEntryAbs) return;
+      // Rebuild when the config or the core entry changes
+      try {
+        const config = await loadProject(root, configPath);
+        lastEntryAbs = resolve(root, config.entry);
+        if (isConfigFile || ctx.file === lastEntryAbs) {
+          await rebuild(root, configPath);
+          ctx.server.ws.send({ type: 'full-reload' });
         }
+      } catch {
+        /* ignore */
       }
     },
   };

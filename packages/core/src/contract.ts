@@ -4,7 +4,7 @@ import type {
   ContractDiff,
   ContractSnapshot,
   ExportDef,
-  ScriptcableConfig,
+  ResolvedConfig,
   ScriptcableProfile,
 } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
@@ -56,7 +56,7 @@ export function snapshotFromProfile(profile: ScriptcableProfile): ContractSnapsh
   };
 }
 
-export function snapshotFromConfig(config: ScriptcableConfig): ContractSnapshot {
+export function snapshotFromConfig(config: ResolvedConfig): ContractSnapshot {
   return snapshotFromProfile(configToProfile(config));
 }
 

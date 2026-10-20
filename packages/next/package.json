@@ -1,7 +1,7 @@
 {
   "name": "@scriptcable/next",
   "version": "0.1.0",
-  "description": "Next.js integration \u2014 webpack plugin + Turbopack-friendly scriptcableBuild()",
+  "description": "Next.js integration — webpack plugin + Turbopack-friendly scriptcableBuild()",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "echo \"@scriptcable/next: no tests (skip)\""
+    "test": "bun test src/"
   },
   "dependencies": {
     "@scriptcable/core": "workspace:*",

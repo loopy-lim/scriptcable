@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   snapshotFromProfile,
@@ -7,6 +6,7 @@ import {
   readJsonFile,
   resolveProfile,
   loadProjectConfig,
+  loadConfigFile,
 } from '@scriptcable/core';
 import type { ContractSnapshot } from '@scriptcable/types';
 
@@ -17,13 +17,9 @@ export async function runDiff(opts: {
   failOnBreaking?: boolean;
 }): Promise<number> {
   const cwd = opts.cwd ?? process.cwd();
-  let config;
-  if (opts.configPath) {
-    const { loadConfig } = await import('@scriptcable/core');
-    config = loadConfig(JSON.parse(await readFile(resolve(cwd, opts.configPath), 'utf8')));
-  } else {
-    ({ config } = await loadProjectConfig(cwd));
-  }
+  const config = opts.configPath
+    ? await loadConfigFile(resolve(cwd, opts.configPath), cwd)
+    : (await loadProjectConfig(cwd)).config;
   const { profile } = await resolveProfile(config, cwd);
   const after = snapshotFromProfile(profile);
   const snapPath = resolve(cwd, opts.snapshot ?? '.scriptcable/contract.json');

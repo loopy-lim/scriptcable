@@ -20,7 +20,7 @@ bunx scriptcable build
 bun start
 ```
 
-`src/core.ts`와 `scriptcable.json`의 exports를 수정한 뒤 다시 빌드하세요.
+`src/core.ts`의 exports를 수정한 뒤 다시 빌드하세요. 설정 파일(`scriptcable.config.ts`)이 없어도 name·entry·exports는 자동 추론됩니다 — 아래 [제로 설정](#제로-설정-zero-config) 참고.
 
 ## 동작 방식
 
@@ -31,6 +31,67 @@ TypeScript 코어  →  scriptc 라이브러리 (WASM / .lib.a)  →  생성 클
 기본 산출물은 **네이티브**입니다. 브라우저처럼 네이티브를 쓸 수 없는 곳에서만 WASM을 선택하세요.
 
 Bun은 **bun:ffi**(내장)로 공유 라이브러리를 로드합니다. 순수 Node에서는 `koffi`를 선택적 폴백으로 설치할 수 있습니다.
+
+## 제로 설정 (Zero-config)
+
+설정 파일이 없어도 동작합니다. `package.json`과 표준 위치의 코어만 있으면 됩니다:
+
+```bash
+bunx scriptcable build          # name은 package.json에서, entry는 src/core.ts에서 추론
+```
+
+모든 값이 추론됩니다 (우선순위: 명시적 설정 > 추론):
+
+| 필드 | 추론 출처 |
+|------|-----------|
+| `exports` | 엔트리의 export 함수 TS 타입 |
+| `name` | `package.json` `name` (스코프 `@scope/my-pkg` → `scope_my_pkg`), 없으면 디렉터리 이름 |
+| `entry` | `src/core.ts` → `core.ts` → `src/index.ts` → `index.ts` 중 첫 존재 |
+| `prefix` | `name` + `_` |
+| `outDir` | `.scriptcable` |
+| `target` | `native` (WASM은 선택) |
+
+설정 파일은 재정의하고 싶은 값만 담습니다 — `name`/`entry`도 생략 가능:
+
+```ts
+// scriptcable.config.ts — 전부 선택
+import { defineConfig } from '@scriptcable/core';
+export default defineConfig({});            // 전부 추론
+export default defineConfig({ name: 'mycore' }); // entry는 추론
+```
+
+Vite / Next.js / Webpack 플러그인도 같은 해석을 씁니다 (`scriptcable.config.ts` 포함), 어댑터는 `.scriptcable`이 기본값:
+
+```ts
+import { createBunEngineFromOutDir } from '@scriptcable/bun';
+const engine = await createBunEngineFromOutDir(); // → ./.scriptcable
+```
+
+## 임포트 하나: `@scriptcable/client`
+
+모든 빌드는 생성된 클라이언트를 **실제 패키지**로 내보냅니다. `scriptcable build`가 `.scriptcable/generated/`에 패키지 매니페스트를 쓰고 `node_modules/@scriptcable/client`로 링크합니다. 앱 코드는 `.scriptcable/` 경로를 전혀 참조하지 않습니다:
+
+```ts
+import { createClient } from '@scriptcable/client';
+
+const client = await createClient();
+client.add(20, 22); // 42
+```
+
+export conditions가 환경별로 알맞은 플레이버를 골라 줍니다 — 앱 코드에는 분기가 없습니다:
+
+| 환경 | 플레이버 |
+|---|---|
+| Bun 런타임 | `bun.ts` (bun:ffi 네이티브) |
+| Node 런타임 — Next 서버 컴포넌트, 라우트 핸들러, 서버 액션 | `node.ts` (네이티브 공유 라이브러리, WASM 폴백) |
+| 프로젝트 파일을 서빙하는 브라우저 번들 (예: `vite dev`) | `browser.ts` (WASM — 최소 WASI 폴리필 내장, 인자 없이 동작) |
+| Metro (React Native) | `react-native.ts` (브리지 기반) |
+
+`browser` 플레이버는 생성 모듈 옆의 WASM을 fetch합니다 — 번들러가 프로젝트 파일을 서빙하는 곳(`vite dev`)에서 동작합니다. Next.js 클라이언트 그래프에서는 `<name>.wasm`을 정적 디렉터리에 복사하고 `createClient({ wasmUrl: '/<name>.wasm' })`로 호출하세요. 서버 코드는 아무 것도 필요 없습니다 — node 플레이버가 공유 라이브러리를 자동 로드합니다.
+
+플레이버를 고정하려면 서브패스를 씁니다: `@scriptcable/client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`. 에디터도 같은 패키지를 해석하므로 `paths` 설정 없이 TypeScript가 동작합니다. 번들러 플러그인도 같은 emit을 씁니다. `withScriptcable`(자동 `transpilePackages` 포함)과 Webpack/Rspack 플러그인은 `next dev` / `next build` 중에 링크를 만들고, Turbopack은 predev의 `scriptcableBuild()`가 처리합니다.
+
+링크가 없으면(첫 빌드 전 새 체크아웃) `scriptcable doctor`가 상태를 보고하고 복구합니다. CI에서 내구성을 원하면 의존성에 `"@scriptcable/client": "file:.scriptcable/generated"`을 추가하세요.
 
 ## 어댑터 퀵스타트
 
@@ -59,8 +120,8 @@ export default { plugins: [scriptcable()] };
 ### Next.js / Turbopack
 
 ```js
-import { withScriptca } from '@scriptcable/next';
-export default withScriptca({});
+import { withScriptcable } from '@scriptcable/next';
+export default withScriptcable({}); // transpilePackages 자동 추가
 // Turbopack: predev에서 scriptcableBuild()
 import { scriptcableBuild } from '@scriptcable/next';
 await scriptcableBuild();

@@ -3,9 +3,10 @@ import { access, constants, mkdir, writeFile, readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ScriptcableToolchainError } from '@scriptcable/types';
-import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
+import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
 import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
+import { ensureClientPackageLink } from './client-package.js';
 
 export type ToolchainInfo = {
   scriptcBin: string;
@@ -18,6 +19,8 @@ export type ToolchainInfo = {
   hasClang: boolean;
   zigPath?: string;
   clangPath?: string;
+  /** State of the `node_modules/@scriptcable/client` link — absent when nothing was generated yet. */
+  clientLink?: 'current' | 'linked' | 'repaired' | 'blocked';
 };
 
 async function which(cmd: string): Promise<string | undefined> {
@@ -152,6 +155,17 @@ export async function doctor(cwd = process.cwd()): Promise<ToolchainInfo> {
   const zigPath = (await which('zig')) ?? undefined;
   const clangPath = (await which('clang')) ?? undefined;
 
+  // Doctor doubles as the link repairer: if a previous build generated
+  // clients, make sure `@scriptcable/client` resolves (no-op when current).
+  let clientLink: ToolchainInfo['clientLink'];
+  const genDir = join(cwd, '.scriptcable', 'generated');
+  try {
+    await access(genDir);
+    clientLink = await ensureClientPackageLink(cwd, genDir);
+  } catch {
+    /* nothing generated yet */
+  }
+
   return {
     scriptcBin,
     version,
@@ -162,6 +176,7 @@ export async function doctor(cwd = process.cwd()): Promise<ToolchainInfo> {
     hasClang: Boolean(clangPath),
     zigPath,
     clangPath,
+    clientLink,
   };
 }
 
@@ -223,7 +238,7 @@ function scriptcInvoke(
 }
 
 export async function buildCore(
-  config: ScriptcableConfig,
+  config: ResolvedConfig,
   options: BuildOptions = {},
 ): Promise<BuildResult> {
   const cwd = options.cwd ?? process.cwd();

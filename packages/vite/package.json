@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "echo \"@scriptcable/vite: no tests (skip)\""
+    "test": "bun test"
   },
   "dependencies": {
     "@scriptcable/core": "workspace:*",

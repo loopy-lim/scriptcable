@@ -1,4 +1,4 @@
-import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
+import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
 
 export type CodegenTarget =
@@ -90,6 +90,8 @@ function genNodeClient(
   profile: ScriptcableProfile,
   sharedRelPath: string,
   wasmRelPath: string,
+  outDirRel = '.scriptcable/generated',
+  outDirRoot = '.scriptcable',
 ): string {
   const methods = methodBlock(profile);
   return `${header('node')}
@@ -103,9 +105,29 @@ import type { ScriptcableProfile } from '@scriptcable/types';
 import type { ScriptcableClient } from './types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_SHARED = join(__dirname, '${sharedRelPath}');
-const DEFAULT_WASM = join(__dirname, '${wasmRelPath}');
+// Bundlers may rewrite the module URL (e.g. .next/server chunks), so also
+// search the project's generated dir and outDir root, where buildCore
+// leaves the shared library / wasm.
+const SEARCH_DIRS = [
+  __dirname,
+  join(process.cwd(), '${outDirRel}'),
+  join(process.cwd(), '${outDirRoot}'),
+];
+const SHARED_NAME = '${sharedRelPath}';
+const WASM_NAME = '${wasmRelPath}';
 const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
+
+async function exists(path: string): Promise<boolean> {
+  try { await access(path); return true; } catch { return false; }
+}
+
+async function firstExisting(name: string): Promise<string | null> {
+  for (const dir of SEARCH_DIRS) {
+    const p = join(dir, name);
+    if (await exists(p)) return p;
+  }
+  return null;
+}
 
 export type CreateClientOptions = {
   sharedPath?: string;
@@ -115,21 +137,24 @@ export type CreateClientOptions = {
   callbacks?: Record<string, (...args: unknown[]) => unknown>;
 };
 
-async function exists(path: string): Promise<boolean> {
-  try { await access(path); return true; } catch { return false; }
-}
-
 export async function createClient(options: CreateClientOptions = {}): Promise<ScriptcableClient> {
-  const shared = options.sharedPath ?? DEFAULT_SHARED;
-  if (!options.preferWasm && await exists(shared)) {
-    const mod = await loadNativeLibrary(shared, PROFILE);
-    return {
+  if (!options.preferWasm) {
+    const shared = options.sharedPath ?? (await firstExisting(SHARED_NAME));
+    if (shared) {
+      const mod = await loadNativeLibrary(shared, PROFILE);
+      return {
 ${methods}
   dispose() { mod.dispose(); },
-    };
+      };
+    }
   }
-  const bytes = await readFile(options.wasmPath ?? DEFAULT_WASM);
-  const wasi = new WASI({ version: 'preview1', returnOnExit: true });
+  const wasmPath = options.wasmPath ?? (await firstExisting(WASM_NAME)) ?? join(SEARCH_DIRS[0], WASM_NAME);
+  const bytes = await readFile(wasmPath);
+  // node:wasi's WASI is structurally (not nominally) the adapter the wasm
+  // loader expects — the runtime shapes line up on preview1.
+  const wasi = new WASI({ version: 'preview1', returnOnExit: true }) as unknown as Parameters<
+    typeof loadWasmModule
+  >[1]['wasi'];
   const mod = await loadWasmModule(bytes, {
     profile: PROFILE,
     wasi,
@@ -149,8 +174,13 @@ function genBunClient(
   profile: ScriptcableProfile,
   sharedRelPath: string,
   wasmRelPath: string,
+  outDirRel?: string,
+  outDirRoot?: string,
 ): string {
-  return genNodeClient(profile, sharedRelPath, wasmRelPath).replace('Target: node', 'Target: bun');
+  return genNodeClient(profile, sharedRelPath, wasmRelPath, outDirRel, outDirRoot).replace(
+    'Target: node',
+    'Target: bun',
+  );
 }
 
 function genBrowserClient(profile: ScriptcableProfile, wasmRelPath: string): string {
@@ -164,6 +194,7 @@ function genBrowserClient(profile: ScriptcableProfile, wasmRelPath: string): str
 
   return `${header('browser')}
 import { loadWasmModule, type LoadedModule } from '@scriptcable/core/wasm';
+import { createMinimalWasi } from '@scriptcable/core/wasi';
 import type { ScriptcableProfile } from '@scriptcable/types';
 import type { ScriptcableClient } from './types.js';
 
@@ -173,20 +204,20 @@ const DEFAULT_URL = new URL('${wasmRelPath}', import.meta.url);
 export type CreateClientOptions = {
   wasmUrl?: string | URL;
   callbacks?: Record<string, (...args: unknown[]) => unknown>;
-  /** Browser WASI adapter with getImportObject() + initialize(instance) */
-  wasi: {
+  /** Optional WASI adapter — defaults to the built-in minimal polyfill. */
+  wasi?: {
     getImportObject(): WebAssembly.Imports;
     initialize(instance: WebAssembly.Instance): void;
   };
 };
 
-export async function createClient(options: CreateClientOptions): Promise<ScriptcableClient> {
+export async function createClient(options: CreateClientOptions = {}): Promise<ScriptcableClient> {
   const url = options.wasmUrl ?? DEFAULT_URL;
   const response = await fetch(url);
   const bytes = await response.arrayBuffer();
   const mod: LoadedModule = await loadWasmModule(bytes, {
     profile: PROFILE,
-    wasi: options.wasi,
+    wasi: options.wasi ?? createMinimalWasi(),
     callbacks: options.callbacks ?? {},
   });
   return {
@@ -313,7 +344,7 @@ function genLynxClient(profile: ScriptcableProfile, wasmRelPath: string): string
 }
 
 export function generateClients(
-  config: ScriptcableConfig,
+  config: ResolvedConfig,
   targets: CodegenTarget[],
   opts: { wasmFileName?: string; sharedFileName?: string; profile?: ScriptcableProfile } = {},
 ): CodegenResult {
@@ -331,12 +362,13 @@ export function generateClients(
   };
 
   for (const t of targets) {
+    const outDirRoot = config.outDir ?? '.scriptcable';
     switch (t) {
       case 'node':
-        files['node.ts'] = genNodeClient(profile, sharedRel, wasmRel);
+        files['node.ts'] = genNodeClient(profile, sharedRel, wasmRel, `${outDirRoot}/generated`, outDirRoot);
         break;
       case 'bun':
-        files['bun.ts'] = genBunClient(profile, sharedRel, wasmRel);
+        files['bun.ts'] = genBunClient(profile, sharedRel, wasmRel, `${outDirRoot}/generated`, outDirRoot);
         break;
       case 'browser':
         files['browser.ts'] = genBrowserClient(profile, wasmRel);

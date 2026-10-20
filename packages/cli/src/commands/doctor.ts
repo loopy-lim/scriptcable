@@ -20,6 +20,16 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
       console.log('  macOS:  xcode-select --install');
       return 1;
     }
+    if (info.clientLink) {
+      if (info.clientLink === 'blocked') {
+        console.log('  client:   @scriptcable/client link UNAVAILABLE');
+        console.log('    Fix: rerun `scriptcable build`, or add `"@scriptcable/client": "file:.scriptcable/generated"`');
+        console.log('    to dependencies and reinstall for a CI-durable link.');
+      } else {
+        const verb = info.clientLink === 'current' ? '✓' : '✓ (repaired)';
+        console.log(`  client:   @scriptcable/client → node_modules ${verb}`);
+      }
+    }
     console.log('\nOK — ready to build native cores.');
     console.log('  repeat builds are cached in .scriptcable/build-cache.json (scriptcable build --force to bypass)');
     console.log('Apple Silicon (M1/M2/M3): host builds are arm64 by default.');

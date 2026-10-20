@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **One client import for every host**: builds now publish the generated clients as a real package — `scriptcable build` (and the Vite / Next.js / Webpack plugins, via the shared `writeGeneratedClients` emit) writes a package manifest into `.scriptcable/generated/` and links it as `node_modules/@scriptcable/client`. App code imports `createClient` from `@scriptcable/client` with no knowledge of `.scriptcable/` paths. Export conditions resolve the flavor per environment (`bun` → bun:ffi, `node` → native shared lib, `browser` → WASM with an optional WASI adapter, `react-native` → bridge), and explicit subpaths (`/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`) pin one. Editors resolve the same package, so TypeScript works without `paths` config.
+- `writeGeneratedClients` / `writeClientPackage` / `ensureClientPackageLink` / `clientPackageManifest` in `@scriptcable/core` — the single emit point for client flavors, the `@scriptcable/client` package manifest, and the idempotent `node_modules` link (repairs dangling links, never touches a real package).
+- `withScriptcable` now merges `transpilePackages: ['@scriptcable/client']` into the Next config (webpack and Turbopack paths).
+- `scriptcable doctor` reports — and repairs — the `@scriptcable/client` link state.
+- `scriptcable build` logs the client import line and the `init` scaffold for bun/node hosts uses `@scriptcable/client` instead of a hard-coded `outDir`.
+- **Zero-config builds**: `scriptcable build` (and `diff`, bundler plugins, adapters) work with no `scriptcable.config.ts`/`scriptcable.json` — `name` is inferred from `package.json` (scoped names slugified, else the directory name) and `entry` from standard locations (`src/core.ts` > `core.ts` > `src/index.ts` > `index.ts`). Explicit config always wins; `name`/`entry` in a config file are now optional too.
+- `resolveProjectConfig` / `loadConfigFile` in `@scriptcable/core` — single resolution point; `--config`-style explicit paths accept `.ts` configs as well as `.json`.
+- Integration test building a real native core with no config file (`packages/cli`).
+
+### Changed
+- **Vite / Next.js / Webpack plugins read `scriptcable.config.ts`** (previously JSON-only, conflicting with `init`'s scaffolded TS config) and share the same zero-config resolution; when both config files exist, the TS config wins — same precedence as the CLI. The `configPath` plugin option is now opt-in instead of defaulting to `scriptcable.json`.
+- `ScriptcableConfig.name`/`entry` are optional in `@scriptcable/types` (`ResolvedConfig` = resolved shape used by `configToProfile`/`buildCore`/`generateClients`).
+- `createNodeEngine()` / `createBunEngineFromOutDir()` default `outDir` to `.scriptcable`.
+- Generated browser clients accept `createClient()` with no arguments — the WASI adapter is optional and defaults to the built-in minimal polyfill.
+- Generated node/bun clients also search the project-relative `.scriptcable/generated/` for the shared library/WASM, so bundled server runtimes (e.g. Next.js) resolve artifacts even when the module URL is rewritten.
+
 ## 0.3.0 — 2026-10-20
 
 ### Added

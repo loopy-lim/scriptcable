@@ -54,12 +54,19 @@ export type ScriptcableProfile = {
   callbacks?: CallbackDef[];
 };
 
-/** Project config (scriptcable.json). */
+/**
+ * Project config (scriptcable.config.ts / scriptcable.json).
+ *
+ * Zero-config: `name` and `entry` may be omitted — the build infers `name`
+ * from package.json (falling back to the directory name) and `entry` from
+ * standard locations (`src/core.ts` > `core.ts` > `src/index.ts` > `index.ts`).
+ * Explicit values always win over inference.
+ */
 export type ScriptcableConfig = {
-  /** Package / project name */
-  name: string;
-  /** Core entry relative to project root */
-  entry: string;
+  /** Package / project name — inferred from package.json when omitted */
+  name?: string;
+  /** Core entry relative to project root — inferred from standard locations when omitted */
+  entry?: string;
   /** Symbol prefix for the ABI */
   prefix?: string;
   /** Declared exports — when omitted, inferred from the TS entry source. */
@@ -79,6 +86,15 @@ export type ScriptcableConfig = {
   target?: 'native' | 'wasm' | 'both';
   optimization?: 'release' | 'dev' | 'speed';
 };
+
+/**
+ * A config whose required fields have been resolved — either read from the
+ * config file or inferred from package.json / standard entry locations.
+ * Produced by `resolveProjectConfig` / `resolveProfile`; required by
+ * `configToProfile`, `buildCore`, and `generateClients`.
+ */
+export type ResolvedConfig = ScriptcableConfig & { name: string; entry: string };
+
 
 export type EngineSupports = {
   cancel?: boolean;

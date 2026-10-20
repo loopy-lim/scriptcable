@@ -97,14 +97,16 @@ export default defineConfig({
     scripts.start = 'bun src/main.ts';
     await writeFile(
       join(root, 'src', 'main.ts'),
-      `import { createNodeEngine } from '@scriptcable/node';
+      `import { createClient } from '@scriptcable/client';
 
-const engine = await createNodeEngine({ outDir: '.scriptcable' });
+// Resolves through the node_modules link \`scriptcable build\` creates —
+// no paths to know. Run \`scriptcable build\` first if it doesn't resolve.
+const client = await createClient();
 console.log(JSON.stringify({
-  sum: engine.call('add', 20, 22),
-  hi: engine.call('greet', '${host}'),
+  sum: client.add(20, 22),
+  hi: client.greet('${host}'),
 }));
-engine.dispose?.();
+client.dispose();
 `,
     );
   } else if (host === 'vite') {
