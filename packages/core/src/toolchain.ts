@@ -232,18 +232,33 @@ export async function buildCore(
   await mkdir(outDir, { recursive: true });
 
   const info = await doctor(cwd);
-  const profile = configToProfile(config);
+  // Infer exports from the TS entry when not declared in scriptcable.json.
+  const { resolveProfile } = await import('./profile.js');
+  const { profile, inferred, skipped } = await resolveProfile(config, cwd);
+  if (inferred) {
+    console.log(`  inferred:  ${profile.exports.length} exports from ${config.entry} (no scriptcable.json exports declared)`);
+    for (const s of skipped) {
+      console.log(`  skipped:   ${s.name} — ${s.reason}`);
+    }
+  }
   const profilePath = join(outDir, 'profile.json');
   // scriptc resolves profile.entry relative to the profile file
   const entryAbs = resolve(cwd, config.entry);
   profile.entry = relative(outDir, entryAbs).replace(/\\/g, '/');
-  await writeFile(profilePath, JSON.stringify(profile, null, 2) + '\n');
+  // scriptc rejects unknown fields (paramNames/doc are codegen-only metadata)
+  const scriptcProfile = {
+    ...profile,
+    exports: profile.exports.map(({ paramNames: _pn, doc: _doc, ...e }) => e),
+  };
+  await writeFile(profilePath, JSON.stringify(scriptcProfile, null, 2) + '\n');
 
   const result: BuildResult = { profilePath, profile };
 
   // — build cache: skip scriptc + link when inputs are unchanged —
   const { computeBuildHash, isCachedBuild, markBuildDone } = await import('./build-cache.js');
-  const buildHash = await computeBuildHash({ cwd, config, profile, target });
+  const configInputs = [join(cwd, 'scriptcable.config.ts'), join(cwd, 'scriptcable.json')]
+    .filter((p) => p.startsWith(outDir) === false);
+  const buildHash = await computeBuildHash({ cwd, config, profile, target, extraInputs: configInputs });
   const wantedArtifacts =
     target === 'wasm'
       ? [join(outDir, `${config.name}.wasm`)]

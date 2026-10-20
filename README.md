@@ -24,7 +24,7 @@ bunx scriptcable build
 bun start
 ```
 
-Edit `src/core.ts` and declare exports in `scriptcable.json`, then rebuild.
+`init` scaffolds a typed `scriptcable.config.ts` (preferred) or `scriptcable.json`. **You never declare exports by hand** — they're inferred from your `src/core.ts` types (see below).
 
 ## How it works
 
@@ -32,11 +32,25 @@ Edit `src/core.ts` and declare exports in `scriptcable.json`, then rebuild.
 TypeScript core  →  scriptc library (WASM / .lib.a)  →  generated clients + adapters
 ```
 
-1. You declare the ABI surface in `scriptcable.json` (export names + param/return classes).
-2. `scriptcable build` writes a scriptc library profile, compiles with `scriptc build --lib` to a **native** `.lib.a`, links a loadable shared library, and generates typed clients.
+1. **Zero-duplication ABI**: `scriptcable build` parses `src/core.ts` with the TS compiler API and infers every ABI-mappable exported function — names, parameter names, JSDoc, and types (`number`→`f64`, `bigint`→`i64`, `Uint8Array`→`bytes`, aliases like `type UserId = u32` resolve automatically). Functions with unmappable types are skipped with a printed reason.
+2. `scriptcable build` writes a scriptc library profile, compiles with `scriptc build --lib` to a **native** `.lib.a`, links a loadable shared library, and generates typed clients that keep your parameter names and JSDoc.
 3. Bun loads via **bun:ffi** (built-in — no extra dependency). Plain Node can optionally load via koffi. Tauri / React Native / Lynx link the archive natively. Browser UIs opt into WASM.
 
 Default artifact is **native**. Use `"target": "wasm"` or `scriptcable build --target wasm` only where native cannot run (browsers).
+
+### Config: `scriptcable.config.ts` (typed, recommended)
+
+```ts
+import { defineConfig } from '@scriptcable/core';
+
+export default defineConfig({
+  name: 'mycore',
+  entry: 'src/core.ts',
+  // exports: inferred — add an explicit array only to pin/subset the surface
+});
+```
+
+JSON (`scriptcable.json`) still works for zero-dependency setups. The TS config wins when both exist.
 
 ## Packages
 

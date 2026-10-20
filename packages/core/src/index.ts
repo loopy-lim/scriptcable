@@ -7,3 +7,5 @@ export * from './native-loader.js';
 export * from './codegen.js';
 export * from './wasi-polyfill.js';
 export * from './build-cache.js';
+export * from './infer.js';
+export * from './config-loader.js';

@@ -1,4 +1,5 @@
 import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
+import { inferExportsFromSource } from './infer.js';
 
 /** Build a scriptc library profile from scriptcable.json. */
 export function configToProfile(config: ScriptcableConfig): ScriptcableProfile {
@@ -18,7 +19,7 @@ export function configToProfile(config: ScriptcableConfig): ScriptcableProfile {
         ? { callback_register_symbol: `${prefix}callback` }
         : {}),
     },
-    exports: config.exports.map((e) => ({
+    exports: (config.exports ?? []).map((e) => ({
       export: e.name,
       symbol: `${prefix}${e.name}`,
       params: e.params,
@@ -33,6 +34,41 @@ export function configToProfile(config: ScriptcableConfig): ScriptcableProfile {
     }));
   }
   return profile;
+}
+
+/**
+ * Resolve a config into a complete profile: when `exports` is omitted (or
+ * partially declared), infer the ABI surface from the TS entry source.
+ * Explicit declarations win; inferred functions fill the rest.
+ */
+export async function resolveProfile(
+  config: ScriptcableConfig,
+  cwd: string,
+): Promise<{ profile: ScriptcableProfile; inferred: boolean; skipped: Array<{ name: string; reason: string }> }> {
+  if (config.exports && config.exports.length > 0) {
+    return { profile: configToProfile(config), inferred: false, skipped: [] };
+  }
+  const { resolve } = await import('node:path');
+  const entryAbs = resolve(cwd, config.entry);
+  const { inferExportsFromFile } = await import('./infer.js');
+  const { exports: found, skipped } = await inferExportsFromFile(entryAbs);
+  if (found.length === 0) {
+    throw new Error(
+      `No ABI-mappable exports found in ${config.entry}. ` +
+        (skipped.length
+          ? `Skipped: ${skipped.map((s) => `${s.name} (${s.reason})`).join('; ')}. `
+          : '') +
+        'Use exported functions with explicit primitive types, or declare exports in scriptcable.json.',
+    );
+  }
+  const merged: ScriptcableConfig = { ...config, exports: found.map((f) => ({ name: f.name, params: f.params, returns: f.returns })) };
+  const profile = configToProfile(merged);
+  // carry paramNames + docs for codegen
+  profile.exports = profile.exports.map((e) => {
+    const src = found.find((f) => f.name === e.export);
+    return src ? { ...e, paramNames: src.paramNames, doc: src.doc } : e;
+  });
+  return { profile, inferred: true, skipped };
 }
 
 export function normalizePrefix(prefix: string): string {
@@ -60,8 +96,8 @@ export function loadConfig(raw: unknown): ScriptcableConfig {
   const o = raw as Record<string, unknown>;
   if (typeof o.name !== 'string' || !o.name) throw new Error('scriptcable.json: name is required');
   if (typeof o.entry !== 'string' || !o.entry) throw new Error('scriptcable.json: entry is required');
-  if (!Array.isArray(o.exports) || o.exports.length === 0) {
-    throw new Error('scriptcable.json: exports must be a non-empty array');
+  if (o.exports !== undefined && (!Array.isArray(o.exports) || o.exports.length === 0)) {
+    throw new Error('scriptcable.json: exports must be a non-empty array when present (or omit it to infer from the TS entry)');
   }
   return o as ScriptcableConfig;
 }
