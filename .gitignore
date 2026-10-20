@@ -2,6 +2,7 @@ node_modules/
 dist/
 dist-ts/
 .scriptc/
+.scriptcable/
 *.lib.a
 *.o
 *.wasm
@@ -14,16 +15,13 @@ coverage/
 *.tgz
 .cache/
 tmp/
-.scriptca/
-*.lib.a
 *.lib.ll
 packages/*/dist/
 *.so
 *.dylib
 *.dll
-scriptca-stubs.*
+scriptcable-stubs.*
 dist-test/
-target/
-.scriptca-static-work/
+.scriptcable-static-work/
 lib*.a
-!crates/**
+public/.scriptcable/

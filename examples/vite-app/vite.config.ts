@@ -1,14 +1,11 @@
 import { defineConfig } from 'vite';
-import scriptca from '@scriptca/vite';
+import scriptcable from '@scriptcable/vite';
 
 export default defineConfig({
-  plugins: [scriptca()],
+  plugins: [scriptcable()],
   build: { outDir: 'dist' },
   // Avoid prebundling the Node toolchain entry
   optimizeDeps: {
-    exclude: ['koffi', '@scriptca/core'],
-  },
-  ssr: {
-    external: ['koffi'],
+    exclude: ['@scriptcable/core'],
   },
 });

@@ -1,30 +1,30 @@
-/** @scriptca/node — Node.js adapter (native shared library by default; WASM opt-in). */
+/** @scriptcable/node — Node.js adapter (native shared library by default; WASM opt-in). */
 export {
   loadNativeLibrary,
   loadNativeFromOutDir,
   type NativeModule,
-} from '@scriptca/core/native';
+} from '@scriptcable/core/native';
 export {
   loadWasmFile,
   loadWasmModule,
   type LoadedModule,
   type LoadWasmOptions,
-} from '@scriptca/core/wasm';
-export { buildCore, doctor, configToProfile, snapshotFromConfig, linkSharedLibrary } from '@scriptca/core';
+} from '@scriptcable/core/wasm';
+export { buildCore, doctor, configToProfile, snapshotFromConfig, linkSharedLibrary } from '@scriptcable/core';
 export type {
   EngineClient,
   ScriptcaConfig,
   ScriptcaProfile,
   InvokeOptions,
-} from '@scriptca/types';
-export { ScriptcaError, ScriptcaToolchainError } from '@scriptca/types';
+} from '@scriptcable/types';
+export { ScriptcaError, ScriptcaToolchainError } from '@scriptcable/types';
 
-import { loadNativeFromOutDir, type NativeModule } from '@scriptca/core/native';
-import { loadWasmFile, type LoadedModule } from '@scriptca/core/wasm';
-import type { ScriptcaProfile, EngineClient } from '@scriptca/types';
+import { loadNativeFromOutDir, type NativeModule } from '@scriptcable/core/native';
+import { loadWasmFile, type LoadedModule } from '@scriptcable/core/wasm';
+import type { ScriptcaProfile, EngineClient } from '@scriptcable/types';
 import { access } from 'node:fs/promises';
 import { join } from 'node:path';
-import { sharedLibraryFileName } from '@scriptca/core';
+import { sharedLibraryFileName } from '@scriptcable/core';
 
 export type NodeClientOptions = {
   /** Directory containing profile.json + shared lib / wasm */
@@ -79,10 +79,10 @@ export async function createNodeEngine(
   }
 
   if (!(await exists(wasmPath))) {
-    throw new (await import('@scriptca/types')).ScriptcaError(
+    throw new (await import('@scriptcable/types')).ScriptcaError(
       'MISSING_ARTIFACT',
       `No native shared library (${soPath}) or WASM (${wasmPath}) found.`,
-      'Run: scriptca build   (native default)  or  scriptca build --target wasm',
+      'Run: scriptcable build   (native default)  or  scriptcable build --target wasm',
     );
   }
 

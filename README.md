@@ -1,30 +1,30 @@
 English | [Korean](./README.ko.md)
 
-# scriptca
+# scriptcable
 
-One **TypeScript** core → type-safe clients for **Node, Bun, Tauri, React Native, Lynx, Vite, and Next.js** — compiled by [Vercel scriptc](https://scriptc.dev) to a **native** library by default (`.lib.a` → `.so`/`.dylib`/`.dll`), with WASM as an opt-in fallback for browsers, with CI contracts that block breaking API changes.
+One **TypeScript** core → type-safe clients for **Bun, Node, Tauri, React Native, Lynx, Vite, and Next.js** — compiled by [Vercel scriptc](https://scriptc.dev) to a **native** library by default (`.lib.a` → `.so`/`.dylib`/`.dll`), with WASM as an opt-in fallback for browsers, with CI contracts that block breaking API changes.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Inspired by [rustra](https://github.com/loopy-lim/rustra) (Rust core → multi-host clients). scriptca swaps the Rust core for **scriptc**: you write ordinary TypeScript, scriptc compiles it, scriptca generates bindings and adapters.
+Inspired by [rustra](https://github.com/loopy-lim/rustra) (Rust core → multi-host clients). scriptcable swaps the Rust core for **scriptc**: you write ordinary TypeScript, scriptc compiles it, scriptcable generates bindings and adapters. **Everything here — tooling and apps — runs on [Bun](https://bun.sh).**
 
 ## 5-minute quickstart
 
-**Requirements:** Node.js ≥ 24 and `clang` (links the native shared library). Optional: [zig 0.13.x](https://ziglang.org/download/) only if you build `--target wasm`.
+**Requirements:** Bun ≥ 1.2 and `clang` (links the native shared library). Optional: [zig 0.13.x](https://ziglang.org/download/) only if you build `--target wasm`.
 
 ```bash
-# from this monorepo after pnpm install && pnpm build
-pnpm --filter @scriptca/cli exec scriptca init my-app
-# or once published: npx @scriptca/cli init my-app
+# from this monorepo after bun install && bun run build
+bun run --filter @scriptcable/cli exec scriptcable init my-app
+# or once published: bunx @scriptcable/cli init my-app
 
 cd my-app
-npm install
-npx scriptca doctor
-npx scriptca build
-npm start
+bun install
+bunx scriptcable doctor
+bunx scriptcable build
+bun start
 ```
 
-Edit `src/core.ts` and declare exports in `scriptca.json`, then rebuild.
+Edit `src/core.ts` and declare exports in `scriptcable.json`, then rebuild.
 
 ## How it works
 
@@ -32,109 +32,121 @@ Edit `src/core.ts` and declare exports in `scriptca.json`, then rebuild.
 TypeScript core  →  scriptc library (WASM / .lib.a)  →  generated clients + adapters
 ```
 
-1. You declare the ABI surface in `scriptca.json` (export names + param/return classes).
-2. `scriptca build` writes a scriptc library profile, compiles with `scriptc build --lib` to a **native** `.lib.a`, links a loadable shared library, and generates typed clients.
-3. Node loads via **koffi**; Bun via **bun:ffi**. Tauri / React Native / Lynx link the archive natively. Browser UIs opt into WASM.
+1. You declare the ABI surface in `scriptcable.json` (export names + param/return classes).
+2. `scriptcable build` writes a scriptc library profile, compiles with `scriptc build --lib` to a **native** `.lib.a`, links a loadable shared library, and generates typed clients.
+3. Bun loads via **bun:ffi** (built-in — no extra dependency). Plain Node can optionally load via koffi. Tauri / React Native / Lynx link the archive natively. Browser UIs opt into WASM.
 
-Default artifact is **native**. Use `"target": "wasm"` or `scriptca build --target wasm` only where native cannot run (browsers).
+Default artifact is **native**. Use `"target": "wasm"` or `scriptcable build --target wasm` only where native cannot run (browsers).
 
 ## Packages
 
 | Package | Role |
 |---------|------|
-| `@scriptca/cli` | `init` / `build` / `diff` / `doctor` |
-| `@scriptca/core` | profile, toolchain, WASM loader, contract hash, codegen |
-| `@scriptca/types` | shared types / errors |
-| `@scriptca/node` | Node WASI adapter |
-| `@scriptca/bun` | Bun adapter |
-| `@scriptca/tauri` | Tauri webview WASM + sidecar IPC |
-| `@scriptca/react-native` | RN bridge (mock + host bridge) |
-| `@scriptca/lynx` | Lynx + Rspeedy helpers |
-| `@scriptca/vite` | Vite plugin (build + HMR rebuild) |
-| `@scriptca/next` | Next.js webpack plugin + Turbopack `scriptcaBuild()` |
-| `@scriptca/webpack` | Webpack / Rspack / Rsbuild plugin |
-| `@scriptca/testing` | contract assert helpers |
+| `@scriptcable/cli` | `init` / `build` / `diff` / `doctor` |
+| `@scriptcable/core` | profile, toolchain, WASM loader, contract hash, codegen |
+| `@scriptcable/types` | shared types / errors |
+| `@scriptcable/node` | Node adapter (native shared library; koffi optional) |
+| `@scriptcable/bun` | Bun adapter (bun:ffi native by default) |
+| `@scriptcable/tauri` | Tauri invoke bridge |
+| `@scriptcable/react-native` | RN bridge (mock + host bridge) |
+| `@scriptcable/lynx` | Lynx + Rspeedy helpers |
+| `@scriptcable/vite` | Vite plugin (build + HMR rebuild) |
+| `@scriptcable/next` | Next.js webpack plugin + Turbopack `scriptcableBuild()` |
+| `@scriptcable/webpack` | Webpack / Rspack / Rsbuild plugin |
+| `@scriptcable/testing` | contract assert helpers |
 
 ## Adapter quickstarts
-
-### Node
-
-```bash
-pnpm --filter @scriptca/example-calculator-core build
-pnpm --filter @scriptca/example-node-app start
-```
-
-```ts
-import { createNodeEngine } from '@scriptca/node';
-const engine = await createNodeEngine({ outDir: '.scriptca' });
-engine.call('add', 20, 22); // 42  (native .so via koffi)
-```
 
 ### Bun
 
 ```bash
-pnpm --filter @scriptca/example-bun-app start
+bun run --filter @scriptcable/example-calculator-core build
+bun run --filter @scriptcable/example-bun-app start
 ```
+
+```ts
+import { createBunEngineFromOutDir } from '@scriptcable/bun';
+const engine = await createBunEngineFromOutDir('.scriptcable');
+engine.call('add', 20, 22); // 42  (native .dylib via bun:ffi)
+```
+
+### Node
+
+```bash
+bun run --filter @scriptcable/example-node-app start
+```
+
+Under Bun (default), native loading uses built-in `bun:ffi`. Under plain Node, install `koffi` as an optional fallback.
 
 ### Vite
 
 ```ts
 // vite.config.ts
-import scriptca from '@scriptca/vite';
-export default { plugins: [scriptca()] };
+import scriptcable from '@scriptcable/vite';
+export default { plugins: [scriptcable()] };
 ```
+
+Run vite with `bun --bun vite` so toolchain checks use the Bun runtime.
 
 ### Next.js / Turbopack
 
 ```js
 // next.config.mjs — webpack path
-import { withScriptca } from '@scriptca/next';
+import { withScriptca } from '@scriptcable/next';
 export default withScriptca({});
 
-// Turbopack: npm script predev → scriptcaBuild()
-import { scriptcaBuild } from '@scriptca/next';
-await scriptcaBuild();
+// Turbopack: predev script → scriptcableBuild()
+import { scriptcableBuild } from '@scriptcable/next';
+await scriptcableBuild();
 ```
 
 ### Tauri
 
 ```ts
-import { createTauriSidecarEngine } from '@scriptca/tauri';
+import { createTauriSidecarEngine } from '@scriptcable/tauri';
 const engine = createTauriSidecarEngine({ invoke, profile });
 ```
 
-Or load WASM in the webview (`scriptca build --hosts tauri`).
+In the Tauri Rust shell, link `scriptcable build`'s `lib{name}.a` (build script / `cc`) and wrap the C ABI symbols with `#[tauri::command]`.
 
 ### React Native
 
 ```ts
-import { createReactNativeEngine, createMockBridge } from '@scriptca/react-native';
+import { createReactNativeEngine, createMockBridge } from '@scriptcable/react-native';
 const engine = createReactNativeEngine(createMockBridge({ add: (a, b) => a + b }));
 ```
 
-Native linking of scriptc iOS/Android archives is documented by scriptc; not fully verified in this repo yet.
+Link the scriptc iOS/Android archives in your native module (Xcode / NDK CMake), then bridge with `createReactNativeEngine`.
 
 ### Lynx
 
-Use `@scriptca/webpack`'s `ScriptcaRspackPlugin` inside Rspeedy/Rsbuild, and `scriptca build --hosts lynx`.
+Use `@scriptcable/webpack`'s `ScriptcaRspackPlugin` inside Rspeedy/Rsbuild, and `scriptcable build --hosts lynx`.
 
 ## Contract gate (CI)
 
 ```bash
-scriptca build                 # writes .scriptca/contract.json
+scriptcable build                 # writes .scriptcable/contract.json
 # …change API…
-scriptca diff --fail-on-breaking   # exit 1 on removals / signature changes
+scriptcable diff --fail-on-breaking   # exit 1 on removals / signature changes
 ```
+
+## Performance
+
+Benchmarks live in `examples/bench-core` (`bun run bench`): native (bun:ffi) vs wasm (WASI) call latency/throughput plus cold/warm build times. Headline numbers on an M1 Max: **~75 ns/call on both engines**, cold core build **~0.5 s**, warm (cached) **~70 ms**. See [BENCHMARK.md](./BENCHMARK.md).
+
+Repeat builds are cached automatically — `scriptcable build --force` bypasses the cache.
 
 ## Monorepo scripts
 
 ```bash
-pnpm install
-pnpm build
-pnpm test
-pnpm --filter @scriptca/example-node-app start
-pnpm --filter @scriptca/example-bun-app start
+bun install
+bun run build
+bun run test
+bun run --filter @scriptcable/example-bun-app start
+bun run --filter @scriptcable/example-node-app start
 ```
+
+Note: `scriptc` must be a trusted dependency so Bun runs its install script (already configured in the root `package.json`).
 
 ## Limitations (from scriptc)
 
@@ -143,17 +155,6 @@ pnpm --filter @scriptca/example-bun-app start
 - String/bytes use `(ptr, len)` in / `(out_ptr, out_len)` out on the native boundary.
 - **clang** is required for the default native shared-library link.
 - WASM (`--target wasm`) still needs zig **0.13.x** with scriptc 0.3.x, plus a WASI polyfill in browsers.
-
-
-## Native hosts (Rust / C++)
-
-- `crates/scriptca-sys` — links `lib{name}.a`, safe wrappers
-- `crates/scriptca-tauri` — invoke-style commands for Tauri
-- `packages/react-native/cpp` & `packages/lynx/cpp` — CMake hosts
-
-```bash
-cargo test -p scriptca-sys && cargo run -p scriptca-tauri-example
-```
 
 ## License
 

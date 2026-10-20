@@ -1,23 +1,32 @@
 {
-  "name": "@scriptca/tauri",
+  "name": "@scriptcable/tauri",
   "version": "0.1.0",
-  "description": "Tauri 2 adapter — webview WASM or sidecar bridge",
+  "description": "Tauri 2 adapter \u2014 invoke bridge to a scriptcable native core",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
-  "files": ["dist", "LICENSE", "README.md"],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/*.test.js 2>/dev/null || node --test --experimental-strip-types src/*.test.ts"
+    "test": "bun test src/"
   },
   "dependencies": {
-    "@scriptca/core": "workspace:*",
-    "@scriptca/types": "workspace:*"
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/types": "workspace:*"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "bun": ">=1.2.0"
+  }
 }

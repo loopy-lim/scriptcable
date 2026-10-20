@@ -1,21 +1,22 @@
 {
-  "name": "@scriptca/example-next-app",
+  "name": "@scriptcable/example-next-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "pnpm --filter @scriptca/example-calculator-core exec scriptca build --target both && node -e \"import('@scriptca/next').then(m=>m.scriptcaBuild())\"",
-    "test:server": "pnpm build:core && node --experimental-strip-types src/server-action.ts",
-    "build": "pnpm build:core && node ./scripts/fake-next-build.mjs",
-    "test": "pnpm test:server && pnpm build"
+    "build:core": "scriptcable build --target both && bun -e \"import('@scriptcable/next').then(m=>m.scriptcableBuild())\"",
+    "test:server": "bun run build:core && bun src/server-action.ts",
+    "build": "bun run build:core && bun run scripts/fake-next-build.mjs",
+    "test": "bun run test:server && bun run build"
   },
   "dependencies": {
-    "@scriptca/next": "workspace:*",
-    "@scriptca/core": "workspace:*",
-    "@scriptca/node": "workspace:*",
-    "@scriptca/types": "workspace:*"
+    "@scriptcable/next": "workspace:*",
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/node": "workspace:*",
+    "@scriptcable/types": "workspace:*"
   },
   "devDependencies": {
+    "@scriptcable/cli": "workspace:*",
     "scriptc": "^0.3.6",
     "@scriptc/runtime-wasm32-wasi": "^0.3.6"
   }

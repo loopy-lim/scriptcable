@@ -8,5 +8,5 @@
     "noEmit": true,
     "allowJs": true
   },
-  "include": ["next.config.mjs", "scriptca.json"]
+  "include": ["next.config.mjs", "scriptcable.json"]
 }

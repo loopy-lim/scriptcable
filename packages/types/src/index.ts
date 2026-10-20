@@ -1,4 +1,4 @@
-/** @scriptca/types — shared EngineClient contract and errors. */
+/** @scriptcable/types — shared EngineClient contract and errors. */
 
 export type AbiClass =
   | 'f64'
@@ -50,7 +50,7 @@ export type ScriptcaProfile = {
   callbacks?: CallbackDef[];
 };
 
-/** Project config (scriptca.json). */
+/** Project config (scriptcable.json). */
 export type ScriptcaConfig = {
   /** Package / project name */
   name: string;

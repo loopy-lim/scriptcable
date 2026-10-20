@@ -6,8 +6,8 @@ import {
   diffContracts,
   formatDiff,
   readJsonFile,
-} from '@scriptca/core';
-import type { ContractSnapshot } from '@scriptca/types';
+} from '@scriptcable/core';
+import type { ContractSnapshot } from '@scriptcable/types';
 
 export async function runDiff(opts: {
   cwd?: string;
@@ -17,10 +17,10 @@ export async function runDiff(opts: {
 }): Promise<number> {
   const cwd = opts.cwd ?? process.cwd();
   const config = loadConfig(
-    JSON.parse(await readFile(resolve(cwd, opts.configPath ?? 'scriptca.json'), 'utf8')),
+    JSON.parse(await readFile(resolve(cwd, opts.configPath ?? 'scriptcable.json'), 'utf8')),
   );
   const after = snapshotFromConfig(config);
-  const snapPath = resolve(cwd, opts.snapshot ?? '.scriptca/contract.json');
+  const snapPath = resolve(cwd, opts.snapshot ?? '.scriptcable/contract.json');
   const before = await readJsonFile<ContractSnapshot>(snapPath);
   const diff = diffContracts(before, after);
   console.log(formatDiff(diff));

@@ -6,3 +6,4 @@ export * from './link-shared.js';
 export * from './native-loader.js';
 export * from './codegen.js';
 export * from './wasi-polyfill.js';
+export * from './build-cache.js';

@@ -6,7 +6,7 @@ import type {
   ExportDef,
   ScriptcaConfig,
   ScriptcaProfile,
-} from '@scriptca/types';
+} from '@scriptcable/types';
 import { configToProfile } from './profile.js';
 
 function normalizeExports(exports: ExportDef[]): ExportDef[] {

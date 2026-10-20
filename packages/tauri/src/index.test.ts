@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
 import { createTauriSidecarEngine } from './index.js';
-import type { ScriptcaProfile } from '@scriptca/types';
+import type { ScriptcaProfile } from '@scriptcable/types';
 
 const profile: ScriptcaProfile = {
   profile_format: 1,
@@ -23,6 +23,6 @@ describe('tauri sidecar', () => {
       },
     });
     assert.equal(await engine.invoke('add', [20, 22]), 42);
-    assert.deepEqual(calls[0], ['scriptca_add', { args: [20, 22] }]);
+    assert.deepEqual(calls[0], ['scriptcable_add', { args: [20, 22] }]);
   });
 });

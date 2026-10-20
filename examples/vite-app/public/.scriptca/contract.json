@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "name": "calculator",
+  "entry": "../../calculator-core/src/core.ts",
+  "prefix": "calc_",
+  "exports": [
+    {
+      "export": "add",
+      "symbol": "calc_add",
+      "params": [
+        "f64",
+        "f64"
+      ],
+      "returns": "f64"
+    },
+    {
+      "export": "greet",
+      "symbol": "calc_greet",
+      "params": [
+        "string"
+      ],
+      "returns": "string"
+    },
+    {
+      "export": "mul",
+      "symbol": "calc_mul",
+      "params": [
+        "f64",
+        "f64"
+      ],
+      "returns": "f64"
+    }
+  ],
+  "callbacks": [],
+  "hash": "412b2913f2714496"
+}

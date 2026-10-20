@@ -1,0 +1,13 @@
+{
+  "name": "bench",
+  "entry": "src/core.ts",
+  "prefix": "bench_",
+  "outDir": ".scriptcable",
+  "target": "both",
+  "exports": [
+    { "name": "add", "params": ["f64", "f64"], "returns": "f64" },
+    { "name": "fib", "params": ["f64"], "returns": "f64" },
+    { "name": "repeat", "params": ["string", "f64"], "returns": "string" },
+    { "name": "ping", "params": [], "returns": "f64" }
+  ]
+}

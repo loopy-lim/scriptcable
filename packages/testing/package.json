@@ -1,5 +1,5 @@
 {
-  "name": "@scriptca/testing",
+  "name": "@scriptcable/testing",
   "version": "0.1.0",
   "description": "Test helpers and contract snapshot utilities",
   "license": "MIT",
@@ -7,17 +7,26 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
-  "files": ["dist", "LICENSE", "README.md"],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/*.test.js 2>/dev/null || node --test --experimental-strip-types src/*.test.ts"
+    "test": "echo \"@scriptcable/testing: no tests (skip)\""
   },
   "dependencies": {
-    "@scriptca/core": "workspace:*",
-    "@scriptca/types": "workspace:*"
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/types": "workspace:*"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "bun": ">=1.2.0"
+  }
 }

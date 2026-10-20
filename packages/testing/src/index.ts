@@ -3,8 +3,8 @@ import {
   diffContracts,
   formatDiff,
   loadConfig,
-} from '@scriptca/core';
-import type { ContractSnapshot, ScriptcaConfig } from '@scriptca/types';
+} from '@scriptcable/core';
+import type { ContractSnapshot, ScriptcaConfig } from '@scriptcable/types';
 import { readFile } from 'node:fs/promises';
 
 export async function loadProjectConfig(path: string): Promise<ScriptcaConfig> {
@@ -22,3 +22,5 @@ export function assertContractCompatible(
 }
 
 export { snapshotFromConfig, diffContracts, formatDiff };
+export { bench, formatTable, formatComparison } from './bench.js';
+export type { BenchResult, BenchOptions, CompareRow } from './bench.js';

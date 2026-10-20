@@ -1,11 +1,12 @@
-import { withScriptca, scriptcaBuild } from '@scriptca/next';
+import { withScriptca, scriptcableBuild } from '@scriptcable/next';
 import { access } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { sharedLibraryFileName } from '@scriptcable/core';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const gen = await scriptcaBuild({ cwd: root });
-await access(join(root, '.scriptca', 'libcalculator.so'));
+const gen = await scriptcableBuild({ cwd: root });
+await access(join(root, '.scriptcable', sharedLibraryFileName('calculator')));
 
 const cfg = withScriptca({ reactStrictMode: true });
 if (typeof cfg.webpack !== 'function') throw new Error('missing webpack hook');

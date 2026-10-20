@@ -1,4 +1,4 @@
-import { withScriptca } from '@scriptca/next';
+import { withScriptca } from '@scriptcable/next';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

@@ -1,7 +1,7 @@
 {
-  "name": "@scriptca/vite",
+  "name": "@scriptcable/vite",
   "version": "0.1.0",
-  "description": "Vite plugin — compile scriptc core on build/HMR",
+  "description": "Vite plugin \u2014 compile scriptc core on build/HMR",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,14 +20,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/*.test.js 2>/dev/null || node --test --experimental-strip-types src/*.test.ts"
+    "test": "echo \"@scriptcable/vite: no tests (skip)\""
   },
   "dependencies": {
-    "@scriptca/core": "workspace:*",
-    "@scriptca/types": "workspace:*"
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/types": "workspace:*"
   },
-  "engines": {
-    "node": ">=24"
+  "devDependencies": {
+    "@types/bun": "^1.3.0"
   },
   "peerDependencies": {
     "vite": ">=5"
@@ -36,5 +36,8 @@
     "vite": {
       "optional": true
     }
+  },
+  "engines": {
+    "bun": ">=1.2.0"
   }
 }

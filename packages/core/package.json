@@ -1,7 +1,7 @@
 {
-  "name": "@scriptca/core",
+  "name": "@scriptcable/core",
   "version": "0.1.0",
-  "description": "scriptca core — profile generation, scriptc toolchain, WASM loader, contract hashing",
+  "description": "scriptcable core \u2014 profile generation, scriptc toolchain, WASM loader, contract hashing",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -52,19 +52,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsc -p tsconfig.test.json && node --test dist-test/contract.test.js"
+    "test": "bun test src/"
   },
   "dependencies": {
-    "@scriptca/types": "workspace:*",
-    "koffi": "^3.3.3"
-  },
-  "engines": {
-    "node": ">=24"
-  },
-  "optionalDependencies": {
-    "koffi": "^3.3.3"
+    "@scriptcable/types": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0"
+    "@types/bun": "^1.3.0"
+  },
+  "engines": {
+    "bun": ">=1.2.0"
   }
 }

@@ -1,14 +1,15 @@
 # Tauri example (native)
 
-Links the scriptca/scriptc native shared library into Rust via `scriptca-sys`,
-then exposes invoke-style commands through `scriptca-tauri`.
+`scriptcable build` produces `libcalculator.a` + `libcalculator.dylib`.
+In your own Tauri app, link the archive from a Rust build script and expose
+`#[tauri::command]`s that call the C ABI symbols (`calc_add`, `calc_greet`, …).
+
+This example verifies the **webview bridge contract**
+(`createTauriSidecarEngine`) that the Tauri shell implements:
 
 ```bash
-pnpm --filter @scriptca/example-calculator-core build   # produces calculator.so
-cargo test -p scriptca-sys
-cargo run -p scriptca-tauri-example
+bun run test    # builds the core, runs the bridge test
 ```
 
 A full `tauri build` (webview + bundler) needs the Tauri CLI and a WebView on
-the host; this example verifies the **native FFI path** that a Tauri `build.rs`
-would use.
+the host — the native FFI path lives in the Tauri app, not this repo.

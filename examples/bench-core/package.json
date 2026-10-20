@@ -1,0 +1,21 @@
+{
+  "name": "@scriptcable/example-bench-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "scriptcable build --target both --hosts node,bun,browser",
+    "doctor": "scriptcable doctor",
+    "contract:check": "scriptcable diff",
+    "bench": "bun src/bench.ts"
+  },
+  "dependencies": {
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/testing": "workspace:*"
+  },
+  "devDependencies": {
+    "@scriptcable/cli": "workspace:*",
+    "scriptc": "^0.3.6",
+    "@scriptc/runtime-wasm32-wasi": "^0.3.6"
+  }
+}

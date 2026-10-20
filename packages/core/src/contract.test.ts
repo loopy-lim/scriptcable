@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
 import { snapshotFromConfig, diffContracts } from './contract.js';
-import type { ScriptcaConfig } from '@scriptca/types';
+import type { ScriptcaConfig } from '@scriptcable/types';
 
 const base: ScriptcaConfig = {
   name: 'calc',

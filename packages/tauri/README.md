@@ -1,10 +1,12 @@
-# @scriptca/tauri
+# @scriptcable/tauri
 
-**Native-first:** link `scriptca build`’s `.lib.a` from Rust (`cc` / `build.rs`) and
-expose each export via Tauri commands. Use `createTauriSidecarEngine({ invoke, profile })`.
+**Native-first:** link `scriptcable build`'s `lib{name}.a` inside your own Tauri
+Rust shell (build script / `cc`) and wrap the C ABI symbols with
+`#[tauri::command]`. Bridge from the webview with
+`createTauriSidecarEngine({ invoke, profile })`.
 
 ```ts
-import { createTauriSidecarEngine } from '@scriptca/tauri';
+import { createTauriSidecarEngine } from '@scriptcable/tauri';
 import { invoke } from '@tauri-apps/api/core';
 
 const engine = createTauriSidecarEngine({ invoke, profile });

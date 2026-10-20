@@ -1,24 +1,25 @@
 {
-  "name": "@scriptca/example-vite-app",
+  "name": "@scriptcable/example-vite-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "pnpm --filter @scriptca/example-calculator-core exec scriptca build --target both && node ./scripts/sync-public.mjs",
-    "dev": "pnpm build:core && vite",
-    "build": "pnpm build:core && vite build",
-    "test:ssr": "pnpm build:core && node --experimental-strip-types src/ssr.ts",
-    "test:wasm": "pnpm build:core && node --experimental-strip-types src/wasm-smoke.ts",
-    "test": "pnpm test:ssr && pnpm test:wasm && pnpm build"
+    "build:core": "scriptcable build --target both --hosts browser,node && bun run scripts/sync-public.mjs",
+    "dev": "bun run build:core && bun --bun vite",
+    "build": "bun run build:core && bun --bun vite build",
+    "test:ssr": "bun run build:core && bun src/ssr.ts",
+    "test:wasm": "bun run build:core && bun src/wasm-smoke.ts",
+    "test": "bun run test:ssr && bun run test:wasm && bun run build"
   },
   "dependencies": {
-    "@scriptca/core": "workspace:*",
-    "@scriptca/node": "workspace:*",
-    "@scriptca/example-calculator-core": "workspace:*",
-    "@scriptca/types": "workspace:*"
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/node": "workspace:*",
+    "@scriptcable/example-calculator-core": "workspace:*",
+    "@scriptcable/types": "workspace:*"
   },
   "devDependencies": {
-    "@scriptca/vite": "workspace:*",
+    "@scriptcable/cli": "workspace:*",
+    "@scriptcable/vite": "workspace:*",
     "scriptc": "^0.3.6",
     "@scriptc/runtime-wasm32-wasi": "^0.3.6",
     "vite": "^6.0.0"

@@ -1,16 +1,16 @@
 {
-  "name": "@scriptca/example-node-app",
+  "name": "@scriptcable/example-node-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "prestart": "pnpm --filter @scriptca/example-calculator-core build",
-    "start": "node --experimental-strip-types src/main.ts",
-    "test": "node --experimental-strip-types --test src/main.test.ts"
+    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "start": "bun run build:core && bun src/main.ts",
+    "test": "bun run build:core && bun test src/"
   },
   "dependencies": {
-    "@scriptca/node": "workspace:*",
-    "@scriptca/core": "workspace:*",
-    "@scriptca/example-calculator-core": "workspace:*"
+    "@scriptcable/node": "workspace:*",
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/example-calculator-core": "workspace:*"
   }
 }

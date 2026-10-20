@@ -1,0 +1,40 @@
+{
+  "profile_format": 1,
+  "name": "calculator",
+  "entry": "../../calculator-core/src/core.ts",
+  "emission": "llvm",
+  "optimization": "release",
+  "abi": {
+    "prefix": "calc_",
+    "init_symbol": "calc_init",
+    "sink_register_symbol": "calc_sink"
+  },
+  "exports": [
+    {
+      "export": "add",
+      "symbol": "calc_add",
+      "params": [
+        "f64",
+        "f64"
+      ],
+      "returns": "f64"
+    },
+    {
+      "export": "mul",
+      "symbol": "calc_mul",
+      "params": [
+        "f64",
+        "f64"
+      ],
+      "returns": "f64"
+    },
+    {
+      "export": "greet",
+      "symbol": "calc_greet",
+      "params": [
+        "string"
+      ],
+      "returns": "string"
+    }
+  ]
+}

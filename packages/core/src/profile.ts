@@ -1,6 +1,6 @@
-import type { ScriptcaConfig, ScriptcaProfile } from '@scriptca/types';
+import type { ScriptcaConfig, ScriptcaProfile } from '@scriptcable/types';
 
-/** Build a scriptc library profile from scriptca.json. */
+/** Build a scriptc library profile from scriptcable.json. */
 export function configToProfile(config: ScriptcaConfig): ScriptcaProfile {
   const prefix = normalizePrefix(config.prefix ?? `${slug(config.name)}_`);
   const hasCallbacks = (config.callbacks?.length ?? 0) > 0;
@@ -55,13 +55,13 @@ function slug(name: string): string {
 
 export function loadConfig(raw: unknown): ScriptcaConfig {
   if (!raw || typeof raw !== 'object') {
-    throw new Error('scriptca.json must be an object');
+    throw new Error('scriptcable.json must be an object');
   }
   const o = raw as Record<string, unknown>;
-  if (typeof o.name !== 'string' || !o.name) throw new Error('scriptca.json: name is required');
-  if (typeof o.entry !== 'string' || !o.entry) throw new Error('scriptca.json: entry is required');
+  if (typeof o.name !== 'string' || !o.name) throw new Error('scriptcable.json: name is required');
+  if (typeof o.entry !== 'string' || !o.entry) throw new Error('scriptcable.json: entry is required');
   if (!Array.isArray(o.exports) || o.exports.length === 0) {
-    throw new Error('scriptca.json: exports must be a non-empty array');
+    throw new Error('scriptcable.json: exports must be a non-empty array');
   }
   return o as ScriptcaConfig;
 }

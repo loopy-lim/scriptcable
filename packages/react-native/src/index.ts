@@ -1,11 +1,11 @@
 /**
- * @scriptca/react-native — bridge adapter.
+ * @scriptcable/react-native — bridge adapter.
  *
  * Verified here: typed bridge + unit tests.
  * Not verified on device: linking scriptc `.lib.a` via Nitro/JSI, or WASM runtimes.
  */
-import type { EngineClient, ScriptcaProfile } from '@scriptca/types';
-import { ScriptcaError } from '@scriptca/types';
+import type { EngineClient, ScriptcaProfile } from '@scriptcable/types';
+import { ScriptcaError } from '@scriptcable/types';
 
 export type ReactNativeBridge = {
   call(exportName: string, args: unknown[]): unknown | Promise<unknown>;

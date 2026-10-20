@@ -1,8 +1,8 @@
-# @scriptca/cli
+# @scriptcable/cli
 
 ```bash
-npx @scriptca/cli init my-app
-cd my-app && npm install && npx scriptca build && npm start
+bunx @scriptcable/cli init my-app
+cd my-app && bun install && bunx scriptcable build && bun start
 ```
 
 Commands: `init`, `build`, `diff`, `doctor`.

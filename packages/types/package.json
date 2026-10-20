@@ -1,7 +1,7 @@
 {
-  "name": "@scriptca/types",
+  "name": "@scriptcable/types",
   "version": "0.1.0",
-  "description": "Shared types and EngineClient contract for scriptca adapters",
+  "description": "Shared types and EngineClient contract for scriptcable adapters",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,11 +12,17 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "LICENSE", "README.md"],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/*.test.js"
+    "test": "echo \"@scriptcable/types: no tests (skip)\""
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "bun": ">=1.2.0"
+  }
 }

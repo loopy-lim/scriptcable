@@ -2,8 +2,8 @@
  * Shared WASI Preview 1 reactor loader for scriptc library WASM modules.
  * Works in Node 24+ (node:wasi) and can be adapted for Bun / browsers.
  */
-import type { AbiClass, CallbackDef, ExportDef, ScriptcaProfile } from '@scriptca/types';
-import { ScriptcaError } from '@scriptca/types';
+import type { AbiClass, CallbackDef, ExportDef, ScriptcaProfile } from '@scriptcable/types';
+import { ScriptcaError } from '@scriptcable/types';
 
 export type WasmExports = WebAssembly.Exports & {
   memory: WebAssembly.Memory;

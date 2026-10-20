@@ -1,15 +1,16 @@
-import { describe, it, before } from 'node:test';
+import { describe, it, beforeAll } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createNodeEngineFromOutDir } from '@scriptca/node';
+import { createNodeEngineFromOutDir } from '@scriptcable/node';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { access } from 'node:fs/promises';
+import { sharedLibraryFileName } from '@scriptcable/core';
 
-const outDir = join(dirname(fileURLToPath(import.meta.url)), '../../calculator-core/.scriptca');
+const outDir = join(dirname(fileURLToPath(import.meta.url)), '../../calculator-core/.scriptcable');
 
 describe('node e2e', () => {
-  before(async () => {
-    await access(join(outDir, 'libcalculator.so'));
+  beforeAll(async () => {
+    await access(join(outDir, sharedLibraryFileName('calculator')));
   });
 
   it('add/mul/greet', async () => {

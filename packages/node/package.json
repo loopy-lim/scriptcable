@@ -1,7 +1,7 @@
 {
-  "name": "@scriptca/node",
+  "name": "@scriptcable/node",
   "version": "0.1.0",
-  "description": "Node.js adapter — load scriptc WASM via node:wasi",
+  "description": "Node.js adapter (native shared library by default; WASM opt-in)",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,12 +20,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/*.test.js 2>/dev/null || node --test --experimental-strip-types src/*.test.ts"
+    "test": "bun test src/"
   },
   "dependencies": {
-    "@scriptca/core": "workspace:*",
-    "@scriptca/types": "workspace:*",
-    "koffi": "^3.3.3"
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0"
   },
   "engines": {
     "node": ">=24"

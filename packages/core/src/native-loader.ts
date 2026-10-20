@@ -1,9 +1,9 @@
 /**
  * Load a scriptc native shared library and call C ABI exports.
- * Bun → bun:ffi; Node → koffi.
+ * Bun → bun:ffi (default engine, built-in); plain Node → optional koffi fallback.
  */
-import type { AbiClass, ExportDef, ScriptcaProfile } from '@scriptca/types';
-import { ScriptcaError } from '@scriptca/types';
+import type { AbiClass, ExportDef, ScriptcaProfile } from '@scriptcable/types';
+import { ScriptcaError } from '@scriptcable/types';
 import { readFile } from 'node:fs/promises';
 import { sharedLibraryFileName } from './link-shared.js';
 
@@ -84,14 +84,16 @@ async function bindBun(soPath: string, profile: ScriptcaProfile): Promise<FfiBin
 }
 
 async function bindKoffi(soPath: string, profile: ScriptcaProfile): Promise<FfiBinding> {
-  let koffiMod: typeof import('koffi');
+  type KoffiModule = typeof import('koffi');
+  let koffiMod: KoffiModule;
   try {
     koffiMod = await import('koffi');
   } catch {
     throw new ScriptcaError(
       'MISSING_DEP',
-      'koffi is required to load native scriptca libraries under Node.js.',
-      'Install it: npm install koffi\n(Bun uses built-in bun:ffi and does not need koffi.)',
+      'koffi is an optional fallback for running scriptcable native libraries under plain Node.js.',
+      'Bun is the default engine and loads native libraries with built-in bun:ffi — no extra dependency.\n' +
+        'Node fallback only: npm install koffi',
     );
   }
   const koffi = koffiMod.default ?? koffiMod;
@@ -150,8 +152,7 @@ function makeKoffiFunc(
   koffi: { decode: (ptr: unknown, type: string, len?: number) => unknown },
   lib: { func: (sig: string) => (...args: unknown[]) => unknown },
   e: ExportDef,
-): (...args: unknown[]) => unknown {
-  const argParts: string[] = [];
+): (...args: unknown[]) => unknown {  const argParts: string[] = [];
   for (const p of e.params) {
     if (p === 'string' || p === 'bytes') argParts.push('const uint8_t *', 'int64_t');
     else if (p === 'cstring') argParts.push('const char *');

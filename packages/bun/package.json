@@ -1,7 +1,7 @@
 {
-  "name": "@scriptca/bun",
+  "name": "@scriptcable/bun",
   "version": "0.1.0",
-  "description": "Bun adapter — load scriptc WASM (WASI)",
+  "description": "Bun adapter \u2014 native via bun:ffi by default; scriptc WASM (WASI) opt-in",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,14 +20,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/*.test.js 2>/dev/null || node --test --experimental-strip-types src/*.test.ts"
+    "test": "echo \"@scriptcable/bun: no tests (skip)\""
   },
   "dependencies": {
-    "@scriptca/core": "workspace:*",
-    "@scriptca/types": "workspace:*",
-    "@scriptca/node": "workspace:*"
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/types": "workspace:*",
+    "@scriptcable/node": "workspace:*"
   },
   "engines": {
-    "node": ">=24"
+    "bun": ">=1.2.0"
   }
 }

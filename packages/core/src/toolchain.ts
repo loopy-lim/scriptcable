@@ -2,15 +2,18 @@ import { spawn } from 'node:child_process';
 import { access, constants, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, relative, resolve } from 'node:path';
-import { ScriptcaToolchainError } from '@scriptca/types';
-import type { ScriptcaConfig, ScriptcaProfile } from '@scriptca/types';
+import { ScriptcaToolchainError } from '@scriptcable/types';
+import type { ScriptcaConfig, ScriptcaProfile } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
 import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
 
 export type ToolchainInfo = {
   scriptcBin: string;
   version: string;
+  /** JS runtime driving the toolchain — Bun is the default engine. */
+  runtime: 'bun' | 'node';
   nodeVersion: string;
+  bunVersion?: string;
   hasZig: boolean;
   hasClang: boolean;
   zigPath?: string;
@@ -69,7 +72,7 @@ async function tryResolveScriptcFrom(dir: string): Promise<string | undefined> {
   return undefined;
 }
 
-/** Resolve scriptc binary: walk up from cwd, then PATH, then auto-install. */
+/** Resolve scriptc binary: walk up from cwd, then PATH, then auto-install with bun. */
 export async function resolveScriptc(cwd = process.cwd()): Promise<string> {
   let dir = resolve(cwd);
   for (let i = 0; i < 8; i++) {
@@ -83,13 +86,12 @@ export async function resolveScriptc(cwd = process.cwd()): Promise<string> {
   const onPath = await which('scriptc');
   if (onPath) return onPath;
 
-  const install = await run('npm', ['install', '--save-dev', 'scriptc@^0.3.6'], { cwd });
+  const install = await run('bun', ['add', '--dev', 'scriptc@^0.3.6'], { cwd });
   if (install.code !== 0) {
     throw new ScriptcaToolchainError(
       'scriptc is not installed and auto-install failed.',
-      'Install Node.js >= 24, then run: npm install -D scriptc\n' +
-        'Keep install scripts enabled (npm needs them for the native compiler).\n' +
-        'In a pnpm workspace, add scriptc to the package that runs the build.\n' +
+      'Install Bun 1.2+ (https://bun.sh), then run: bun add -d scriptc\n' +
+        'Bun runs scriptc install scripts for trusted deps; keep them enabled.\n' +
         install.stderr.slice(0, 500),
     );
   }
@@ -107,14 +109,36 @@ export async function scriptcVersion(bin: string): Promise<string> {
   return r.stdout.trim();
 }
 
+function compareVersions(a: string, b: string): number {
+  const pa = a.split('.').map((n) => Number.parseInt(n, 10) || 0);
+  const pb = b.split('.').map((n) => Number.parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
 export async function doctor(cwd = process.cwd()): Promise<ToolchainInfo> {
   const nodeVersion = process.version;
-  const major = Number(nodeVersion.slice(1).split('.')[0]);
-  if (major < 24) {
+  const bunVersion = process.versions.bun;
+  const runtime: 'bun' | 'node' = bunVersion ? 'bun' : 'node';
+
+  // Bun is the primary engine; plain Node >= 24 is still accepted for adapters.
+  if (runtime === 'bun' && compareVersions(bunVersion, '1.2.0') < 0) {
     throw new ScriptcaToolchainError(
-      `Node.js ${nodeVersion} is too old (scriptc requires >= 24).`,
-      'Install Node 24+: https://nodejs.org/ or `nvm install 24`',
+      `Bun ${bunVersion} is too old (scriptcable requires >= 1.2.0).`,
+      'Upgrade: curl -fsSL https://bun.sh/install | bash',
     );
+  }
+  if (runtime === 'node') {
+    const major = Number(nodeVersion.slice(1).split('.')[0]);
+    if (major < 24) {
+      throw new ScriptcaToolchainError(
+        `Node.js ${nodeVersion} is too old (scriptc requires >= 24).`,
+        'Prefer Bun (https://bun.sh) or install Node 24+: https://nodejs.org/',
+      );
+    }
   }
 
   let scriptcBin: string;
@@ -131,7 +155,9 @@ export async function doctor(cwd = process.cwd()): Promise<ToolchainInfo> {
   return {
     scriptcBin,
     version,
+    runtime,
     nodeVersion,
+    bunVersion,
     hasZig: Boolean(zigPath),
     hasClang: Boolean(clangPath),
     zigPath,
@@ -145,6 +171,8 @@ export type BuildOptions = {
   target?: 'wasm' | 'native' | 'both';
   outDir?: string;
   env?: NodeJS.ProcessEnv;
+  /** Bypass the build cache (default: false — cached hits skip scriptc + link) */
+  force?: boolean;
 };
 
 export type BuildResult = {
@@ -155,6 +183,8 @@ export type BuildResult = {
   /** Loadable shared library linked from the archive (.so/.dylib/.dll) */
   sharedPath?: string;
   profile: ScriptcaProfile;
+  /** True when this result came from the build cache (no recompile) */
+  cached?: boolean;
 };
 
 async function ensureRuntimePack(cwd: string, target: 'wasm' | 'native'): Promise<void> {
@@ -167,8 +197,8 @@ async function ensureRuntimePack(cwd: string, target: 'wasm' | 'native'): Promis
     const info = await doctor(cwd);
     const ver = info.version.replace(/^v/, '');
     const r = await run(
-      'npm',
-      ['install', '--save-dev', `@scriptc/runtime-wasm32-wasi@${ver}`],
+      'bun',
+      ['add', '--dev', `@scriptc/runtime-wasm32-wasi@${ver}`],
       { cwd },
     );
     if (r.code !== 0) {
@@ -185,7 +215,7 @@ function scriptcInvoke(
   bin: string,
   args: string[],
 ): { cmd: string; args: string[] } {
-  // Prefer running via node if it's a .js entry
+  // Prefer running via the JS engine if it's a .js entry (works under bun and node)
   if (bin.endsWith('.js') || bin.endsWith('.mjs')) {
     return { cmd: process.execPath, args: [bin, ...args] };
   }
@@ -197,7 +227,7 @@ export async function buildCore(
   options: BuildOptions = {},
 ): Promise<BuildResult> {
   const cwd = options.cwd ?? process.cwd();
-  const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptca');
+  const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptcable');
   const target = options.target ?? config.target ?? 'native';
   await mkdir(outDir, { recursive: true });
 
@@ -210,6 +240,31 @@ export async function buildCore(
   await writeFile(profilePath, JSON.stringify(profile, null, 2) + '\n');
 
   const result: BuildResult = { profilePath, profile };
+
+  // — build cache: skip scriptc + link when inputs are unchanged —
+  const { computeBuildHash, isCachedBuild, markBuildDone } = await import('./build-cache.js');
+  const buildHash = await computeBuildHash({ cwd, config, profile, target });
+  const wantedArtifacts =
+    target === 'wasm'
+      ? [join(outDir, `${config.name}.wasm`)]
+      : target === 'both'
+        ? [join(outDir, `${config.name}.wasm`), join(outDir, sharedLibraryFileName(config.name))]
+        : [join(outDir, sharedLibraryFileName(config.name))];
+  const cacheHit =
+    options.force !== true &&
+    (await isCachedBuild({ outDir, target, hash: buildHash, artifactPaths: wantedArtifacts }));
+
+  if (cacheHit) {
+    if (target === 'wasm' || target === 'both') {
+      result.wasmPath = join(outDir, `${config.name}.wasm`);
+    }
+    if (target === 'native' || target === 'both') {
+      result.nativePath = join(outDir, `${config.name}.lib.a`);
+      result.sharedPath = join(outDir, sharedLibraryFileName(config.name));
+    }
+    result.cached = true;
+    return result;
+  }
 
   const runBuild = async (kind: 'wasm' | 'native') => {
     if (kind === 'wasm') {
@@ -242,7 +297,7 @@ export async function buildCore(
     if (r.code !== 0) {
       throw new ScriptcaToolchainError(
         `scriptc ${kind} build failed:\n${r.stderr || r.stdout}`,
-        'Run `scriptca doctor` and `scriptc coverage <entry>` for details.',
+        'Run `scriptcable doctor` and `scriptc coverage <entry>` for details.',
       );
     }
     return outPath;
@@ -258,12 +313,14 @@ export async function buildCore(
       outPath: join(outDir, sharedLibraryFileName(config.name)),
       cwd,
     });
-    // Self-contained static archive for Rust/C++ (includes promise stubs)
+    // Self-contained static archive for hosts that link natively (Tauri/RN/Lynx)
     await buildCompleteStaticArchive({
       archivePath: result.nativePath!,
       outPath: join(outDir, `lib${config.name}.a`),
     });
   }
+
+  await markBuildDone({ outDir, target, hash: buildHash });
 
   // Persist contract snapshot beside artifacts
   const { snapshotFromProfile } = await import('./contract.js');

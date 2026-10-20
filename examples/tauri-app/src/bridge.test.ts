@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createTauriSidecarEngine } from '@scriptca/tauri';
-import type { ScriptcaProfile } from '@scriptca/types';
+import { createTauriSidecarEngine } from '@scriptcable/tauri';
+import type { ScriptcaProfile } from '@scriptcable/types';
 
 const profile: ScriptcaProfile = {
   profile_format: 1,

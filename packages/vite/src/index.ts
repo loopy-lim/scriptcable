@@ -1,14 +1,14 @@
 /**
- * @scriptca/vite — Vite plugin: builds scriptc core (WASM) on startup and HMR.
+ * @scriptcable/vite — Vite plugin: builds scriptc core (WASM) on startup and HMR.
  */
 import { resolve, join, dirname } from 'node:path';
 import { readFile, mkdir, writeFile, copyFile } from 'node:fs/promises';
-import type { ScriptcaConfig } from '@scriptca/types';
-import { loadConfig, buildCore, configToProfile } from '@scriptca/core';
-import { generateClients } from '@scriptca/core/codegen';
+import type { ScriptcaConfig } from '@scriptcable/types';
+import { loadConfig, buildCore, configToProfile } from '@scriptcable/core';
+import { generateClients } from '@scriptcable/core/codegen';
 
 export type ScriptcaViteOptions = {
-  /** Path to scriptca.json (default: project root) */
+  /** Path to scriptcable.json (default: project root) */
   configPath?: string;
   /** Virtual module id for the generated client */
   virtualId?: string;
@@ -29,7 +29,7 @@ type VitePlugin = {
 async function rebuild(root: string, configPath: string): Promise<{ genDir: string; config: ScriptcaConfig }> {
   const abs = resolve(root, configPath);
   const config = loadConfig(JSON.parse(await readFile(abs, 'utf8')));
-  const outDir = resolve(root, config.outDir ?? '.scriptca');
+  const outDir = resolve(root, config.outDir ?? '.scriptcable');
   const result = await buildCore(config, { cwd: root, outDir, target: config.target === 'wasm' ? 'wasm' : 'both' });
   const genDir = join(outDir, 'generated');
   await mkdir(genDir, { recursive: true });
@@ -45,15 +45,15 @@ async function rebuild(root: string, configPath: string): Promise<{ genDir: stri
   return { genDir, config };
 }
 
-export function scriptca(options: ScriptcaViteOptions = {}): VitePlugin {
-  const configPath = options.configPath ?? 'scriptca.json';
-  const virtualId = options.virtualId ?? 'virtual:scriptca';
+export function scriptcable(options: ScriptcaViteOptions = {}): VitePlugin {
+  const configPath = options.configPath ?? 'scriptcable.json';
+  const virtualId = options.virtualId ?? 'virtual:scriptcable';
   const resolvedVirtual = '\0' + virtualId;
   let root = process.cwd();
   let genDir = '';
 
   return {
-    name: 'vite-plugin-scriptca',
+    name: 'vite-plugin-scriptcable',
     configResolved(config) {
       root = config.root;
     },
@@ -62,7 +62,7 @@ export function scriptca(options: ScriptcaViteOptions = {}): VitePlugin {
       genDir = r.genDir;
     },
     resolveId(id) {
-      if (id === virtualId || id === '@scriptca/client') return resolvedVirtual;
+      if (id === virtualId || id === '@scriptcable/client') return resolvedVirtual;
       return null;
     },
     async load(id) {
@@ -75,7 +75,7 @@ export function scriptca(options: ScriptcaViteOptions = {}): VitePlugin {
       return `export { createClient, PROFILE } from ${JSON.stringify(join(genDir, 'browser.ts'))};\nexport type { ScriptcaClient } from ${JSON.stringify(join(genDir, 'types.ts'))};\n`;
     },
     async handleHotUpdate(ctx) {
-      if (ctx.file.includes('scriptca.json') || /\.(ts|js)$/.test(ctx.file)) {
+      if (ctx.file.includes('scriptcable.json') || /\.(ts|js)$/.test(ctx.file)) {
         // Only rebuild when core entry or config changes
         try {
           const raw = JSON.parse(await readFile(resolve(root, configPath), 'utf8')) as ScriptcaConfig;
@@ -92,4 +92,4 @@ export function scriptca(options: ScriptcaViteOptions = {}): VitePlugin {
   };
 }
 
-export default scriptca;
+export default scriptcable;

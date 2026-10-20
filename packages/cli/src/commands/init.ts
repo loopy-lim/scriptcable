@@ -1,7 +1,7 @@
 import { mkdir, writeFile, access } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
-const CORE_TS = `/** scriptca core — compiled by scriptc into a native library (default). */
+const CORE_TS = `/** scriptcable core — compiled by scriptc into a native library (default). */
 export function add(a: number, b: number): number {
   return a + b;
 }
@@ -29,7 +29,7 @@ export async function runInit(opts: {
   cwd?: string;
   host?: InitHost;
 }): Promise<number> {
-  const host = opts.host ?? 'node';
+  const host = opts.host ?? 'bun';
   const root = resolve(opts.cwd ?? process.cwd(), opts.name);
   try {
     await access(root);
@@ -48,7 +48,7 @@ export async function runInit(opts: {
     name: slugName,
     entry: 'src/core.ts',
     prefix,
-    outDir: '.scriptca',
+    outDir: '.scriptcable',
     target: host === 'vite' ? 'both' : 'native',
     exports: [
       { name: 'add', params: ['f64', 'f64'], returns: 'f64' },
@@ -56,32 +56,33 @@ export async function runInit(opts: {
       { name: 'greet', params: ['string'], returns: 'string' },
     ],
   };
-  await writeFile(join(root, 'scriptca.json'), JSON.stringify(config, null, 2) + '\n');
+  await writeFile(join(root, 'scriptcable.json'), JSON.stringify(config, null, 2) + '\n');
 
   const deps: Record<string, string> = {
     scriptc: '^0.3.6',
-    '@scriptca/cli': '^0.1.0',
-    '@scriptca/core': '^0.1.0',
+    '@scriptcable/cli': '^0.1.0',
+    '@scriptcable/core': '^0.1.0',
   };
   const scripts: Record<string, string> = {
-    build: 'scriptca build',
-    doctor: 'scriptca doctor',
-    'contract:check': 'scriptca diff --fail-on-breaking',
+    build: 'scriptcable build',
+    doctor: 'scriptcable doctor',
+    'contract:check': 'scriptcable diff --fail-on-breaking',
   };
 
-  if (host === 'node' || host === 'bun') {
-    deps['@scriptca/node'] = '^0.1.0';
-    deps.koffi = '^3.3.3';
-    if (host === 'bun') deps['@scriptca/bun'] = '^0.1.0';
-    scripts.start =
-      host === 'bun'
-        ? 'bun src/main.ts'
-        : 'node --experimental-strip-types src/main.ts';
+  if (host === 'bun' || host === 'node') {
+    if (host === 'bun') {
+      deps['@scriptcable/bun'] = '^0.1.0';
+      deps['@scriptcable/node'] = '^0.1.0';
+    } else {
+      deps['@scriptcable/node'] = '^0.1.0';
+      deps.koffi = '^3.3.3'; // optional Node-only FFI fallback (Bun has bun:ffi built in)
+    }
+    scripts.start = 'bun src/main.ts';
     await writeFile(
       join(root, 'src', 'main.ts'),
-      `import { createNodeEngine } from '@scriptca/node';
+      `import { createNodeEngine } from '@scriptcable/node';
 
-const engine = await createNodeEngine({ outDir: '.scriptca' });
+const engine = await createNodeEngine({ outDir: '.scriptcable' });
 console.log(JSON.stringify({
   sum: engine.call('add', 20, 22),
   hi: engine.call('greet', '${host}'),
@@ -90,28 +91,27 @@ engine.dispose?.();
 `,
     );
   } else if (host === 'vite') {
-    deps['@scriptca/vite'] = '^0.1.0';
+    deps['@scriptcable/vite'] = '^0.1.0';
     deps['@scriptc/runtime-wasm32-wasi'] = '^0.3.6';
-    scripts.dev = 'scriptca build --target both && vite';
-    scripts['build:web'] = 'scriptca build --target both && vite build';
+    scripts.dev = 'scriptcable build --target both && vite';
+    scripts['build:web'] = 'scriptcable build --target both && vite build';
     await writeFile(
       join(root, 'vite.config.ts'),
-      `import { defineConfig } from 'vite';\nimport scriptca from '@scriptca/vite';\nexport default defineConfig({ plugins: [scriptca()] });\n`,
+      `import { defineConfig } from 'vite';\nimport scriptcable from '@scriptcable/vite';\nexport default defineConfig({ plugins: [scriptcable()] });\n`,
     );
   } else if (host === 'next') {
-    deps['@scriptca/next'] = '^0.1.0';
-    deps['@scriptca/node'] = '^0.1.0';
-    deps.koffi = '^3.3.3';
-    scripts['build:core'] = 'scriptca build && node -e "import(\'@scriptca/next\').then(m=>m.scriptcaBuild())"';
+    deps['@scriptcable/next'] = '^0.1.0';
+    deps['@scriptcable/node'] = '^0.1.0';
+    scripts['build:core'] = 'scriptcable build && bun -e "import(\'@scriptcable/next\').then(m=>m.scriptcableBuild())"';
   } else if (host === 'tauri') {
     await writeFile(
       join(root, 'README.host.md'),
-      `# Tauri host\n\n1. \`scriptca build\` → \`.scriptca/lib${slugName}.a\`\n2. Point \`SCRIPTCA_LIB_DIR\` at \`.scriptca\` and depend on \`scriptca-sys\` / \`scriptca-tauri\` from the scriptca repo (or vendor the crates).\n3. \`cargo test\` / wire \`#[tauri::command]\` to \`scriptca_add\` etc.\n`,
+      `# Tauri host\n\n1. \`scriptcable build\` → \`.scriptcable/lib${slugName}.a\`\n2. In the Tauri Rust app, link the archive via a build script (cc / build.rs) and expose \`#[tauri::command]\`s that call the C ABI symbols (\`${prefix}add\` etc.).\n3. Bridge from the webview with \`createTauriSidecarEngine\` (@scriptcable/tauri).\n`,
     );
   } else if (host === 'react-native' || host === 'lynx') {
     await writeFile(
       join(root, 'README.host.md'),
-      `# ${host} host\n\n1. \`scriptca build\`\n2. Link \`.scriptca/lib${slugName}.a\` via CMake (see @scriptca/${host === 'lynx' ? 'lynx' : 'react-native'}/cpp).\n3. Bridge JS with create${host === 'lynx' ? 'Lynx' : 'ReactNative'}Engine.\n`,
+      `# ${host} host\n\n1. \`scriptcable build\`\n2. Link \`.scriptcable/lib${slugName}.a\` in your native module (iOS: Xcode, Android: CMake in the NDK project).\n3. Bridge JS with create${host === 'lynx' ? 'Lynx' : 'ReactNative'}Engine.\n`,
     );
   }
 
@@ -124,7 +124,7 @@ engine.dispose?.();
         private: true,
         type: 'module',
         scripts,
-        engines: { node: '>=24' },
+        engines: host === 'node' ? { node: '>=24' } : { bun: '>=1.2.0' },
         dependencies: deps,
       },
       null,
@@ -144,7 +144,7 @@ engine.dispose?.();
           skipLibCheck: true,
           noEmit: true,
         },
-        include: ['src/**/*', '.scriptca/generated/**/*'],
+        include: ['src/**/*', '.scriptcable/generated/**/*'],
       },
       null,
       2,
@@ -153,11 +153,11 @@ engine.dispose?.();
 
   await writeFile(
     join(root, 'README.md'),
-    `# ${opts.name}\n\nscriptca project (host: **${host}**, native default).\n\n\`\`\`bash\nnpm install\nnpx scriptca doctor\nnpx scriptca build\n${scripts.start ? 'npm start' : 'npm run build'}\n\`\`\`\n\nMac (Apple Silicon): install clang via Xcode CLT; for iOS library archives see scriptc \`SCRIPTC_TARGET=aarch64-apple-ios\`.\n`,
+    `# ${opts.name}\n\nscriptcable project (host: **${host}**, native default).\n\n\`\`\`bash\nbun install\nbunx scriptcable doctor\nbunx scriptcable build\n${scripts.start ? 'bun start' : 'bun run build'}\n\`\`\`\n\nMac (Apple Silicon): install clang via Xcode CLT; for iOS library archives see scriptc \`SCRIPTC_TARGET=aarch64-apple-ios\`.\n`,
   );
 
   console.log(`Created ${root} (host=${host})`);
-  console.log(`  cd ${opts.name} && npm install && npx scriptca doctor && npx scriptca build`);
+  console.log(`  cd ${opts.name} && bun install && bunx scriptcable doctor && bunx scriptcable build`);
   return 0;
 }
 

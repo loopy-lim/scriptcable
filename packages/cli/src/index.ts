@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { runDoctor } from './commands/doctor.js';
 import { runBuild } from './commands/build.js';
 import { runDiff } from './commands/diff.js';
@@ -6,14 +6,14 @@ import { runInit } from './commands/init.js';
 import type { CodegenTarget } from './codegen/index.js';
 
 function usage(): void {
-  console.log(`scriptca — TypeScript core → native clients (via scriptc; WASM opt-in)
+  console.log(`scriptcable — TypeScript core → native clients (via scriptc; WASM opt-in)
 
 Usage:
-  scriptca init <name> [--host node|bun|vite|next|tauri|react-native|lynx]
-  scriptca build [--target wasm|native|both] [--hosts node,bun,browser,...]
-  scriptca diff [--snapshot path]   compare scriptca.json to committed contract
-  scriptca doctor                   check Node / scriptc / zig / clang
-  scriptca --help
+  scriptcable init <name> [--host bun|node|vite|next|tauri|react-native|lynx]
+  scriptcable build [--target wasm|native|both] [--hosts bun,node,browser,...] [--force]
+  scriptcable diff [--snapshot path]   compare scriptcable.json to committed contract
+  scriptcable doctor                   check Bun / scriptc / zig / clang
+  scriptcable --help
 
 Docs: see the repo README. scriptc: https://scriptc.dev
 `);
@@ -31,25 +31,28 @@ async function main(argv: string[]): Promise<number> {
     case 'init': {
       const name = rest.find((a) => !a.startsWith('-'));
       if (!name) {
-        console.error('Usage: scriptca init <name> [--host node|bun|vite|next|tauri|react-native|lynx]');
+        console.error('Usage: scriptcable init <name> [--host bun|node|vite|next|tauri|react-native|lynx]');
         return 1;
       }
       let host: import('./commands/init.js').InitHost | undefined;
       for (let i = 0; i < rest.length; i++) {
         if (rest[i] === '--host') host = rest[++i] as typeof host;
       }
+      if (host === undefined) host = 'bun';
       return runInit({ name, host });
     }
     case 'build': {
       let target: 'wasm' | 'native' | 'both' | undefined;
       let hosts: CodegenTarget[] | undefined;
+      let force = false;
       for (let i = 0; i < rest.length; i++) {
         if (rest[i] === '--target') target = rest[++i] as typeof target;
         if (rest[i] === '--hosts') {
           hosts = rest[++i]!.split(',') as CodegenTarget[];
         }
+        if (rest[i] === '--force') force = true;
       }
-      return runBuild({ target, hosts });
+      return runBuild({ target, hosts, force });
     }
     case 'diff': {
       let snapshot: string | undefined;
