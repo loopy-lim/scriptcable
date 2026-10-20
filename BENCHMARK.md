@@ -27,7 +27,24 @@ Median of 3 runs (2,000,000 iterations for cheap calls; 200,000 for compute/stri
 - `fib(30)` shows compiled-core throughput (~10M calls/s each doing 30 iterations of work) — the boundary cost dominates; the compiled code itself runs at JS-comparable speed (JS baseline: `fib(30)` in 18 ns in-process, but that comparison ignores isolation/type-safety benefits).
 - String round-trips cost ~1.2–1.3 µs because both directions copy through `(ptr, len)` marshalling. For chatty string APIs, batch work inside a single export.
 
-## 2. JS host baseline (for context)
+## 2. Cross-runtime comparison — one core, four hosts
+
+Same export (`add`, f64×2 → f64), same generated client surface, per-runtime measurement on this machine (2M iterations, warmed):
+
+| runtime | JS engine | call path | mean/call | ops/s | notes |
+| --- | --- | --- | --- | --- | --- |
+| Bun 1.4.3 | JSC | bun:ffi → dylib | 73–80 ns | ~12.5M | default engine, zero extra deps |
+| Node 22.21 | V8 | koffi 3.3 → dylib | 70–76 ns | ~13–14M | `npm i koffi` fallback |
+| Web — Chromium 156 | V8 | WASM + minimal WASI | **48 ns** | ~20.9M | fastest path measured; `vite dev`, in-page loop |
+| React Native (bridge pattern) | JSC* | async + JSON marshal hop | 165–181 ns | ~5.9M | *measured under Bun/JSC; **native transport excluded** — the device IPC hop dominates on hardware and was not measured (no device/simulator) |
+
+**Reading:**
+
+- All three direct-call hosts (Bun, Node, browser) land in the same ~50–80 ns band — runtime choice is about deployment, not speed. The browser WASM path is, if anything, the fastest.
+- The RN client's extra cost is architectural (async bridge + JSON per hop), not the core: still sub-µs of JS per hop. Coarse-grained exports matter most on RN — one hop amortizes the marshal.
+- Not measured: Hermes as the JS engine (RN's production engine), Metro bundle startup, physical-device bridge transport.
+
+## 3. JS host baseline (for context)
 
 | benchmark | mean | ops/s |
 | --- | --- | --- |
@@ -38,7 +55,7 @@ Median of 3 runs (2,000,000 iterations for cheap calls; 200,000 for compute/stri
 
 A pure in-process JS call is ~55–60× cheaper than crossing into a compiled core — the boundary, not the compiled code, is the cost. Design coarse-grained exports.
 
-## 3. Build times (DX)
+## 4. Build times (DX)
 
 | metric | time | notes |
 | --- | --- | --- |
@@ -49,7 +66,7 @@ A pure in-process JS call is ~55–60× cheaper than crossing into a compiled co
 
 The build cache hashes entry sources + sibling module graph + ABI surface + target; any edit invalidates precisely and rebuilds (~1 s).
 
-## 4. Engine startup (e2e)
+## 5. Engine startup (e2e)
 
 | scenario | wall time |
 | --- | --- |
@@ -59,7 +76,7 @@ The build cache hashes entry sources + sibling module graph + ABI surface + targ
 
 The ~6 ms figure is measured inside the process (`performance.now()` around `import('@scriptcable/client')` + `createClient()`); the process wall adds Bun's own boot.
 
-## 5. `@scriptcable/client` package — zero call-path cost
+## 6. `@scriptcable/client` package — zero call-path cost
 
 The package published into `.scriptcable/generated/` and linked as `node_modules/@scriptcable/client` is the generated client itself, exposed through export conditions — no wrapper layer, no indirection at call time:
 
@@ -67,7 +84,7 @@ The package published into `.scriptcable/generated/` and linked as `node_modules
 - Runtime flavor selection (bun/node/browser/react-native) is static per environment — no branching in the call path.
 - Verified end-to-end in a real browser: headless Chromium + `vite dev`, `createClient()` → WASM → `add(20, 22) = 42` (see the plan doc in `docs/plans/`).
 
-## 6. Correctness gates (all green on this machine)
+## 7. Correctness gates (all green on this machine)
 
 - 12/12 packages build, 12/12 typecheck
 - Package tests: 40 pass, 0 fail (core 32 incl. client-package + link lifecycle, cli integration with real scriptc compile + subprocess call, vite plugin + HMR gating, next plugin-only integration, node/tauri adapters)

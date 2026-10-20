@@ -9,8 +9,9 @@
     "test": "bun run build:core && bun test src/"
   },
   "dependencies": {
-    "@scriptcable/node": "workspace:*",
     "@scriptcable/core": "workspace:*",
-    "@scriptcable/example-calculator-core": "workspace:*"
+    "@scriptcable/example-calculator-core": "workspace:*",
+    "@scriptcable/node": "workspace:*",
+    "koffi": "^3.3.3"
   }
 }

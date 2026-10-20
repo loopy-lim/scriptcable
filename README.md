@@ -87,6 +87,30 @@ Explicit subpaths pin a flavor: `@scriptcable/client/node`, `/bun`, `/browser`, 
 
 If the link is missing — a fresh checkout before the first build — `scriptcable doctor` reports and repairs it. For CI durability, add `"@scriptcable/client": "file:.scriptcable/generated"` to your dependencies.
 
+### Before → after: what you stop knowing
+
+Using scriptcable used to require seven pieces of knowledge; now it requires one (`scriptcable build`, or a bundler plugin to run it):
+
+| You had to know | Before | Now |
+| --- | --- | --- |
+| Config file | `scriptcable.config.ts` required (`name`, `entry`) | optional — inferred from `package.json` + standard locations |
+| Generated artifact paths | relative imports into `.scriptcable/generated/`, `outDir` option | nothing — one bare specifier |
+| Flavor selection | per-host adapter/file choice | automatic per environment (export conditions) |
+| Browser WASI adapter | construct & pass `createMinimalWasi()` | `createClient()` takes no args |
+| Bundler wiring | manual alias/transpile (Next), JSON-only plugin config | plugins wire everything |
+| Editor types | manual tsconfig `paths` | real package — resolved as-is |
+
+```ts
+// before — per-host imports, paths, adapters
+const engine = await createNodeEngine({ outDir: '.scriptcable' });
+
+// after — identical in Bun, Node, Next server code, and the browser
+import { createClient } from '@scriptcable/client';
+const client = await createClient();
+```
+
+There is no speed trade-off for the convenience: calls run at the measured engine speed everywhere (see [BENCHMARK.md](./BENCHMARK.md) — ~73 ns native/WASM, 48 ns browser WASM, sub-µs RN bridge hop).
+
 ## How it works
 
 ```

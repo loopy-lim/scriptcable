@@ -93,6 +93,30 @@ export conditions가 환경별로 알맞은 플레이버를 골라 줍니다 —
 
 링크가 없으면(첫 빌드 전 새 체크아웃) `scriptcable doctor`가 상태를 보고하고 복구합니다. CI에서 내구성을 원하면 의존성에 `"@scriptcable/client": "file:.scriptcable/generated"`을 추가하세요.
 
+### 이전 → 이후: 알아야 했던 것
+
+scriptcable을 쓰려면 일곱 가지를 알아야 했지만, 이제는 하나(`scriptcable build` 또는 이를 대신 돌려 주는 번들러 플러그인)면 됩니다:
+
+| 알아야 했던 것 | 이전 | 이제 |
+| --- | --- | --- |
+| 설정 파일 | `scriptcable.config.ts` 필수 (`name`, `entry`) | 선택 — package.json·표준 위치에서 추론 |
+| 생성물 경로 | `.scriptcable/generated/` 상대경로, `outDir` 옵션 | 없음 — bare import 하나 |
+| 플레이버 선택 | 호스트별 어댑터/파일 직접 선택 | 환경별 자동 (export conditions) |
+| 브라우저 WASI 어댑터 | `createMinimalWasi()` 구성·전달 | `createClient()` 무인자 |
+| 번들러 설정 | 수동 alias/transpile (Next), JSON 전용 플러그인 설정 | 플러그인이 전부 처리 |
+| 에디터 타입 | tsconfig `paths` 수동 | 실제 패키지 — 그대로 해석 |
+
+```ts
+// 이전 — 호스트별 import, 경로, 어댑터
+const engine = await createNodeEngine({ outDir: '.scriptcable' });
+
+// 이후 — Bun, Node, Next 서버 코드, 브라우저에서 동일
+import { createClient } from '@scriptcable/client';
+const client = await createClient();
+```
+
+편의를 위한 속도 희생은 없습니다. 모든 환경에서 측정된 엔진 속도 그대로 호출됩니다(BENCHMARK.md — 네이티브/WASM ~73ns, 브라우저 WASM 48ns, RN 브리지 홉 sub-µs).
+
 ## 어댑터 퀵스타트
 
 ### Bun

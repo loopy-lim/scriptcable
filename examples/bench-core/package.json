@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@scriptcable/core": "workspace:*",
-    "@scriptcable/testing": "workspace:*"
+    "@scriptcable/testing": "workspace:*",
+    "koffi": "^3.3.3"
   },
   "devDependencies": {
     "@scriptcable/cli": "workspace:*",
