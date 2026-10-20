@@ -29,7 +29,6 @@ jobs:
             curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
             echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
           fi
-          zig version
       - run: bun install
       - run: bun run build
       # bin links are only created when dist/index.js exists — re-link after build
