@@ -20,6 +20,16 @@ jobs:
       - name: Ensure clang (macOS)
         if: runner.os == 'macOS'
         run: clang --version
+      - name: Install zig (WASM toolchain)
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            curl -fsSL https://ziglang.org/download/0.13.0/zig-macos-aarch64-0.13.0.tar.xz | tar -xJ
+            echo "$PWD/zig-macos-aarch64-0.13.0" >> $GITHUB_PATH
+          else
+            curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
+            echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
+          fi
+          zig version
       - run: bun install
       - run: bun run build
       # bin links are only created when dist/index.js exists — re-link after build
@@ -37,9 +47,4 @@ jobs:
           bun run --filter @scriptcable/example-vite-app build
           bun run --filter @scriptcable/example-next-app test
       - run: bun run --filter @scriptcable/example-calculator-core exec scriptcable diff
-      - name: Optional WASM toolchain (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
-          echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
-          bun run --filter @scriptcable/example-calculator-core exec scriptcable build --target wasm
+      - run: bun run --filter @scriptcable/example-calculator-core exec scriptcable build --target wasm
