@@ -1,6 +1,6 @@
 # scriptcable Performance Report
 
-**Date:** 2026-10-20 · **Host:** Apple M1 Max (10-core CPU, 64 GB) · macOS arm64
+**Date:** 2026-10-20 (re-measured after the `@scriptcable/client` package release) · **Host:** Apple M1 Max (10-core CPU, 64 GB) · macOS arm64
 **Runtime:** Bun 1.4.3 · **Toolchain:** scriptc 0.3.6, Apple clang, zig 0.13 (WASM)
 
 Run it yourself:
@@ -16,56 +16,68 @@ Median of 3 runs (2,000,000 iterations for cheap calls; 200,000 for compute/stri
 
 | benchmark | native mean | wasm mean | native ops/s | wasm ops/s | native ÷ wasm |
 | --- | --- | --- | --- | --- | --- |
-| ping (call overhead) | 74–78 ns | 74–107 ns | ~13.3M | ~12.1M | **~1.0x** |
-| add (f64×2 → f64) | 80–82 ns | 80–84 ns | ~12.3M | ~12.2M | **~1.0x** |
-| fib(30) (CPU loop) | 95–97 ns | 91–94 ns | ~10.3M | ~10.8M | **~0.96x** |
-| repeat("ab",100) (string marshal) | 1.24–1.55 µs | 1.30–1.34 µs | ~0.75M | ~0.76M | **~1.0x** |
+| ping (call overhead) | 73 ns | 73 ns | ~13.6M | ~13.6M | **1.00×** |
+| add (f64×2 → f64) | 80 ns | 80 ns | ~12.5M | ~12.5M | **1.00×** |
+| fib(30) (CPU loop) | 97 ns | 91 ns | ~10.3M | ~11.0M | **0.94×** |
+| repeat("ab",100) (string marshal) | 1.20 µs | 1.30 µs | ~0.83M | ~0.77M | **1.08×** |
 
 **Reading:**
 
-- The FFI/WASM boundary costs **~75 ns per call** on both engines — effectively identical. Choose native or WASM by deployment target, not speed.
-- `fib(30)` shows compiled-core throughput (~10M calls/s each doing 30 iterations of work) — the boundary cost dominates; the compiled code itself runs at JS-comparable speed (JS baseline: `fib(30)` in 19 ns in-process, but that comparison ignores isolation/type-safety benefits).
-- String round-trips cost ~1.3 µs because both directions copy through `(ptr, len)` marshalling. For chatty string APIs, batch work inside a single export.
+- The FFI/WASM boundary costs **~73–80 ns per call** on both engines — effectively identical. Choose native or WASM by deployment target, not speed.
+- `fib(30)` shows compiled-core throughput (~10M calls/s each doing 30 iterations of work) — the boundary cost dominates; the compiled code itself runs at JS-comparable speed (JS baseline: `fib(30)` in 18 ns in-process, but that comparison ignores isolation/type-safety benefits).
+- String round-trips cost ~1.2–1.3 µs because both directions copy through `(ptr, len)` marshalling. For chatty string APIs, batch work inside a single export.
 
 ## 2. JS host baseline (for context)
 
 | benchmark | mean | ops/s |
 | --- | --- | --- |
-| js:ping | 1.3 ns | 756M |
-| js:add | 1.3 ns | 777M |
-| js:fib(30) | 19 ns | 53M |
-| js:repeat(100) | 374 ns | 2.7M |
+| js:ping | 1.3 ns | 754M |
+| js:add | 1.2 ns | 816M |
+| js:fib(30) | 18.2 ns | 55M |
+| js:repeat(100) | 383 ns | 2.6M |
 
-A pure in-process JS call is ~50–60× cheaper than crossing into a compiled core — the boundary, not the compiled code, is the cost. Design coarse-grained exports.
+A pure in-process JS call is ~55–60× cheaper than crossing into a compiled core — the boundary, not the compiled code, is the cost. Design coarse-grained exports.
 
 ## 3. Build times (DX)
 
 | metric | time | notes |
 | --- | --- | --- |
-| Cold core build (scriptc compile + clang link) | **~465 ms** | `rm -rf .scriptcable && scriptcable build --target both` |
-| Warm build (cache hit) | **~70 ms** | **6.6× faster** — skips scriptc + link via `.scriptcable/build-cache.json` |
-| Warm repeat (cache + identical-codegen skip) | ~69 ms | content-hash codegen skip keeps editor watchers quiet |
-| Full monorepo package build (12 pkgs, clean) | ~3.1 s | `bun run build`, parallel across 10 cores |
+| Cold core build (scriptc compile + clang link, both targets) | **~1.06 s** | full pipeline from an empty `.scriptcable` |
+| Warm build (cache hit) | **~166 ms** | **6.4× faster** — skips scriptc + link via `.scriptcable/build-cache.json` |
+| Warm repeat (cache + identical-codegen skip) | ~165 ms | content-hash codegen skip keeps editor watchers quiet |
+| Full monorepo package build (12 pkgs, clean) | ~3.7 s | `bun run build`, parallel across 10 cores |
 
-The build cache hashes entry sources + sibling module graph + ABI surface + target; any edit invalidates precisely and rebuilds (~0.5 s).
+The build cache hashes entry sources + sibling module graph + ABI surface + target; any edit invalidates precisely and rebuilds (~1 s).
 
 ## 4. Engine startup (e2e)
 
 | scenario | wall time |
 | --- | --- |
-| `bun src/main.ts` — load `.dylib` via bun:ffi, 3 calls, exit | ~20 ms |
-| Same via wasm/WASI reactor | ~25 ms |
+| `@scriptcable/client` import → loaded client (bun flavor, dylib) → first calls ready | **~6.2 ms** |
+| first two exported calls after load | ~0.16 ms |
+| `bun src/main.ts` — full process: runtime boot, dylib load, 3 calls, exit | ~0.10–0.13 s |
 
-## 5. Correctness gates (all green on this machine)
+The ~6 ms figure is measured inside the process (`performance.now()` around `import('@scriptcable/client')` + `createClient()`); the process wall adds Bun's own boot.
+
+## 5. `@scriptcable/client` package — zero call-path cost
+
+The package published into `.scriptcable/generated/` and linked as `node_modules/@scriptcable/client` is the generated client itself, exposed through export conditions — no wrapper layer, no indirection at call time:
+
+- Resolution happens once at import; the bound methods are the same generated functions measured in §1 (73–80 ns/call).
+- Runtime flavor selection (bun/node/browser/react-native) is static per environment — no branching in the call path.
+- Verified end-to-end in a real browser: headless Chromium + `vite dev`, `createClient()` → WASM → `add(20, 22) = 42` (see the plan doc in `docs/plans/`).
+
+## 6. Correctness gates (all green on this machine)
 
 - 12/12 packages build, 12/12 typecheck
-- Package tests: 7 suites, 12 tests, 0 fail (incl. 4 build-cache unit tests)
-- e2e: bun-app, node-app (native + test), vite (SSR + WASM + browser build), next (server + webpack wiring), tauri/lynx/react-native bridges
+- Package tests: 40 pass, 0 fail (core 32 incl. client-package + link lifecycle, cli integration with real scriptc compile + subprocess call, vite plugin + HMR gating, next plugin-only integration, node/tauri adapters)
+- e2e: bun-app, node-app (native + test), vite (SSR + WASM + browser build + headless-Chromium run), next (server + webpack wiring), tauri/lynx/react-native bridges
 - Contract checks: `calculator` and `bench` cores — no changes
 
 ## Takeaways
 
-1. **Native and WASM are interchangeable on speed** for scriptcable cores (~75 ns/call); pick per-platform.
-2. **The build cache is the big DX win** — 6.6× faster inner loop on unchanged inputs, with precise invalidation.
+1. **Native and WASM are interchangeable on speed** for scriptcable cores (~73–80 ns/call); pick per-platform.
+2. **The build cache is the big DX win** — 6.4× faster inner loop on unchanged inputs, with precise invalidation.
 3. **Coarse exports beat chatty ones** — batch string/bytes work to amortize the ~1.3 µs marshalling.
-4. Bun's startup (~20 ms to loaded FFI engine) makes CLI/server usage snappy.
+4. **`@scriptcable/client` adds no runtime cost** — flavor selection is import-time resolution; calls run at the measured engine speed everywhere (Bun CLI, Next server, browser).
+5. Startup is snappy: ~6 ms from import to a loaded, callable native engine.
