@@ -5,7 +5,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile, access, constants } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { ScriptcaToolchainError } from '@scriptcable/types';
+import { ScriptcableToolchainError } from '@scriptcable/types';
 
 async function which(cmd: string): Promise<string | undefined> {
   return new Promise((resolvePromise) => {
@@ -67,7 +67,7 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
 
   const clang = (await which('clang')) ?? (await which('cc'));
   if (!clang) {
-    throw new ScriptcaToolchainError(
+    throw new ScriptcableToolchainError(
       'clang (or cc) is required to link the native shared library.',
       'Install a C toolchain:\n' +
         '  Linux:  sudo apt install clang\n' +
@@ -83,7 +83,7 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
 
   const compileStub = await run(clang, ['-c', stubC, '-o', stubO]);
   if (compileStub.code !== 0) {
-    throw new ScriptcaToolchainError(
+    throw new ScriptcableToolchainError(
       `Failed to compile link stubs:\n${compileStub.stderr}`,
     );
   }
@@ -101,7 +101,7 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
 
   const link = await run(clang, args);
   if (link.code !== 0) {
-    throw new ScriptcaToolchainError(
+    throw new ScriptcableToolchainError(
       `Failed to link shared library from ${archivePath}:\n${link.stderr || link.stdout}`,
       'Ensure clang can link for this host. Try: scriptcable doctor',
     );
@@ -119,7 +119,7 @@ export async function buildCompleteStaticArchive(options: {
   await access(archivePath, constants.R_OK);
   const clang = (await which('clang')) ?? (await which('cc'));
   if (!clang) {
-    throw new ScriptcaToolchainError(
+    throw new ScriptcableToolchainError(
       'clang is required to prepare the static archive for native hosts.',
       'Install clang, or use the shared library (.so) from Bun/Node.',
     );
@@ -131,14 +131,14 @@ export async function buildCompleteStaticArchive(options: {
   const stubO = join(work, 'stubs.o');
   await writeFile(stubC, STUB_SOURCE);
   const c1 = await run(clang, ['-c', stubC, '-o', stubO]);
-  if (c1.code !== 0) throw new ScriptcaToolchainError(c1.stderr);
+  if (c1.code !== 0) throw new ScriptcableToolchainError(c1.stderr);
   // Extract archive objects into work dir then re-pack with stubs
   const extract = await run('bash', ['-c', `cd "${work}" && ar x "${archivePath}"`]);
-  if (extract.code !== 0) throw new ScriptcaToolchainError(extract.stderr || extract.stdout);
+  if (extract.code !== 0) throw new ScriptcableToolchainError(extract.stderr || extract.stdout);
   const pack = await run('bash', [
     '-c',
     `cd "${work}" && rm -f "${outPath}" && ar rcs "${outPath}" *.o`,
   ]);
-  if (pack.code !== 0) throw new ScriptcaToolchainError(pack.stderr || pack.stdout);
+  if (pack.code !== 0) throw new ScriptcableToolchainError(pack.stderr || pack.stdout);
   return outPath;
 }

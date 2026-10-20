@@ -2,13 +2,13 @@
  * Load a scriptc native shared library and call C ABI exports.
  * Bun → bun:ffi (default engine, built-in); plain Node → optional koffi fallback.
  */
-import type { AbiClass, ExportDef, ScriptcaProfile } from '@scriptcable/types';
-import { ScriptcaError } from '@scriptcable/types';
+import type { AbiClass, ExportDef, ScriptcableProfile } from '@scriptcable/types';
+import { ScriptcableError } from '@scriptcable/types';
 import { readFile } from 'node:fs/promises';
 import { sharedLibraryFileName } from './link-shared.js';
 
 export type NativeModule = {
-  profile: ScriptcaProfile;
+  profile: ScriptcableProfile;
   call: (exportName: string, ...args: unknown[]) => unknown;
   dispose: () => void;
 };
@@ -22,7 +22,7 @@ function isBun(): boolean {
   return typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined';
 }
 
-async function bindBun(soPath: string, profile: ScriptcaProfile): Promise<FfiBinding> {
+async function bindBun(soPath: string, profile: ScriptcableProfile): Promise<FfiBinding> {
   const { dlopen, FFIType, ptr, toArrayBuffer } = await import('bun:ffi');
 
   const mapClass = (c: AbiClass): unknown => {
@@ -72,9 +72,9 @@ async function bindBun(soPath: string, profile: ScriptcaProfile): Promise<FfiBin
   return {
     call(symbol, args) {
       const def = profile.exports.find((x) => x.symbol === symbol);
-      if (!def) throw new ScriptcaError('MISSING_EXPORT', symbol);
+      if (!def) throw new ScriptcableError('MISSING_EXPORT', symbol);
       const fn = sym[symbol];
-      if (typeof fn !== 'function') throw new ScriptcaError('MISSING_EXPORT', symbol);
+      if (typeof fn !== 'function') throw new ScriptcableError('MISSING_EXPORT', symbol);
       return invokeNative(fn, def, args, {
         ptr: (buf) => ptr(buf),
         readBytes: (addr, len) => new Uint8Array(toArrayBuffer(addr, 0, len)),
@@ -83,13 +83,13 @@ async function bindBun(soPath: string, profile: ScriptcaProfile): Promise<FfiBin
   };
 }
 
-async function bindKoffi(soPath: string, profile: ScriptcaProfile): Promise<FfiBinding> {
+async function bindKoffi(soPath: string, profile: ScriptcableProfile): Promise<FfiBinding> {
   type KoffiModule = typeof import('koffi');
   let koffiMod: KoffiModule;
   try {
     koffiMod = await import('koffi');
   } catch {
-    throw new ScriptcaError(
+    throw new ScriptcableError(
       'MISSING_DEP',
       'koffi is an optional fallback for running scriptcable native libraries under plain Node.js.',
       'Bun is the default engine and loads native libraries with built-in bun:ffi — no extra dependency.\n' +
@@ -109,7 +109,7 @@ async function bindKoffi(soPath: string, profile: ScriptcaProfile): Promise<FfiB
   return {
     call(symbol, args) {
       const fn = funcs[symbol];
-      if (!fn) throw new ScriptcaError('MISSING_EXPORT', symbol);
+      if (!fn) throw new ScriptcableError('MISSING_EXPORT', symbol);
       return fn(...args);
     },
   };
@@ -255,7 +255,7 @@ function invokeNative(
 
 export async function loadNativeLibrary(
   sharedPath: string,
-  profile: ScriptcaProfile,
+  profile: ScriptcableProfile,
 ): Promise<NativeModule> {
   const binding = isBun() ? await bindBun(sharedPath, profile) : await bindKoffi(sharedPath, profile);
   const byName = new Map(profile.exports.map((e) => [e.export, e]));
@@ -265,7 +265,7 @@ export async function loadNativeLibrary(
     call(exportName: string, ...args: unknown[]) {
       const def = byName.get(exportName);
       if (!def) {
-        throw new ScriptcaError(
+        throw new ScriptcableError(
           'UNKNOWN_EXPORT',
           `Unknown export "${exportName}"`,
           `Known: ${[...byName.keys()].join(', ')}`,
@@ -280,7 +280,7 @@ export async function loadNativeLibrary(
 }
 
 export async function loadNativeFromOutDir(outDir: string): Promise<NativeModule> {
-  const profile = JSON.parse(await readFile(`${outDir}/profile.json`, 'utf8')) as ScriptcaProfile;
+  const profile = JSON.parse(await readFile(`${outDir}/profile.json`, 'utf8')) as ScriptcableProfile;
   const soPath = `${outDir}/${sharedLibraryFileName(profile.name)}`;
   return loadNativeLibrary(soPath, profile);
 }

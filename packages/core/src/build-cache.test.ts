@@ -8,18 +8,18 @@ import {
   isCachedBuild,
   markBuildDone,
 } from './build-cache.js';
-import type { ScriptcaConfig, ScriptcaProfile } from '@scriptcable/types';
+import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
 
 let workDir: string;
 
-const config: ScriptcaConfig = {
+const config: ScriptcableConfig = {
   name: 'cachetest',
   entry: 'src/core.ts',
   prefix: 'cachetest_',
   exports: [{ name: 'add', params: ['f64', 'f64'], returns: 'f64' }],
 };
 
-const profile: ScriptcaProfile = {
+const profile: ScriptcableProfile = {
   profile_format: 1,
   name: 'cachetest',
   entry: 'src/core.ts',

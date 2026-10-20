@@ -1,7 +1,7 @@
 # @scriptcable/lynx
 
 **Native-first on device:** link the scriptc archive into your own Lynx
-native module (NDK / platform build). Use `ScriptcaRspackPlugin`
+native module (NDK / platform build). Use `ScriptcableRspackPlugin`
 (`@scriptcable/webpack`) so Rspeedy/Rsbuild rebuilds the core, then bridge
 through `createLynxEngine`.
 

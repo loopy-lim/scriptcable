@@ -1,4 +1,4 @@
-import { withScriptca, scriptcableBuild } from '@scriptcable/next';
+import { withScriptcable, scriptcableBuild } from '@scriptcable/next';
 import { access } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -8,7 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const gen = await scriptcableBuild({ cwd: root });
 await access(join(root, '.scriptcable', sharedLibraryFileName('calculator')));
 
-const cfg = withScriptca({ reactStrictMode: true });
+const cfg = withScriptcable({ reactStrictMode: true });
 if (typeof cfg.webpack !== 'function') throw new Error('missing webpack hook');
 
 await new Promise((resolve, reject) => {

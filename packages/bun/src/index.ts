@@ -14,4 +14,4 @@ export {
   loadWasmModule,
   type LoadedModule,
 } from '@scriptcable/core/wasm';
-export { ScriptcaError } from '@scriptcable/types';
+export { ScriptcableError } from '@scriptcable/types';

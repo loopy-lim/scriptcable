@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto';
 import { readFile, stat, writeFile, access } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
-import type { ScriptcaConfig, ScriptcaProfile } from '@scriptcable/types';
+import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
 
 const CACHE_FILE = 'build-cache.json';
 
@@ -84,8 +84,8 @@ async function collectSourceHashes(
 /** Compute the cache key for a build. */
 export async function computeBuildHash(options: {
   cwd: string;
-  config: ScriptcaConfig;
-  profile: ScriptcaProfile;
+  config: ScriptcableConfig;
+  profile: ScriptcableProfile;
   target: 'native' | 'wasm' | 'both';
   extraInputs?: string[];
 }): Promise<string> {
