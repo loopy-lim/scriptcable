@@ -23,6 +23,10 @@ export type ExportDef = {
   /** Native/Wasm symbol (usually `${prefix}${export}`) */
   symbol: string;
   params: AbiClass[];
+  /** Source parameter names (from TS inference) — used by codegen. */
+  paramNames?: string[];
+  /** JSDoc summary carried from the TS source. */
+  doc?: string;
   returns: AbiClass;
 };
 
@@ -58,8 +62,8 @@ export type ScriptcableConfig = {
   entry: string;
   /** Symbol prefix for the ABI */
   prefix?: string;
-  /** Declared exports (source of truth for codegen + profile) */
-  exports: Array<{
+  /** Declared exports — when omitted, inferred from the TS entry source. */
+  exports?: Array<{
     name: string;
     params: AbiClass[];
     returns: AbiClass;

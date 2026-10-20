@@ -55,7 +55,8 @@
     "test": "bun test src/"
   },
   "dependencies": {
-    "@scriptcable/types": "workspace:*"
+    "@scriptcable/types": "workspace:*",
+    "typescript": "^5.9.2"
   },
   "devDependencies": {
     "@types/bun": "^1.3.0"

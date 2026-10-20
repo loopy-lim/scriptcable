@@ -1,15 +1,25 @@
 import { mkdir, writeFile, access } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
-const CORE_TS = `/** scriptcable core — compiled by scriptc into a native library (default). */
+const CORE_TS = `/**
+ * scriptcable core — compiled by scriptc into a native library (default).
+ *
+ * Every exported function with ABI-mappable types (number, string, boolean,
+ * Uint8Array, bigint, or aliases like \`type UserId = u32\`) becomes a native
+ * export automatically. JSDoc comments flow into generated clients.
+ */
+
+/** Adds two numbers. */
 export function add(a: number, b: number): number {
   return a + b;
 }
 
+/** Multiplies two numbers. */
 export function mul(a: number, b: number): number {
   return a * b;
 }
 
+/** Greets someone by name. */
 export function greet(name: string): string {
   return \`hello, \${name}\`;
 }
@@ -44,19 +54,26 @@ export async function runInit(opts: {
 
   const slugName = opts.name.replace(/[^A-Za-z0-9_-]/g, '-');
   const prefix = `${slug(opts.name)}_`;
-  const config = {
-    name: slugName,
-    entry: 'src/core.ts',
-    prefix,
-    outDir: '.scriptcable',
-    target: host === 'vite' ? 'both' : 'native',
-    exports: [
-      { name: 'add', params: ['f64', 'f64'], returns: 'f64' },
-      { name: 'mul', params: ['f64', 'f64'], returns: 'f64' },
-      { name: 'greet', params: ['string'], returns: 'string' },
-    ],
-  };
-  await writeFile(join(root, 'scriptcable.json'), JSON.stringify(config, null, 2) + '\n');
+  // Typed TS config — exports are inferred from src/core.ts, zero duplication.
+  await writeFile(
+    join(root, 'scriptcable.config.ts'),
+    `import { defineConfig } from '@scriptcable/core';
+
+/**
+ * scriptcable config — fully typed.
+ * Exports are inferred from ${'`'}src/core.ts${'`'} (ABI-mappable exported functions),
+ * so you never duplicate signatures here. To pin explicitly, add:
+ *   exports: [{ name: "add", params: ["f64", "f64"], returns: "f64" }]
+ */
+export default defineConfig({
+  name: '${slugName}',
+  entry: 'src/core.ts',
+  prefix: '${prefix}',
+  outDir: '.scriptcable',
+  target: '${host === 'vite' ? 'both' : 'native'}',
+});
+`,
+  );
 
   const deps: Record<string, string> = {
     scriptc: '^0.3.6',

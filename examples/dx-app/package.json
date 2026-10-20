@@ -1,0 +1,15 @@
+{
+  "name": "@scriptcable/example-dx-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "scriptcable build"
+  },
+  "devDependencies": {
+    "@scriptcable/cli": "workspace:*",
+    "@scriptcable/core": "workspace:*",
+    "@scriptcable/bun": "workspace:*",
+    "scriptc": "^0.3.6"
+  }
+}
