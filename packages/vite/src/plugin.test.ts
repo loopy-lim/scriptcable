@@ -61,6 +61,29 @@ describe('vite plugin', () => {
     assert.equal(profile.exports.length, 1);
   }, 120_000);
 
+  it('drop-in gate: build targets without TLA disable interception, es2022 and dev stay on', async () => {
+    const root = await makeProject(false);
+    const entryAbs = resolve(root, 'src', 'core.ts');
+    const importer = resolve(root, 'src', 'app.ts');
+
+    const dropinPathFor = async (command: string | undefined, target: unknown): Promise<string | null> => {
+      const plugin = scriptcable();
+      plugin.configResolved!({ root, publicDir: join(root, 'public'), command, build: { target } });
+      await plugin.buildStart!();
+      const hook = plugin.resolveId as {
+        handler: (this: { resolve: () => { id: string } | null }, id: string, importer?: string) => Promise<string | null>;
+      };
+      return hook.handler.call({ resolve: () => ({ id: entryAbs }) }, './core', importer);
+    };
+
+    // vite 5/6 default ('modules' → safari 14) rejects top-level await — the
+    // drop-in must stay off, or `vite build` would break (P1 regression).
+    assert.equal(await dropinPathFor('build', ['es2020', 'safari14']), null, 'pre-TLA target must disable');
+    assert.match((await dropinPathFor('build', 'es2022'))!, /dropin[\\/]browser\.ts$/, 'es2022 stays on');
+    // Dev transforms with esnext — no gate applies.
+    assert.match((await dropinPathFor('serve', ['es2020', 'safari14']))!, /dropin[\\/]browser\.ts$/);
+  }, 180_000);
+
   it('HMR: rebuilds on entry change, skips unrelated files', async () => {
     const root = await makeProject(false);
     const plugin = scriptcable();
