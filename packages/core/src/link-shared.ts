@@ -83,12 +83,17 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
   const args: string[] = ['-shared', '-o', outPath];
   if (process.platform === 'darwin') {
     args.push('-Wl,-force_load,' + archivePath);
+  } else if (process.platform === 'win32') {
+    // clang on Windows drives lld-link (MSVC): GNU -Wl,--whole-archive and
+    // the Unix -lm/-lpthread inputs don't exist there (LNK1181)
+    args.push('-Wl,/WHOLEARCHIVE:' + archivePath);
   } else {
     args.push('-Wl,--whole-archive', archivePath, '-Wl,--no-whole-archive');
     // Unused FS/async objects may reference symbols we stubbed or never call.
     args.push('-Wl,--allow-shlib-undefined');
   }
-  args.push(stubO, '-lm', '-lpthread');
+  args.push(stubO);
+  if (process.platform !== 'win32') args.push('-lm', '-lpthread');
   if (process.platform === 'linux') args.push('-ldl');
 
   const link = await run(clang, args);
