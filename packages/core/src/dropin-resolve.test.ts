@@ -91,9 +91,12 @@ describe('ScriptcableDropinResolvePlugin', () => {
       console.warn('enhanced-resolve not installed — skipping integration case');
       return;
     }
-    const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises');
+    const { mkdtemp, mkdir, writeFile, realpath } = await import('node:fs/promises');
     const { tmpdir } = await import('node:os');
-    const proj = await mkdtemp(join(tmpdir(), 'sc-dropin-resolve-'));
+    // Realpath up front: macOS /var → /private/var, and Windows tmpdir()
+    // reports 8.3 short names (RUNNER~1) that enhanced-resolve resolves to
+    // the long form — every path handed to the resolver must be the real one.
+    const proj = await realpath(await mkdtemp(join(tmpdir(), 'sc-dropin-resolve-')));
     await mkdir(join(proj, 'src'), { recursive: true });
     await writeFile(join(proj, 'src', 'core.ts'), 'export function add(a: number, b: number) { return a + b; }\n');
     await writeFile(join(proj, 'src', 'other.ts'), 'export const other = 1;\n');
@@ -112,7 +115,6 @@ describe('ScriptcableDropinResolvePlugin', () => {
       });
 
     // macOS /var → /private/var: enhanced-resolve reports the real path.
-    const { realpath } = await import('node:fs/promises');
     const dropinReal = await realpath(dropin);
     const otherReal = await realpath(join(proj, 'src', 'other.ts'));
     assert.equal(await resolveIt(join(proj, 'src'), './core'), dropinReal, './core must land on the drop-in');
