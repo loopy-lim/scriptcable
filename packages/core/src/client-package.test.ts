@@ -8,6 +8,7 @@ import {
   writeClientPackage,
   ensureClientPackageLink,
   writeGeneratedClients,
+  copyWasmToPublicDir,
 } from './client-package.js';
 import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
 
@@ -150,6 +151,48 @@ describe('writeGeneratedClients', () => {
       const browserSrc = await readFile(join(genDir, 'browser.ts'), 'utf8');
       assert.match(browserSrc, /wasi\?:/);
       assert.match(browserSrc, /createMinimalWasi/);
+    });
+  });
+});
+
+describe('copyWasmToPublicDir', () => {
+  it('writes once, then skips identical copies', async () => {
+    await withTmpDir(async (dir) => {
+      const publicDir = join(dir, 'public');
+      const wasmPath = join(dir, 'calc.wasm');
+      const bytes = new Uint8Array([0, 97, 115, 109, 1, 2, 3]);
+      await writeFile(wasmPath, bytes);
+
+      const first = await copyWasmToPublicDir({ publicDir, wasmPath, wasmName: 'calc.wasm' });
+      assert.equal(first, 'written');
+      const copied = await readFile(join(publicDir, 'calc.wasm'));
+      assert.deepEqual(new Uint8Array(copied), bytes);
+
+      const second = await copyWasmToPublicDir({ publicDir, wasmPath, wasmName: 'calc.wasm' });
+      assert.equal(second, 'unchanged');
+
+      // A rebuilt wasm is copied again
+      await writeFile(wasmPath, new Uint8Array([9, 9, 9, 9]));
+      const third = await copyWasmToPublicDir({ publicDir, wasmPath, wasmName: 'calc.wasm' });
+      assert.equal(third, 'written');
+      assert.equal((await readFile(join(publicDir, 'calc.wasm'))).byteLength, 4);
+    });
+  });
+
+  it('skips (never throws) when the source or destination is unwritable', async () => {
+    await withTmpDir(async (dir) => {
+      const missing = await copyWasmToPublicDir({
+        publicDir: join(dir, 'public'),
+        wasmPath: join(dir, 'nope.wasm'),
+      });
+      assert.equal(missing, 'skipped');
+      // A file where the public dir belongs — copyFile fails, result is 'skipped'
+      await writeFile(join(dir, 'blocker'), 'x');
+      const blocked = await copyWasmToPublicDir({
+        publicDir: join(dir, 'blocker'),
+        wasmPath: join(dir, 'blocker'),
+      });
+      assert.equal(blocked, 'skipped');
     });
   });
 });

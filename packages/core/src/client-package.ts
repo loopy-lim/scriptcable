@@ -144,6 +144,35 @@ async function copyIfChanged(src: string, dest: string): Promise<void> {
   await copyFile(src, dest);
 }
 
+export type PublicCopyResult = 'written' | 'unchanged' | 'skipped';
+
+/**
+ * Copy the WASM artifact into a web host's static directory (`public/`), so
+ * the generated browser client's root-URL candidate resolves with no manual
+ * copy step. Skip-identical — safe to call on every build / watch tick.
+ * Never throws: 'skipped' means the host can still pass an explicit wasmUrl.
+ */
+export async function copyWasmToPublicDir(opts: {
+  publicDir: string;
+  wasmPath: string;
+  wasmName?: string;
+}): Promise<PublicCopyResult> {
+  const dest = join(opts.publicDir, opts.wasmName ?? basename(opts.wasmPath));
+  try {
+    const [a, b] = await Promise.all([readFile(opts.wasmPath), readFile(dest)]);
+    if (a.equals(b)) return 'unchanged';
+  } catch {
+    /* copy below */
+  }
+  try {
+    await mkdir(opts.publicDir, { recursive: true });
+    await copyFile(opts.wasmPath, dest);
+    return 'written';
+  } catch {
+    return 'skipped';
+  }
+}
+
 /**
  * Single emit point shared by the CLI and the bundler plugins: generate the
  * client flavors, write them (skipping identical content so watchers don't
@@ -176,6 +205,9 @@ export async function writeGeneratedClients(opts: {
     } catch {
       /* not written yet */
     }
+    // Nested emits (dropin/*.ts) need their directory — skip-identical files
+    // may leave it uncreated on a fresh dir.
+    await mkdir(dirname(path), { recursive: true });
     await writeFile(path, body);
   }
   if (opts.copy?.sharedPath) {

@@ -399,3 +399,35 @@ export async function buildCore(
 export async function readJsonFile<T>(path: string): Promise<T> {
   return JSON.parse(await readFile(path, 'utf8')) as T;
 }
+
+/**
+ * Make sure the WASM artifact for the browser flavor exists. Native-default
+ * builds (the Next / Webpack plugins) don't produce one, but the generated
+ * browser client needs `<name>.wasm`. Reuses a previously built wasm — the
+ * build cache makes the first build the only expensive one — and soft-fails
+ * (undefined + a printed reason) when zig is missing or the wasm build
+ * errors, so native-only hosts keep working unchanged.
+ */
+export async function ensureWasmArtifact(
+  config: ResolvedConfig,
+  options: { cwd?: string; outDir?: string } = {},
+): Promise<string | undefined> {
+  const cwd = options.cwd ?? process.cwd();
+  const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptcable');
+  const existing = join(outDir, `${config.name}.wasm`);
+  try {
+    await access(existing);
+    return existing;
+  } catch {
+    /* build below */
+  }
+  try {
+    const result = await buildCore(config, { cwd, outDir, target: 'wasm' });
+    return result.wasmPath;
+  } catch (e) {
+    const reason = e instanceof Error ? e.message.split('\n')[0] : String(e);
+    console.warn(`  wasm:      browser flavor unavailable — ${reason}`);
+    console.warn('             run `scriptcable build --target wasm` to enable it (needs zig 0.13)');
+    return undefined;
+  }
+}
