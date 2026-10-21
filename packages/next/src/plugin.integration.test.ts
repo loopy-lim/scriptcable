@@ -7,10 +7,10 @@
  */
 import { describe, it, afterAll } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, rm, symlink, readFile, lstat } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, rm, symlink, readFile, lstat, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { scriptcableBuild } from './index.js';
+import { scriptcableBuild, withScriptcable } from './index.js';
 
 const repoRoot = resolve(import.meta.dir, '../../..'); // packages/next/src → repo root
 const tmpRoots: string[] = [];
@@ -67,6 +67,11 @@ describe('next plugin-only build (integration)', () => {
       `expected exactly one shared lib in ${genDir}, got: ${sharedLibs.join(', ')}`,
     );
 
+    // Browser flavor: the wasm artifact is ensured (built here on first use,
+    // cached afterwards) and copied into public/ — no manual copy step
+    await access(join(project, 'public', 'next_plugin_it.wasm'));
+    await access(join(genDir, 'next_plugin_it.wasm'));
+
     // Package manifest + node_modules link
     const clientPkg = JSON.parse(await readFile(join(genDir, 'package.json'), 'utf8'));
     assert.equal(clientPkg.name, '@scriptcable/client');
@@ -89,5 +94,63 @@ console.log(JSON.stringify({ add: c.add(2, 3) }));`,
     });
     assert.equal(probe.exitCode, 0, `client import failed: ${String(probe.stderr)}`);
     assert.equal(JSON.parse(String(probe.stdout)).add, 5);
+
+    // Drop-in flavors are emitted alongside the regular clients
+    await access(join(genDir, 'dropin', 'browser.ts'));
+    await access(join(genDir, 'dropin', 'node.ts'));
   }, 120_000);
+
+  it('wires a drop-in resolve gate per graph: client → browser, server → node', async () => {
+    const project = await makeProject();
+
+    // Run the real build once so both graphs' drop-ins exist on disk.
+    await scriptcableBuild({ cwd: project });
+    const genDir = join(project, '.scriptcable', 'generated');
+    await access(join(genDir, 'dropin', 'browser.ts'));
+    await access(join(genDir, 'dropin', 'node.ts'));
+
+    const gates: Record<string, { apply: (resolver: unknown) => void }> = {};
+    for (const isServer of [false, true]) {
+      const cfg = withScriptcable({});
+      const webpackConfig: { plugins: unknown[]; resolve?: { plugins?: unknown[] } } = { plugins: [] };
+      cfg.webpack!(webpackConfig, { isServer });
+      const gate = webpackConfig.resolve?.plugins?.[0] as { apply: (resolver: unknown) => void } | undefined;
+      assert.ok(gate, `isServer=${isServer} must wire a drop-in gate`);
+      gates[isServer ? 'server' : 'client'] = gate;
+    }
+
+    // Before the build hook runs, the gate is inert (no resolver tap).
+    let tapped = 0;
+    const stubResolver = {
+      ensureHook: (name: string) => ({ hook: name }),
+      getHook: () => ({
+        tapAsync: () => {
+          tapped += 1;
+        },
+      }),
+      doResolve: () => {},
+    };
+    gates.client!.apply(stubResolver);
+    assert.equal(tapped, 0, 'gate must stay inert until the build proves interceptability');
+
+    // Run the client-graph build hook — the same gate now wires the redirect.
+    for (const isServer of [false, true]) {
+      const cfg = withScriptcable({});
+      const webpackConfig: { plugins: Array<{ apply: (compiler: unknown) => void }>; resolve?: { plugins?: unknown[] } } = {
+        plugins: [],
+      };
+      cfg.webpack!(webpackConfig, { isServer });
+      const buildPlugin = webpackConfig.plugins[0]!;
+      let hook: (() => Promise<void>) | null = null;
+      buildPlugin.apply({
+        context: project,
+        hooks: { beforeCompile: { tapPromise: (_n: string, fn: () => Promise<void>) => (hook = fn) } },
+      });
+      await hook!();
+      const gate = webpackConfig.resolve?.plugins?.[0] as { apply: (resolver: unknown) => void };
+      tapped = 0;
+      gate.apply(stubResolver);
+      assert.equal(tapped, 1, `isServer=${isServer} gate must wire the redirect after its build`);
+    }
+  }, 180_000);
 });
