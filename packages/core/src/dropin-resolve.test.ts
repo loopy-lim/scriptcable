@@ -6,11 +6,16 @@
  */
 import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { ScriptcableDropinResolvePlugin } from './dropin-resolve.js';
 
-const ENTRY = '/proj/src/core.ts';
-const DROPIN = '/proj/.scriptcable/generated/dropin/browser.ts';
+// Real (per-platform) absolute paths: on Windows, path.resolve() rewrites
+// fake POSIX absolutes like /proj/... onto the current drive, which would
+// break the plugin's comparison against the entry.
+const PROJ = resolve(tmpdir(), 'sc-dropin-resolve-stub');
+const ENTRY = join(PROJ, 'src', 'core.ts');
+const DROPIN = join(PROJ, '.scriptcable', 'generated', 'dropin', 'browser.ts');
 
 type Captured = { redirected: (string | undefined)[]; delegated: string[] };
 
@@ -50,16 +55,16 @@ describe('ScriptcableDropinResolvePlugin', () => {
   const plugin = new ScriptcableDropinResolvePlugin(ENTRY, DROPIN);
 
   it('redirects a relative import that resolves to the entry', () => {
-    const captured = run(plugin, { path: '/proj/src', request: './core' });
+    const captured = run(plugin, { path: join(PROJ, 'src'), request: './core' });
     assert.deepEqual(captured.redirected, [DROPIN]);
     assert.equal(captured.delegated.length, 0);
   });
 
   it('redirects with an explicit extension and from a parent directory', () => {
     const cases: Array<{ path: string; request: string }> = [
-      { path: '/proj/src', request: './core.ts' },
-      { path: '/proj/app', request: '../src/core.ts' },
-      { path: '/proj/app/x', request: '../../src/core.ts' },
+      { path: join(PROJ, 'src'), request: './core.ts' },
+      { path: join(PROJ, 'app'), request: '../src/core.ts' },
+      { path: join(PROJ, 'app', 'x'), request: '../../src/core.ts' },
     ];
     for (const req of cases) {
       const captured = run(plugin, req);
