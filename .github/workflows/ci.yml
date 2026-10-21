@@ -37,6 +37,7 @@ jobs:
       - run: bun run --filter @scriptcable/cli test
       - run: bun run --filter @scriptcable/vite test
       - run: bun run --filter @scriptcable/next test
+      - run: bun run --filter @scriptcable/webpack test
       - run: bun run --filter @scriptcable/example-calculator-core build
       - run: bun run --filter @scriptcable/example-bench-core build
       - run: bun run --filter @scriptcable/example-node-app test
