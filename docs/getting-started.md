@@ -2,7 +2,7 @@
 
 Every command below was executed end-to-end on 2026-10-21 (macOS, Bun 1.4.3, clang via Xcode CLT) and the outputs shown are what you should see. If a step prints something else, check [troubleshooting.md](./troubleshooting.md).
 
-**Requirements:** [Bun](https://bun.sh) ≥ 1.2 · clang (macOS: `xcode-select --install`, Linux: `sudo apt install clang`)
+**Requirements:** [Bun](https://bun.sh) ≥ 1.2 · clang (macOS: `xcode-select --install`, Linux: `sudo apt install clang`) · Windows: [zig](https://ziglang.org) 0.13 (drives the linker; the typed N-API addon doesn't build there yet — the FFI fallback serves those hosts)
 
 ---
 

@@ -62,11 +62,11 @@ jobs:
         run: bun examples/bench-core/scripts/bench-gate.ts
         continue-on-error: true
 
-  # Experimental: scriptc ships Windows binaries, but zig cc + clang + MSVC
-  # linking on Windows is unproven for this repo. Allow-fail until proven.
-  windows-experiment:
+  # Windows: scriptc compiles, zig cc links, watch/init/tests pass. The
+  # typed N-API addon doesn't build on Windows yet (FFI fallback serves
+  # those hosts).
+  windows:
     runs-on: windows-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

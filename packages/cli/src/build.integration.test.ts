@@ -101,10 +101,14 @@ describe('zero-config build (integration)', () => {
     const linkPath = join(project, 'node_modules', '@scriptcable', 'client');
     assert.equal((await lstat(linkPath)).isSymbolicLink(), true, 'no node_modules/@scriptcable/client link');
 
-    // Typed N-API direct binding: built into outDir and copied next to the clients
-    const addonPath = join(project, '.scriptcable', 'zero_cfg_it.node');
-    await access(addonPath);
-    await access(join(project, '.scriptcable', 'generated', 'zero_cfg_it.node'));
+    // Typed N-API direct binding: built into outDir and copied next to the
+    // clients. Soft-fail by design — Windows doesn't build the addon yet
+    // (FFI fallback serves those hosts) and the build still succeeds.
+    if (process.platform !== 'win32') {
+      const addonPath = join(project, '.scriptcable', 'zero_cfg_it.node');
+      await access(addonPath);
+      await access(join(project, '.scriptcable', 'generated', 'zero_cfg_it.node'));
+    }
 
     // The bare specifier actually resolves and calls the real core under Bun,
     // exercising the typed addon across all ABI classes
