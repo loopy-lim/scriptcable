@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { doctor } from '@scriptcable/core';
 import { formatError } from '../errors.js';
 
@@ -28,6 +30,22 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
       } else {
         const verb = info.clientLink === 'current' ? '✓' : '✓ (repaired)';
         console.log(`  client:   @scriptcable/client → node_modules ${verb}`);
+        // CI durability: the file: dep only survives when its placeholder
+        // manifest is committed, so report rather than auto-write — `init`
+        // scaffolds the dep + placeholder + gitignore negations as a set.
+        try {
+          const pkg = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8')) as {
+            dependencies?: Record<string, string>;
+            devDependencies?: Record<string, string>;
+          };
+          const declared = { ...pkg.dependencies, ...pkg.devDependencies }['@scriptcable/client'];
+          if (declared !== 'file:.scriptcable/generated') {
+            console.log('  client-dep: not CI-durable — add to package.json to survive re-installs:');
+            console.log('              "@scriptcable/client": "file:.scriptcable/generated"  (init scaffolds this)');
+          }
+        } catch {
+          /* no package.json here — nothing to advise */
+        }
       }
     }
     console.log('\nOK — ready to build native cores.');

@@ -81,6 +81,10 @@ export default defineConfig({
     scriptc: '^0.3.6',
     '@scriptcable/cli': '^0.1.0',
     '@scriptcable/core': '^0.1.0',
+    // CI-durable client dep — the placeholder manifest written below lets
+    // `bun install` resolve it before the first build; the first
+    // `scriptcable build` overwrites the manifest with the real flavors.
+    '@scriptcable/client': 'file:.scriptcable/generated',
   };
   const scripts: Record<string, string> = {
     build: 'scriptcable build',
@@ -195,11 +199,48 @@ Tests use \`createMockBridge\` — no device needed. See packages/react-native i
     }
     for (const [name, spec] of Object.entries(deps)) {
       if (!name.startsWith('@scriptcable/')) continue;
+      // The client dep points at this project's generated dir, not the checkout
+      if (name === '@scriptcable/client') continue;
       const fileSpec = overrides[name];
       if (!fileSpec) throw new Error(`--from: package not found in checkout: ${name}`);
       deps[name] = fileSpec;
     }
   }
+
+  // Placeholder client package + gitignore negation: the only .scriptcable
+  // content a fresh clone needs so `bun install` succeeds (bun fails a file:
+  // dep whose target has no package.json) and the link survives re-installs.
+  const genDir = join(root, '.scriptcable', 'generated');
+  await mkdir(genDir, { recursive: true });
+  await writeFile(
+    join(genDir, 'package.json'),
+    JSON.stringify(
+      {
+        name: '@scriptcable/client',
+        version: '0.0.0-scriptcable',
+        private: true,
+        type: 'module',
+        exports: { '.': './placeholder.ts' },
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+  await writeFile(
+    join(genDir, 'placeholder.ts'),
+    `/* Placeholder — \`scriptcable build\` replaces this package with the generated flavors. */\nexport async function createClient(): Promise<never> {\n  throw new Error('@scriptcable/client is not built yet — run "scriptcable build" first.');\n}\n`,
+  );
+  await writeFile(
+    join(root, '.gitignore'),
+    [
+      'node_modules/',
+      '.scriptcable/*',
+      '!.scriptcable/generated/',
+      '.scriptcable/generated/*',
+      '!.scriptcable/generated/package.json',
+      '!.scriptcable/generated/placeholder.ts',
+    ].join('\n') + '\n',
+  );
 
   await writeFile(
     join(root, 'package.json'),
