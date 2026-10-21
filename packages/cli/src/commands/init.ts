@@ -1,5 +1,5 @@
 import { mkdir, writeFile, access } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 
 const CORE_TS = `/**
  * scriptcable core — compiled by scriptc into a native library (default).
@@ -38,6 +38,8 @@ export async function runInit(opts: {
   name: string;
   cwd?: string;
   host?: InitHost;
+  /** Link @scriptcable/* to a local checkout via file: deps (pre-publish workflow) */
+  from?: string;
 }): Promise<number> {
   const host = opts.host ?? 'bun';
   const root = resolve(opts.cwd ?? process.cwd(), opts.name);
@@ -169,6 +171,36 @@ Tests use \`createMockBridge\` — no device needed. See packages/react-native i
     );
   }
 
+  // --from <checkout>: point every @scriptcable/* dep at the local checkout
+  // (file:), so the scaffold works before the packages are published to npm.
+  // The cli file: dep also links the `scriptcable` bin into node_modules/.bin.
+  const overrides: Record<string, string> = {};
+  if (opts.from) {
+    const checkout = resolve(opts.from);
+    // Every workspace package that a linked dep may reference via workspace:*
+    // — root overrides force them all into the checkout so nested workspace:*
+    // resolves outside the monorepo too.
+    const allPkgs = [
+      'cli', 'core', 'types', 'bun', 'node', 'vite', 'next', 'webpack',
+      'tauri', 'react-native', 'lynx', 'testing',
+    ];
+    for (const pkg of allPkgs) {
+      const target = join(checkout, 'packages', pkg);
+      try {
+        await access(target);
+      } catch {
+        continue;
+      }
+      overrides[`@scriptcable/${pkg}`] = `file:${relative(root, target)}`;
+    }
+    for (const [name, spec] of Object.entries(deps)) {
+      if (!name.startsWith('@scriptcable/')) continue;
+      const fileSpec = overrides[name];
+      if (!fileSpec) throw new Error(`--from: package not found in checkout: ${name}`);
+      deps[name] = fileSpec;
+    }
+  }
+
   await writeFile(
     join(root, 'package.json'),
     JSON.stringify(
@@ -180,6 +212,10 @@ Tests use \`createMockBridge\` — no device needed. See packages/react-native i
         scripts,
         engines: host === 'node' ? { node: '>=24' } : { bun: '>=1.2.0' },
         dependencies: deps,
+        // scriptc needs an install script to fetch its binary — trust it up
+        // front so `bun install` works without a prompt.
+        ...(Object.keys(deps).includes('scriptc') ? { trustedDependencies: ['scriptc'] } : {}),
+        ...(Object.keys(overrides).length ? { overrides } : {}),
       },
       null,
       2,
@@ -207,11 +243,11 @@ Tests use \`createMockBridge\` — no device needed. See packages/react-native i
 
   await writeFile(
     join(root, 'README.md'),
-    `# ${opts.name}\n\nscriptcable project (host: **${host}**, native default).\n\n\`\`\`bash\nbun install\nbunx scriptcable doctor\nbunx scriptcable build\n${scripts.start ? 'bun start' : 'bun run build'}\n\`\`\`\n\nMac (Apple Silicon): install clang via Xcode CLT; for iOS library archives see scriptc \`SCRIPTC_TARGET=aarch64-apple-ios\`.\n`,
+    `# ${opts.name}\n\nscriptcable project (host: **${host}**, native default).\n\n\`\`\`bash\nbun install\nbun run doctor\nbun run build\n${scripts.start ? 'bun start' : 'bun run build'}\n\`\`\`\n\nMac (Apple Silicon): install clang via Xcode CLT; for iOS library archives see scriptc \`SCRIPTC_TARGET=aarch64-apple-ios\`.\n`,
   );
 
   console.log(`Created ${root} (host=${host})`);
-  console.log(`  cd ${opts.name} && bun install && bunx scriptcable doctor && bunx scriptcable build`);
+  console.log(`  cd ${opts.name} && bun install && bun run doctor && bun run build`);
   return 0;
 }
 

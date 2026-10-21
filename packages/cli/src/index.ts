@@ -35,11 +35,13 @@ async function main(argv: string[]): Promise<number> {
         return 1;
       }
       let host: import('./commands/init.js').InitHost | undefined;
+      let from: string | undefined;
       for (let i = 0; i < rest.length; i++) {
         if (rest[i] === '--host') host = rest[++i] as typeof host;
+        if (rest[i] === '--from') from = rest[++i];
       }
       if (host === undefined) host = 'bun';
-      return runInit({ name, host });
+      return runInit({ name, host, from });
     }
     case 'build': {
       let target: 'wasm' | 'native' | 'both' | undefined;

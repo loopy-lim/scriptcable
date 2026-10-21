@@ -12,16 +12,17 @@ Inspired by [rustra](https://github.com/loopy-lim/rustra) (Rust core → multi-h
 
 **Requirements:** Bun ≥ 1.2 and `clang` (links the native shared library). Optional: [zig 0.13.x](https://ziglang.org/download/) only if you build `--target wasm`.
 
+**Every command below is verified end-to-end — with the output you should see at each step — in [docs/getting-started.md](./docs/getting-started.md).** Stuck? [docs/troubleshooting.md](./docs/troubleshooting.md) lists real errors and their fixes.
+
 ```bash
 # from this monorepo after bun install && bun run build
-bun run --filter @scriptcable/cli exec scriptcable init my-app
-# or once published: bunx @scriptcable/cli init my-app
+bun packages/cli/dist/index.js init demo --host bun --from .
+# or once published: bunx @scriptcable/cli init demo --host bun
 
-cd my-app
+cd demo
 bun install
-bunx scriptcable doctor
-bunx scriptcable build
-bun start
+bun run doctor && bun run build && bun start
+# → {"sum":42,"hi":"hello, bun"}
 ```
 
 `init` scaffolds a typed `scriptcable.config.ts` (preferred) or `scriptcable.json`. **You never declare exports by hand** — they're inferred from your `src/core.ts` types (see below).

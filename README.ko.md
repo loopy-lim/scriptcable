@@ -11,13 +11,17 @@
 
 **필요:** Bun ≥ 1.2와 `clang`(네이티브 공유 라이브러리 링크). WASM(`--target wasm`)을 쓸 때만 [zig 0.13.x](https://ziglang.org/download/).
 
+**아래 명령은 끝까지 실행해 검증됐습니다 — 각 단계에서 나와야 할 출력까지 [docs/getting-started.md](./docs/getting-started.md)에 정리**되어 있습니다. 막히면 [docs/troubleshooting.md](./docs/troubleshooting.md)에서 실제 에러와 해결법을 찾으세요.
+
 ```bash
-bun run --filter @scriptcable/cli exec scriptcable init my-app
-cd my-app
+# 이 모노레포에서 bun install && bun run build 이후
+bun packages/cli/dist/index.js init demo --host bun --from .
+# npm 발행 후: bunx @scriptcable/cli init demo --host bun
+
+cd demo
 bun install
-bunx scriptcable doctor
-bunx scriptcable build
-bun start
+bun run doctor && bun run build && bun start
+# → {"sum":42,"hi":"hello, bun"}
 ```
 
 `src/core.ts`의 exports를 수정한 뒤 다시 빌드하세요. 설정 파일(`scriptcable.config.ts`)이 없어도 name·entry·exports는 자동 추론됩니다 — 아래 [제로 설정](#제로-설정-zero-config) 참고.
