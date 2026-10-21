@@ -98,18 +98,19 @@ import { add } from './src/core';
 add(20, 22); // 42, native-addon speed
 ```
 
-| Host | How interception wires up |
-|---|---|
-| **Vite** | automatic — `resolveId` (runs before the builtin resolver) |
-| **Webpack / Rspack / Rspeedy (Lynx)** | automatic — an `enhanced-resolve` plugin |
-| **Next.js (webpack)** | automatic — client graphs get the browser drop-in, server/edge graphs the node one |
-| **Next.js (Turbopack)** | `withScriptcableAsync()` emits `turbopack.resolveAlias` (await it in `next.config.mjs`) |
-| **React Native (Metro)** | `withScriptcableMetro()` from `@scriptcable/react-native/metro` in `metro.config.js` |
-| **Electron** | main process: `import { createClient } from '@scriptcable/client'` (node conditions); renderer: the Vite/Webpack plugin as usual |
+| Host | How interception wires up | Verified against |
+|---|---|---|
+| **Vite** | automatic — `resolveId` (runs before the builtin resolver) | Vite 6 dev + build (2026-10-21) |
+| **Webpack** | automatic — an `enhanced-resolve` plugin | webpack plugin tests + Next's webpack graph (below) |
+| **Next.js (webpack)** | automatic — client graphs get the browser drop-in, server/edge graphs the node one | Next 16.4.2 `next build --webpack` + `next start` runtime call (2026-10-21) |
+| **Next.js (Turbopack)** | entry drop-in unavailable — Turbopack has no per-graph resolve hook, and `resolveAlias` matches request specifiers, not resolved paths (an absolute-path key does nothing — verified). Use `@scriptcable/client` (export conditions work via `transpilePackages`), or run `next dev/build --webpack` for drop-in imports | Next 16.4.2 turbopack build |
+| **Rspack / Rspeedy (Lynx)** | Rspack's Rust resolver has no JS resolve-plugin hooks (`resolve.plugins` is not in its config schema — a pushed plugin is silently ignored). The plugin still runs the build and links the package; imports resolve through `@scriptcable/client` export conditions | Rspeedy 0.18.2 build (browser client in the bundle) |
+| **React Native (Metro)** | `withScriptcableMetro()` from `@scriptcable/react-native/metro` in `metro.config.js` | Metro 0.87 / RN 0.88 real bundle (2026-10-21) |
+| **Electron** | main process: `import { createClient } from '@scriptcable/client'` (node conditions); renderer: the Vite/Webpack plugin as usual | — |
 
 Drop-in flavors: browser graphs initialize WASM once at module load (top-level await — build for **ES2022+**, e.g. vite `build.target: 'es2022'`); server graphs are **await-free** (`createClientSync()` — safe in CommonJS-output server bundles); Metro creates the bridge client lazily on first call.
 
-Accuracy comes first: if your entry exports anything a drop-in can't provide — a non-function value, a class, a `default`/re-export, a function with unmappable types, or an `exports` list that pins a subset — that project is **not** intercepted and one warning line says why. Opt out entirely with `dropin: false` (Vite) / `dropin: false` (Webpack) / `{ dropin: false }` (`withScriptcable`). Externally hosted runtimes (Turbopack, Metro, Rspeedy) are wired by config emission here; end-to-end verification needs those hosts installed.
+Accuracy comes first: if your entry exports anything a drop-in can't provide — a non-function value, a class, a `default`/re-export, a function with unmappable types, or an `exports` list that pins a subset — that project is **not** intercepted and one warning line says why. Opt out entirely with `dropin: false` (Vite) / `dropin: false` (Webpack) / `{ dropin: false }` (`withScriptcable`).
 
 ### Before → after: what you stop knowing
 
@@ -215,17 +216,27 @@ export default {
 
 Run vite with `bun --bun vite` so toolchain checks use the Bun runtime.
 
-### Next.js / Turbopack
+### Next.js
 
 ```js
 // next.config.mjs — webpack path (drop-in per graph: client → browser, server → node)
 import { withScriptcable } from '@scriptcable/next';
 export default withScriptcable({});
+// run `next build --webpack` / `next dev` for drop-in imports
+```
 
-// Turbopack: await the async variant for the resolveAlias drop-in,
-// and keep scriptcableBuild() as the predev script
-import { withScriptcableAsync, scriptcableBuild } from '@scriptcable/next';
-export default await withScriptcableAsync({});
+Turbopack (Next 16's default bundler) has no per-graph resolve hook, and its
+`resolveAlias` matches request specifiers rather than resolved paths — an
+absolute-path alias key does nothing (verified against 16.4.2: the TypeScript
+entry stayed in the graph). There is no silent pretend-alias: `withScriptcableAsync()`
+prints that once and leaves the imports alone. App code imports
+`@scriptcable/client`; export conditions still deliver the compiled client in
+both graphs:
+
+```js
+// next.config.mjs — Turbopack path
+import { withScriptcableAsync } from '@scriptcable/next';
+export default await withScriptcableAsync({}); // builds artifacts + links @scriptcable/client
 ```
 
 ### Tauri
@@ -324,7 +335,8 @@ Note: `scriptc` must be a trusted dependency so Bun runs its install script (alr
 - WASM (`--target wasm`) still needs zig **0.13.x** with scriptc 0.3.x, plus a WASI polyfill in browsers.
 - The **browser drop-in** initializes WASM with top-level await — build for **ES2022+** (Chrome 89+, Safari 15+, Firefox 89+). On stricter targets use `dropin: false` and the async `createClient()`.
 - **Drop-in interception** applies only when the entry's entire runtime export surface is ABI-mappable (named functions); anything else disables it with a printed reason.
-- Turbopack / Metro / Rspeedy drop-in wiring is emitted as config here and verified at the unit level; end-to-end behavior needs those hosts installed.
+- **Drop-in host matrix** (verified 2026-10-21): Vite 6, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Rspeedy 0.18 (conditions path) — end-to-end. Turbopack: entry drop-in unavailable (no resolve hook; see the host table). Lynx/TurboModule **on-device** call semantics remain unverified — no device in the loop.
+- Bundler plugins compile inside the host's build process, so any Node version is accepted there (`doctorRuntimeGate: 'skip'`); the Node ≥ 24 floor applies to running the CLI / generated clients directly.
 
 ## License
 

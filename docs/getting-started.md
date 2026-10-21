@@ -148,6 +148,26 @@ const client = await createClient();
 
 ---
 
+## Zero changes: drop-in imports (bundler hosts)
+
+On bundler hosts you don't even write the `@scriptcable/client` import. Register the plugin and keep importing the core file — imports that resolve to the core entry are redirected onto a generated drop-in client with the same export names:
+
+```ts
+// vite.config.ts / webpack.config / next.config — just register the plugin
+import { add, greet } from './src/core'; // → the compiled client, same names
+add(20, 22); // 42
+```
+
+```ts
+import scriptcable from '@scriptcable/vite'; // or:
+import { ScriptcableWebpackPlugin } from '@scriptcable/webpack'; // or:
+import { withScriptcable } from '@scriptcable/next'; // next build --webpack
+```
+
+Verified end-to-end (2026-10-21): Vite 6 dev+build, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Rspeedy 0.18. Turbopack and Rspack have no JS resolver hooks — there the `@scriptcable/client` import from Path A is the way (export conditions still deliver the compiled client). See the README host table for the full matrix.
+
+---
+
 ## Where to go next
 
 - [README](../README.md) — architecture, per-host adapters, contract gate (CI)

@@ -99,7 +99,31 @@ Server components / route handlers don't need any of this — the native flavor 
 
 ### Vite: `SyntaxError: Unexpected identifier` for a `.ts` file from the client
 
-A static `public/` copy of `.scriptcable/generated/` shadows Vite's transformed modules. Serve only runtime artifacts (`.wasm`, `profile.json`) from `public/` — see `examples/vite-app/scripts/sync-public.mjs`.
+A static `public/` copy of `.scriptcable/generated/` shadows Vite's transformed modules. Serve only runtime artifacts (`.wasm`, `profile.json`) from `public/` — the Vite plugin copies the wasm itself; don't publish the generated directory.
+
+---
+
+## Drop-in
+
+### `[scriptcable] drop-in disabled — …`
+
+Interception is off for this project on purpose: the entry exports something a drop-in can't provide (a non-function value, a class, `default`, a re-export, or an `exports` list pinning a subset). The imports keep resolving to the TypeScript source; switch those call sites to `@scriptcable/client`, or make the entry export only ABI-mappable named functions.
+
+### `next build` (Turbopack): imports still run the TypeScript core
+
+Turbopack has no per-graph resolve hook, and `turbopack.resolveAlias` matches request specifiers — an absolute-path alias key does nothing (verified against Next 16). `withScriptcableAsync()` prints this once and leaves imports alone. Either run `next dev` / `next build --webpack` (drop-in per graph), or import `@scriptcable/client` — export conditions deliver the compiled client under Turbopack too.
+
+### `Module not found: Can't resolve '../node.js'` (or `'../browser.js'`) in a webpack build
+
+You're on an old build of the plugins: the generated clients import each other via `.js` specifiers (Node convention), and webpack needs `resolve.extensionAlias: { '.js': ['.js', '.ts', '.tsx'] }`. The `@scriptcable/next` hook and `@scriptcable/webpack` plugin set it for you since 2026-10-21 — update and rebuild.
+
+### Metro bundles the TypeScript core even though `withScriptcableMetro` is registered
+
+Check two things. (1) The drop-in must exist: run `scriptcable build --hosts react-native` (or keep `build --watch`) — before that, the resolver declines and imports stay source. (2) On metro ≥ 0.80, make sure you're on a current `@scriptcable/react-native`: older versions ran the existing resolver first — Metro's default config ships one, and it resolved the entry before the redirect could apply.
+
+### Rspeedy / Rspack: `[scriptcable] rspack has no JS resolver hooks — entry drop-in unavailable here`
+
+Not a bug: Rspack's Rust resolver has no `resolve.plugins` in its config schema (a pushed enhanced-resolve plugin is silently ignored — verified against Rspack 2.2.9). The plugin still builds the core, emits artifacts, and links `@scriptcable/client`; import the client by name and export conditions pick the compiled flavor.
 
 ---
 

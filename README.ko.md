@@ -107,18 +107,19 @@ import { add } from './src/core';
 add(20, 22); // 42, 네이티브 애드온 속도
 ```
 
-| 호스트 | 가로채기 연결 |
-|---|---|
-| **Vite** | 자동 — `resolveId` (내장 리졸버보다 먼저 실행) |
-| **Webpack / Rspack / Rspeedy (Lynx)** | 자동 — `enhanced-resolve` 플러그인 |
-| **Next.js (webpack)** | 자동 — client 그래프는 브라우저 drop-in, server/edge는 node |
-| **Next.js (Turbopack)** | `withScriptcableAsync()`가 `turbopack.resolveAlias` 생성 (`next.config.mjs`에서 await) |
-| **React Native (Metro)** | `metro.config.js`에서 `@scriptcable/react-native/metro`의 `withScriptcableMetro()` |
-| **Electron** | main: `import { createClient } from '@scriptcable/client'` (node conditions), renderer: 기존처럼 Vite/Webpack 플러그인 |
+| 호스트 | 가로채기 연결 | 검증 대상 |
+|---|---|---|
+| **Vite** | 자동 — `resolveId` (내장 리졸버보다 먼저 실행) | Vite 6 dev + build (2026-10-21) |
+| **Webpack** | 자동 — `enhanced-resolve` 플러그인 | webpack 플러그인 테스트 + Next webpack 그래프(아래) |
+| **Next.js (webpack)** | 자동 — client 그래프는 브라우저 drop-in, server/edge는 node | Next 16.4.2 `next build --webpack` + `next start` 런타임 호출 (2026-10-21) |
+| **Next.js (Turbopack)** | 엔트리 drop-in 불가 — Turbopack에는 그래프별 resolve 훅이 없고, `resolveAlias`는 해석된 경로가 아니라 요청 specifier를 매칭합니다(절대경로 키는 아무 일도 안 함 — 검증). `@scriptcable/client`를 쓰거나(`transpilePackages`로 export conditions 동작), `next dev/build --webpack`으로 drop-in import | Next 16.4.2 turbopack 빌드 |
+| **Rspack / Rspeedy (Lynx)** | Rspack의 Rust 리졸버에는 JS resolve 플러그인 훅이 없습니다(`resolve.plugins`가 설정 스키마에 없음 — 넣어도 조용히 무시). 플러그인은 빌드·패키지 링크를 계속 하고, import는 `@scriptcable/client` export conditions으로 해석 | Rspeedy 0.18.2 빌드 (번들에 browser 클라이언트 포함) |
+| **React Native (Metro)** | `metro.config.js`에서 `@scriptcable/react-native/metro`의 `withScriptcableMetro()` | Metro 0.87 / RN 0.88 실번들 (2026-10-21) |
+| **Electron** | main: `import { createClient } from '@scriptcable/client'` (node conditions), renderer: 기존처럼 Vite/Webpack 플러그인 | — |
 
 drop-in 플레이버: 브라우저 그래프는 모듈 로드 시 top-level await로 WASM을 1회 초기화합니다(빌드 타깃 **ES2022+** 필요, 예: vite `build.target: 'es2022'`). 서버 그래프는 **await이 전혀 없습니다**(`createClientSync()` — CommonJS 출력 서버 번들에도 안전). Metro는 첫 호출 때 브리지 클라이언트를 lazy 생성합니다.
 
-정확성이 우선입니다. 엔트리가 drop-in이 제공할 수 없는 것을 하나라도 export하면 — 함수 아닌 값, 클래스, `default`/re-export, 매핑 불가 타입의 함수, 또는 표면을 줄여 선언한 `exports` — 그 프로젝트는 가로채지 않고 이유 1줄을 알립니다. `dropin: false`(Vite/Webpack) 또는 `{ dropin: false }`(`withScriptcable`)로 완전히 끌 수 있습니다. 외부 호스트(Turbopack, Metro, Rspeedy) 연결은 여기서는 설정 생성까지만 검증하고, e2e 동작은 해당 호스트 설치 환경에서 확인합니다.
+정확성이 우선입니다. 엔트리가 drop-in이 제공할 수 없는 것을 하나라도 export하면 — 함수 아닌 값, 클래스, `default`/re-export, 매핑 불가 타입의 함수, 또는 표면을 줄여 선언한 `exports` — 그 프로젝트는 가로채지 않고 이유 1줄을 알립니다. `dropin: false`(Vite/Webpack) 또는 `{ dropin: false }`(`withScriptcable`)로 완전히 끌 수 있습니다.
 
 ### 이전 → 이후: 알아야 했던 것
 
@@ -172,14 +173,24 @@ export default {
 
 실행은 `bun --bun vite` (툴체인 검사가 Bun 런타임 기준으로 동작).
 
-### Next.js / Turbopack
+### Next.js
 
 ```js
 import { withScriptcable } from '@scriptcable/next';
 export default withScriptcable({}); // transpilePackages 자동 추가 + 그래프별 drop-in
-// Turbopack: drop-in resolveAlias는 비동기 변형으로
-import { withScriptcableAsync, scriptcableBuild } from '@scriptcable/next';
-export default await withScriptcableAsync({});
+// `next build --webpack` / `next dev` 로 실행하면 drop-in import가 켜집니다
+```
+
+Turbopack(Next 16 기본 번들러)에는 그래프별 resolve 훅이 없고, `resolveAlias`는
+해석된 경로가 아닌 요청 specifier를 매칭합니다 — 절대경로 키는 아무 일도 하지
+않습니다(16.4.2에서 검증: TS 엔트리가 그대로 그래프에 남았습니다). 이격 없는
+가짜 alias는 설정하지 않습니다 — `withScriptcableAsync()`가 한 번 정확히 알려주고
+import는 그대로 둡니다. 앱 코드는 `@scriptcable/client`를 import하면 되고,
+export conditions가 두 그래프 모두에서 컴파일된 클라이언트를 전달합니다:
+
+```js
+import { withScriptcableAsync } from '@scriptcable/next';
+export default await withScriptcableAsync({}); // 아티팩트 빌드 + @scriptcable/client 링크
 ```
 
 ### Tauri
