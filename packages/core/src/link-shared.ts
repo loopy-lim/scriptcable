@@ -57,23 +57,31 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
   const outPath = resolve(options.outPath);
   await access(archivePath, constants.R_OK);
 
+  // Windows: link with `zig cc` when available — clang there drives
+  // lld-link (MSVC), which cannot read the GNU-ar archive scriptc emits
+  // (LNK1143). zig cc is the GNU-family driver scriptc itself uses on
+  // Windows; clang stays the fallback.
+  const zig = process.platform === 'win32' ? await which('zig') : undefined;
   const clang = (await which('clang')) ?? (await which('cc'));
-  if (!clang) {
+  if (!zig && !clang) {
     throw new ScriptcableToolchainError(
       'clang (or cc) is required to link the native shared library.',
       'Install a C toolchain:\n' +
         '  Linux:  sudo apt install clang\n' +
         '  macOS:  xcode-select --install\n' +
+        '  Windows: zig (ziglang.org) — zig cc drives the linker\n' +
         'Or build with --target wasm for the WASI fallback.',
     );
   }
+  const linker = zig ? zig : clang!;
+  const linkerArgs = zig ? ['cc'] : [];
 
   await mkdir(dirname(outPath), { recursive: true });
   const stubC = join(dirname(outPath), 'scriptcable-stubs.c');
   const stubO = join(dirname(outPath), 'scriptcable-stubs.o');
   await writeFile(stubC, STUB_SOURCE);
 
-  const compileStub = await run(clang, ['-c', stubC, '-o', stubO]);
+  const compileStub = await run(linker, [...linkerArgs, '-c', stubC, '-o', stubO]);
   if (compileStub.code !== 0) {
     throw new ScriptcableToolchainError(
       `Failed to compile link stubs:\n${compileStub.stderr}`,
@@ -84,9 +92,9 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
   if (process.platform === 'darwin') {
     args.push('-Wl,-force_load,' + archivePath);
   } else if (process.platform === 'win32') {
-    // clang on Windows drives lld-link (MSVC): GNU -Wl,--whole-archive and
-    // the Unix -lm/-lpthread inputs don't exist there (LNK1181)
-    args.push('-Wl,/WHOLEARCHIVE:' + archivePath);
+    // zig cc speaks GNU ld: whole-archive keeps every object of the archive
+    args.push('-Wl,--whole-archive', archivePath, '-Wl,--no-whole-archive');
+    args.push('-Wl,--allow-shlib-undefined');
   } else {
     args.push('-Wl,--whole-archive', archivePath, '-Wl,--no-whole-archive');
     // Unused FS/async objects may reference symbols we stubbed or never call.
@@ -96,7 +104,7 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
   if (process.platform !== 'win32') args.push('-lm', '-lpthread');
   if (process.platform === 'linux') args.push('-ldl');
 
-  const link = await run(clang, args);
+  const link = await run(linker, [...linkerArgs, ...args]);
   if (link.code !== 0) {
     throw new ScriptcableToolchainError(
       `Failed to link shared library from ${archivePath}:\n${link.stderr || link.stdout}`,
