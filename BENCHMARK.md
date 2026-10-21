@@ -1,7 +1,7 @@
 # scriptcable Performance Report
 
 **Date:** 2026-10-20 (re-measured after the `@scriptcable/client` package release) · **Host:** Apple M1 Max (10-core CPU, 64 GB) · macOS arm64
-**Runtime:** Bun 1.4.3 · **Toolchain:** scriptc 0.3.6, Apple clang, zig 0.13 (WASM)
+**Runtime:** Bun 1.4.3 · **Toolchain:** scriptc 0.4.0, Apple clang, zig 0.13 (WASM)
 
 Run it yourself:
 

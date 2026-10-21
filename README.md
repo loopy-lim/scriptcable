@@ -332,7 +332,7 @@ Note: `scriptc` must be a trusted dependency so Bun runs its install script (alr
 - Hosts call **into** your library exports (C ABI); outbound FFI is for scriptc executables, not libraries.
 - String/bytes use `(ptr, len)` in / `(out_ptr, out_len)` out on the native boundary.
 - **clang** is required for the default native shared-library link.
-- WASM (`--target wasm`) still needs zig **0.13.x** with scriptc 0.3.x, plus a WASI polyfill in browsers.
+- WASM (`--target wasm`) needs zig **0.13.x** (verified with scriptc 0.4.0), plus a WASI polyfill in browsers.
 - The **browser drop-in** initializes WASM with top-level await — build for **ES2022+** (Chrome 89+, Safari 15+, Firefox 89+). On stricter targets use `dropin: false` and the async `createClient()`.
 - **Drop-in interception** applies only when the entry's entire runtime export surface is ABI-mappable (named functions); anything else disables it with a printed reason.
 - **Drop-in host matrix** (verified 2026-10-21): Vite 6, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Rspeedy 0.18 (conditions path) — end-to-end. Turbopack: entry drop-in unavailable (no resolve hook; see the host table). Lynx/TurboModule **on-device** call semantics remain unverified — no device in the loop.
