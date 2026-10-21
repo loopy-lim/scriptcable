@@ -1,11 +1,12 @@
-import { resolve, join, dirname } from 'node:path';
-import { readdir, stat } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { stat } from 'node:fs/promises';
 import {
   buildCore,
   snapshotFromProfile,
   loadProjectConfig,
   loadConfigFile,
   writeGeneratedClients,
+  collectSourceGraph,
 } from '@scriptcable/core';
 import { type CodegenTarget } from '@scriptcable/core/codegen';
 import { formatError } from '../errors.js';
@@ -110,18 +111,16 @@ async function runWatch(opts: BuildCliOptions = {}): Promise<number> {
   }
   console.log(`watching for changes — Ctrl+C to stop`);
 
-  const entryDir = dirname(resolve(cwd, config.entry));
   const configFiles = () => {
     const files = [join(cwd, 'scriptcable.config.ts'), join(cwd, 'scriptcable.json')];
     if (opts.configPath) files.push(resolve(cwd, opts.configPath));
     return files;
   };
-  // Same conservative source set as the build cache's collectSourceHashes.
+  // The build cache's input set — the import graph rooted at the entry plus
+  // its same-directory siblings. One collector, so watch and cache agree.
   const watchedSources = async (): Promise<string[]> => {
     try {
-      return (await readdir(entryDir))
-        .filter((f) => /\.ts$/.test(f) && !/\.test\./.test(f) && !/\.bench\./.test(f))
-        .map((f) => join(entryDir, f));
+      return await collectSourceGraph(resolve(cwd, config.entry));
     } catch {
       return [];
     }

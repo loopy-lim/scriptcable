@@ -7,6 +7,7 @@ import {
   computeBuildHash,
   isCachedBuild,
   markBuildDone,
+  collectSourceGraph,
 } from './build-cache.js';
 import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
 
@@ -43,6 +44,38 @@ describe('build cache', () => {
     const h1 = await computeBuildHash({ cwd: workDir, config, profile, target: 'native' });
     const h2 = await computeBuildHash({ cwd: workDir, config, profile, target: 'native' });
     assert.equal(h1, h2);
+  });
+
+  it('tracks the import graph: a nested import invalidates, an unimported sibling does not', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'scriptcable-graph-'));
+    try {
+      await mkdir(join(root, 'src', 'nested'), { recursive: true });
+      await writeFile(
+        join(root, 'src', 'core.ts'),
+        `import { helper } from './nested/helper.js';\nexport function add(a: number, b: number) { return a + helper(b); }\n`,
+      );
+      await writeFile(join(root, 'src', 'nested', 'helper.ts'), `export function helper(n: number) { return n; }\n`);
+      await writeFile(join(root, 'src', 'nested', 'unrelated.ts'), `export const x = 1;\n`);
+      const cfg = { ...config, entry: 'src/core.ts' };
+      const h1 = await computeBuildHash({ cwd: root, config: cfg, profile, target: 'native' });
+
+      // A change in the IMPORTED nested file must change the hash…
+      await writeFile(join(root, 'src', 'nested', 'helper.ts'), `export function helper(n: number) { return n + 1; }\n`);
+      const h2 = await computeBuildHash({ cwd: root, config: cfg, profile, target: 'native' });
+      assert.notEqual(h2, h1, 'imported nested file change must invalidate');
+
+      // …while an unimported sibling in the same nested dir must not.
+      const h3 = await computeBuildHash({ cwd: root, config: cfg, profile, target: 'native' });
+      await writeFile(join(root, 'src', 'nested', 'unrelated.ts'), `export const x = 2;\n`);
+      const h4 = await computeBuildHash({ cwd: root, config: cfg, profile, target: 'native' });
+      assert.equal(h4, h3, 'unimported sibling change must not invalidate');
+
+      // `.js` specifiers resolve to their `.ts` sibling
+      const graph = await collectSourceGraph(join(root, 'src', 'core.ts'));
+      assert.ok(graph.some((f) => f.endsWith('nested/helper.ts')), `graph: ${graph.join(', ')}`);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it('hash changes when source changes', async () => {

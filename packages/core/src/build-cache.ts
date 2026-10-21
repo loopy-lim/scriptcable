@@ -43,36 +43,97 @@ async function hashFile(path: string): Promise<string | null> {
   }
 }
 
+/** Relative/static import specifiers in a TS source (over-matches comments — conservative). */
+function extractRelativeSpecifiers(source: string): string[] {
+  const specs: string[] = [];
+  const re = /(?:\bfrom\s*|\bimport\s*\(?\s*)['"]([^'"]+)['"]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(source))) {
+    const spec = m[1]!;
+    if (spec.startsWith('.') || spec.startsWith('/')) specs.push(spec);
+  }
+  return specs;
+}
+
+/** Resolve one import specifier to a project file (extensionless and `.js`→`.ts` aware). */
+async function resolveTsSpecifier(fromFile: string, spec: string): Promise<string | null> {
+  const { access } = await import('node:fs/promises');
+  const base = resolve(dirname(fromFile), spec);
+  const candidates = [base, `${base}.ts`, `${base}.tsx`, `${base}.mts`];
+  if (base.endsWith('.js')) candidates.push(`${base.slice(0, -3)}.ts`, `${base.slice(0, -3)}.tsx`);
+  if (base.endsWith('.mjs')) candidates.push(`${base.slice(0, -4)}.mts`);
+  candidates.push(join(base, 'index.ts'), join(base, 'index.tsx'));
+  for (const c of candidates) {
+    try {
+      await access(c);
+      return c;
+    } catch {
+      /* try next candidate */
+    }
+  }
+  return null;
+}
+
+/**
+ * The source files a build depends on: the entry, every file reachable
+ * through relative/static imports (the graph scriptc compiles), plus the
+ * entry's same-directory siblings as a conservative floor (non-literal
+ * dynamic imports escape graph tracking). This is THE input set — the
+ * build cache hashes it and `build --watch` polls it, so what can change
+ * the artifacts is exactly what triggers a rebuild.
+ */
+export async function collectSourceGraph(entryAbs: string): Promise<string[]> {
+  const { readdir } = await import('node:fs/promises');
+  const entry = resolve(entryAbs);
+  const entryDir = dirname(entry);
+  const seen = new Set<string>();
+  const order: string[] = [];
+  const queue = [entry];
+  while (queue.length) {
+    const file = queue.shift()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    let source: string | null = null;
+    try {
+      source = await readFile(file, 'utf8');
+    } catch {
+      continue;
+    }
+    order.push(file);
+    for (const spec of extractRelativeSpecifiers(source)) {
+      const target = await resolveTsSpecifier(file, spec);
+      if (target && !seen.has(target)) queue.push(target);
+    }
+    // Conservative floor, entry directory only: deeper directories trust the
+    // import graph (a per-dir floor would hash unrelated nested files and
+    // erase the precision the graph tracking buys).
+    if (dirname(file) === entryDir) {
+      try {
+        const siblings = (await readdir(entryDir)).filter(
+          (f) => /\.ts$/.test(f) && !/\.test\./.test(f) && !/\.bench\./.test(f) && !/\.d\.ts$/.test(f),
+        );
+        for (const s of siblings) {
+          const p = join(entryDir, s);
+          if (!seen.has(p)) queue.push(p);
+        }
+      } catch {
+        /* unreadable dir — nothing to add */
+      }
+    }
+    if (seen.size > 256) break; // safety bound
+  }
+  return order;
+}
+
 async function collectSourceHashes(
   entryAbs: string,
   extraPaths: string[],
 ): Promise<string[]> {
   const hashes: string[] = [];
-  // Hash the entry plus reachable same-dir .ts files (scriptc compiles the
-  // module graph rooted at the entry; same-dir sources are the common case).
-  const seen = new Set<string>();
-  const queue = [entryAbs];
-  while (queue.length) {
-    const file = queue.shift()!;
-    const norm = resolve(file);
-    if (seen.has(norm)) continue;
-    seen.add(norm);
+  for (const norm of await collectSourceGraph(entryAbs)) {
     const h = await hashFile(norm);
     if (h === null) continue;
     hashes.push(`${relative(dirname(entryAbs), norm)}:${h}`);
-    // Include sibling sources in the same directory (conservative shallow graph)
-    const dir = dirname(norm);
-    const { readdir } = await import('node:fs/promises');
-    let siblings: string[] = [];
-    try {
-      siblings = (await readdir(dir)).filter(
-        (f) => /\.ts$/.test(f) && !/\.test\./.test(f) && !/\.bench\./.test(f),
-      );
-    } catch {
-      siblings = [];
-    }
-    for (const s of siblings) queue.push(join(dir, s));
-    if (seen.size > 64) break; // safety bound
   }
   for (const p of extraPaths) {
     const h = await hashFile(p);

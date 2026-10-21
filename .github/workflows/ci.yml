@@ -56,3 +56,34 @@ jobs:
           bun run --filter @scriptcable/example-next-app test
       - run: bun run --filter @scriptcable/example-calculator-core contract:check
       - run: bun run --filter @scriptcable/example-calculator-core build:wasm
+      # Non-blocking while runner numbers accumulate — the ×2.5 tolerance
+      # catches gross call-path regressions, not runner jitter
+      - name: Perf gate (vs committed baseline)
+        run: bun examples/bench-core/scripts/bench-gate.ts
+        continue-on-error: true
+
+  # Experimental: scriptc ships Windows binaries, but zig cc + clang + MSVC
+  # linking on Windows is unproven for this repo. Allow-fail until proven.
+  windows-experiment:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Toolchain inventory
+        run: |
+          clang --version || echo "clang: MISSING"
+      - name: Install zig (WASM toolchain)
+        shell: bash
+        run: |
+          curl -fsSL https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip -o zig.zip
+          unzip -q zig.zip
+          echo "$PWD/zig-windows-x86_64-0.13.0" >> $GITHUB_PATH
+      - run: bun install
+      - run: bun run build
+      - run: bun install
+      - run: bun run --filter @scriptcable/core test
+      - run: bun run --filter @scriptcable/cli test
+      - run: bun run --filter @scriptcable/example-calculator-core build
