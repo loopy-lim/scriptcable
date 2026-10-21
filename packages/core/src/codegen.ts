@@ -250,6 +250,20 @@ import type { ScriptcableClient } from './types.js';
 const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
 const DEFAULT_URL = new URL('${wasmRelPath}', import.meta.url);
 
+/**
+ * Stream-compile the module while it downloads (wasm-pack/wasm-bindgen
+ * practice); falls back to fetch + arrayBuffer when the server omits the
+ * application/wasm content type.
+ */
+async function compileModule(url: string | URL): Promise<WebAssembly.Module> {
+  try {
+    return await WebAssembly.compileStreaming(fetch(url));
+  } catch {
+    const response = await fetch(url);
+    return WebAssembly.compile(await response.arrayBuffer());
+  }
+}
+
 export type CreateClientOptions = {
   wasmUrl?: string | URL;
   callbacks?: Record<string, (...args: unknown[]) => unknown>;
@@ -262,10 +276,10 @@ export type CreateClientOptions = {
 
 export async function createClient(options: CreateClientOptions = {}): Promise<ScriptcableClient> {
   const url = options.wasmUrl ?? DEFAULT_URL;
-  const response = await fetch(url);
-  const bytes = await response.arrayBuffer();
-  const mod: LoadedModule = await loadWasmModule(bytes, {
+  const module = await compileModule(url);
+  const mod: LoadedModule = await loadWasmModule(new Uint8Array(), {
     profile: PROFILE,
+    module,
     wasi: options.wasi ?? createMinimalWasi(),
     callbacks: options.callbacks ?? {},
   });

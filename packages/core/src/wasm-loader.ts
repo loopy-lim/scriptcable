@@ -22,6 +22,8 @@ export type LoadedModule = {
 
 export type LoadWasmOptions = {
   profile: ScriptcableProfile;
+  /** Pre-compiled module — skips `WebAssembly.compile(wasmBytes)` (use with compileStreaming) */
+  module?: WebAssembly.Module;
   /** Host callback implementations keyed by callback name */
   callbacks?: Record<string, (...args: unknown[]) => unknown>;
   /**
@@ -278,7 +280,8 @@ export async function loadWasmModule(
   let api!: WasmExports;
 
   const scriptcImports = buildScriptcImports(profile, () => api, callbacks, onPanic);
-  const module = await WebAssembly.compile(wasmBytes);
+  // A pre-compiled module (e.g. via compileStreaming) skips the bytes→compile step
+  const module = options.module ?? (await WebAssembly.compile(wasmBytes));
   const wasiImports =
     typeof wasi.getImportObject === 'function'
       ? wasi.getImportObject()

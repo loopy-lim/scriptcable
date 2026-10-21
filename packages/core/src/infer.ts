@@ -89,6 +89,9 @@ export function inferExportsFromSource(source: string, fileName = 'core.ts'): In
       return null;
     }
     if (typeNode.kind === ts.SyntaxKind.NumberKeyword) return NUM_DEFAULT;
+    // NOTE: `bigint` is intentionally NOT mapped — scriptc 0.3.x rejects i64 at
+    // the TS level (SC4003: marshalling classes are f64/u8/u32/i32), so mapping
+    // it here would turn a graceful skip into a build failure.
     if (typeNode.kind === ts.SyntaxKind.StringKeyword) return 'string';
     if (typeNode.kind === ts.SyntaxKind.BooleanKeyword) return 'bool';
     if (typeNode.kind === ts.SyntaxKind.VoidKeyword) return 'void';
