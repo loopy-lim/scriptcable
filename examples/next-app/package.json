@@ -6,8 +6,10 @@
   "scripts": {
     "build:core": "scriptcable build --target both && bun -e \"import('@scriptcable/next').then(m=>m.scriptcableBuild())\"",
     "test:server": "bun run build:core && bun src/server-action.ts",
-    "build": "bun run build:core && bun run scripts/fake-next-build.mjs",
-    "test": "bun run test:server && bun run build"
+    "build": "bun run build:core && bun run scripts/fake-next-build.mjs && bun --bun next build --webpack",
+    "build:turbo": "bun run build:core && bun --bun next build",
+    "test:runtime": "bun run build && bun run scripts/next-runtime-smoke.mjs",
+    "test": "bun run test:server && bun run build && bun run test:runtime"
   },
   "dependencies": {
     "@scriptcable/next": "workspace:*",
@@ -16,8 +18,13 @@
     "@scriptcable/types": "workspace:*"
   },
   "devDependencies": {
+    "@scriptc/runtime-wasm32-wasi": "^0.3.6",
     "@scriptcable/cli": "workspace:*",
-    "scriptc": "^0.3.6",
-    "@scriptc/runtime-wasm32-wasi": "^0.3.6"
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "next": "^16.4.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "scriptc": "^0.3.6"
   }
 }

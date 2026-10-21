@@ -19,6 +19,10 @@ async function runGraph(isServer) {
   await new Promise((resolve, reject) => {
     const webpackConfig = { plugins: [], resolve: {} };
     cfg.webpack(webpackConfig, { isServer });
+    // Generated clients import each other via `.js` specifiers — the hook
+    // must give webpack the `.js` → `.ts` mapping (real builds fail without)
+    const alias = webpackConfig.resolve.extensionAlias?.['.js'];
+    if (!alias || !alias.includes('.ts')) throw new Error('missing .js → .ts extensionAlias');
     const gate = webpackConfig.resolve.plugins?.[0];
     if (!gate) throw new Error(`isServer=${isServer}: missing drop-in resolve gate`);
     const buildPlugin = webpackConfig.plugins[0];
@@ -43,10 +47,13 @@ async function runGraph(isServer) {
 await runGraph(false); // client graph → browser drop-in
 await runGraph(true); // server graph → node drop-in
 
-// Turbopack alias config is produced by the async variant
+// Turbopack: no resolveAlias — absolute-path alias keys are inert in
+// Turbopack (verified against Next 16), so the async variant must NOT set
+// one. The compiled client still works there via export conditions.
 const turboCfg = await withScriptcableAsync({ reactStrictMode: true }, { cwd: root });
-const alias = turboCfg.turbopack?.resolveAlias?.[join(root, 'src', 'core.ts')]
-  ?? turboCfg.turbopack?.resolveAlias?.[join(root, '..', 'calculator-core', 'src', 'core.ts')];
-if (!alias || !alias.includes('dropin')) throw new Error('turbopack.resolveAlias missing or wrong: ' + JSON.stringify(turboCfg.turbopack));
+if (turboCfg.turbopack?.resolveAlias) {
+  throw new Error('turbopack.resolveAlias must not be set (absolute-path keys are inert): ' + JSON.stringify(turboCfg.turbopack));
+}
+if (!turboCfg.transpilePackages?.includes('@scriptcable/client')) throw new Error('missing transpilePackages');
 
 console.log('next build wiring OK', gen);

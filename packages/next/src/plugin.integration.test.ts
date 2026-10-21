@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm, symlink, readFile, lstat, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { scriptcableBuild, withScriptcable } from './index.js';
+import { scriptcableBuild, withScriptcable, withScriptcableAsync } from './index.js';
 
 const repoRoot = resolve(import.meta.dir, '../../..'); // packages/next/src → repo root
 const tmpRoots: string[] = [];
@@ -112,10 +112,16 @@ console.log(JSON.stringify({ add: c.add(2, 3) }));`,
     const gates: Record<string, { apply: (resolver: unknown) => void }> = {};
     for (const isServer of [false, true]) {
       const cfg = withScriptcable({});
-      const webpackConfig: { plugins: unknown[]; resolve?: { plugins?: unknown[] } } = { plugins: [] };
+      const webpackConfig: { plugins: unknown[]; resolve?: { plugins?: unknown[]; extensionAlias?: Record<string, string[]> } } = {
+        plugins: [],
+      };
       cfg.webpack!(webpackConfig, { isServer });
       const gate = webpackConfig.resolve?.plugins?.[0] as { apply: (resolver: unknown) => void } | undefined;
       assert.ok(gate, `isServer=${isServer} must wire a drop-in gate`);
+      // The generated clients import each other via `.js` specifiers — the
+      // hook must teach webpack the `.js` → `.ts` mapping (real Next builds
+      // fail with "Can't resolve '../node.js'" without it).
+      assert.deepEqual(webpackConfig.resolve?.extensionAlias?.['.js'], ['.js', '.ts', '.tsx']);
       gates[isServer ? 'server' : 'client'] = gate;
     }
 
@@ -153,4 +159,19 @@ console.log(JSON.stringify({ add: c.add(2, 3) }));`,
       assert.equal(tapped, 1, `isServer=${isServer} gate must wire the redirect after its build`);
     }
   }, 180_000);
+
+  it('withScriptcableAsync does not set a turbopack resolveAlias (absolute-path keys are inert in Turbopack)', async () => {
+    const project = await makeProject();
+    await scriptcableBuild({ cwd: project });
+
+    const cfg = await withScriptcableAsync({ reactStrictMode: true }, { cwd: project });
+    // Verified against Next 16: turbopack.resolveAlias matches request
+    // specifiers, so an absolute-path key silently does nothing — setting it
+    // would falsely advertise drop-in under Turbopack.
+    assert.equal(cfg.turbopack?.resolveAlias, undefined);
+    // The rest of the wiring stays: the compiled client package works under
+    // Turbopack via export conditions.
+    assert.ok(cfg.transpilePackages?.includes('@scriptcable/client'));
+    assert.equal(typeof cfg.webpack, 'function');
+  }, 120_000);
 });

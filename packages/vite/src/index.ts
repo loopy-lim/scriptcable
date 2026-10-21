@@ -113,7 +113,12 @@ async function rebuild(
 ): Promise<{ genDir: string; config: ResolvedConfig }> {
   const config = await loadProject(root, configPath);
   const outDir = resolve(root, config.outDir ?? '.scriptcable');
-  const result = await buildCore(config, { cwd: root, outDir, target: config.target === 'wasm' ? 'wasm' : 'both' });
+  const result = await buildCore(config, {
+    cwd: root,
+    outDir,
+    target: config.target === 'wasm' ? 'wasm' : 'both',
+    doctorRuntimeGate: 'skip',
+  });
   const { genDir, clientLink } = await writeGeneratedClients({
     config,
     targets: ['browser', 'node'],

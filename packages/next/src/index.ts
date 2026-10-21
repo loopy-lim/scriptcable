@@ -16,7 +16,6 @@
  * graphs onto the node drop-in (synchronous init — no await anywhere).
  */
 import { join, resolve } from 'node:path';
-import { existsSync } from 'node:fs';
 import type { ResolvedConfig } from '@scriptcable/types';
 import {
   buildCore,
@@ -53,7 +52,7 @@ async function runScriptcableBuild(
     ? await loadConfigFile(resolve(projectRoot, configPath), projectRoot)
     : (await loadProjectConfig(projectRoot)).config;
   const outDir = resolve(projectRoot, config.outDir ?? '.scriptcable');
-  const result = await buildCore(config, { cwd: projectRoot, outDir, target: 'native' });
+  const result = await buildCore(config, { cwd: projectRoot, outDir, target: 'native', doctorRuntimeGate: 'skip' });
   // The generated browser flavor needs the WASM artifact — ensure it (built
   // automatically on first use, cached afterwards) and copy it into public/
   // so `createClient()` works in client graphs with no manual copy step.
@@ -152,6 +151,13 @@ export function withScriptcable(
             ? false
             : 'node';
       const state = { entryAbs: '', dropinPath: '' };
+      // The generated clients import each other with explicit `.js`
+      // specifiers (ESM/NodeNext convention) — webpack resolves those
+      // literally, so teach it the `.js` → `.ts` mapping (merge, never
+      // overwrite anything Next or the app already set).
+      const nextResolve = ((config.resolve ??= {}) as { extensionAlias?: Record<string, string[]> });
+      const extensionAlias = (nextResolve.extensionAlias ??= {});
+      extensionAlias['.js'] = [...new Set([...(extensionAlias['.js'] ?? []), '.js', '.ts', '.tsx'])];
       const buildPlugin = {
         apply(compiler: any) {
           compiler.hooks.beforeCompile.tapPromise('ScriptcableWebpackPlugin', async () => {
@@ -179,12 +185,17 @@ export function withScriptcable(
 }
 
 /**
- * Async variant for Turbopack (`next.config.mjs` supports top-level await):
- * wires everything `withScriptcable` does and additionally emits
- * `turbopack.resolveAlias` so entry imports redirect onto the browser
- * drop-in under `next dev --turbo`. The alias fires only once a build has
- * produced `.scriptcable/generated/dropin/browser.ts`; before that, imports
- * resolve to the source module as usual.
+ * Async variant (`next.config.mjs` supports top-level await): runs the same
+ * build as `withScriptcable` at config time so artifacts and the
+ * `@scriptcable/client` package exist before compiling, under either bundler.
+ *
+ * Turbopack note (verified against Next 16): Turbopack has no per-graph
+ * resolve hook, and `turbopack.resolveAlias` matches request specifiers —
+ * an absolute-path alias key does NOT redirect relative entry imports (it
+ * silently does nothing). So entry drop-in is a webpack-path feature; under
+ * Turbopack the app's `@scriptcable/client` import still resolves the
+ * compiled client via export conditions. This helper states that once,
+ * instead of setting a dead alias.
  */
 export async function withScriptcableAsync(
   nextConfig: NextConfig = {},
@@ -196,28 +207,19 @@ export async function withScriptcableAsync(
     const config: ResolvedConfig = options.configPath
       ? await loadConfigFile(resolve(root, options.configPath), root)
       : (await loadProjectConfig(root)).config;
-    // Same gates as the webpack path: the entry's surface must be fully
-    // mappable, and the drop-in must exist (a missing alias target would
-    // surface as an opaque Turbopack resolution error, not a clean skip).
     const { profile } = await resolveProfile(config, root);
     const check = await canInterceptEntry(config, root, profile);
-    if (!check.ok) {
-      console.warn(`[scriptcable] drop-in (turbopack) disabled — ${check.reasons.join('; ')}`);
-      return base;
+    if (check.ok) {
+      console.log(
+        '[scriptcable] turbopack: entry drop-in not available (no resolve hook) —' +
+          ' use @scriptcable/client, or run next with --webpack for drop-in imports',
+      );
+    } else {
+      console.warn(`[scriptcable] drop-in disabled — ${check.reasons.join('; ')}`);
     }
-    const dropinPath = join(resolve(root, config.outDir ?? '.scriptcable'), 'generated', 'dropin', 'browser.ts');
-    if (!existsSync(dropinPath)) {
-      console.warn('[scriptcable] turbopack.resolveAlias not set — run `scriptcable build` first to emit the drop-in');
-      return base;
-    }
-    const entryAbs = resolve(root, config.entry);
-    const existing = nextConfig.turbopack ?? {};
-    base.turbopack = {
-      ...existing,
-      resolveAlias: { ...(existing.resolveAlias ?? {}), [entryAbs]: dropinPath },
-    };
   } catch {
-    console.warn('[scriptcable] turbopack.resolveAlias not set — could not resolve the core config');
+    // Zero-config inference failure shouldn't break the Next config —
+    // the webpack hook reports its own errors.
   }
   return base;
 }
