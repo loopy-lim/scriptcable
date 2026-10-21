@@ -85,9 +85,9 @@ jobs:
           curl -fsSL https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip -o zig.zip
           unzip -q zig.zip -d "$GITHUB_WORKSPACE"
           # $PWD here is a Git-Bash POSIX path (/d/a/...) which Windows
-          # processes cannot resolve — write the Windows form
+          # processes cannot resolve — write the Windows form. (The entry
+          # lands on PATH for SUBSEQUENT steps only.)
           echo "$GITHUB_WORKSPACE/zig-windows-x86_64-0.13.0" >> "$GITHUB_PATH"
-          zig version
       - run: bun install
       - run: bun run build
       - run: bun install
