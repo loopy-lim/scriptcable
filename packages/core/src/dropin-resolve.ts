@@ -13,6 +13,16 @@ import { extname, resolve as resolvePath } from 'node:path';
 
 const SOURCE_EXTS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs']);
 
+/**
+ * Windows-portable path comparison: backslashes → forward slashes, and
+ * case-folded on win32 (case-insensitive filesystems). found by the
+ * allow-fail Windows CI job — every comparison below goes through this.
+ */
+function normPath(p: string): string {
+  const f = p.replace(/\\/g, '/');
+  return process.platform === 'win32' ? f.toLowerCase() : f;
+}
+
 export type DropinResolveRequest = {
   path?: string;
   request?: string;
@@ -30,13 +40,14 @@ export class ScriptcableDropinResolvePlugin {
   /** Entry path without its source extension — matches extensionless imports too. */
   private entryBase(): string {
     const ext = extname(this.entryAbs);
-    return SOURCE_EXTS.has(ext) ? this.entryAbs.slice(0, -ext.length) : this.entryAbs;
+    const base = SOURCE_EXTS.has(ext) ? this.entryAbs.slice(0, -ext.length) : this.entryAbs;
+    return normPath(base);
   }
 
   private matches(absolute: string): boolean {
     const ext = extname(absolute);
     const base = SOURCE_EXTS.has(ext) ? absolute.slice(0, -ext.length) : absolute;
-    return base === this.entryBase();
+    return normPath(base) === this.entryBase();
   }
 
   apply(resolver: {
@@ -54,8 +65,11 @@ export class ScriptcableDropinResolvePlugin {
       try {
         const req = request?.request;
         if (!req || req.startsWith('\0')) return cb();
-        // Only relative and absolute requests can reach a project file.
-        if (!req.startsWith('.') && !req.startsWith('/')) return cb();
+        // Only relative and absolute requests can reach a project file
+        // (windows absolute: `C:\…`, `C:/…`, `\\server\…`).
+        if (!req.startsWith('.') && !/^[A-Za-z]:[\\/]/.test(req) && !req.startsWith('/') && !req.startsWith('\\\\')) {
+          return cb();
+        }
         const base = resolvePath(request.path ?? process.cwd(), req);
         if (!this.matches(base)) return cb();
         const redirected: DropinResolveRequest = { ...request, request: this.dropinPath };

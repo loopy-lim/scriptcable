@@ -49,7 +49,10 @@ export type MetroResolveRequest = (
 
 function baseOf(p: string): string {
   const ext = extname(p);
-  return SOURCE_EXTS.has(ext) ? p.slice(0, -ext.length) : p;
+  const base = SOURCE_EXTS.has(ext) ? p.slice(0, -ext.length) : p;
+  // windows-portable comparison (backslashes, case-insensitive FS)
+  const f = base.replace(/\\/g, '/');
+  return process.platform === 'win32' ? f.toLowerCase() : f;
 }
 
 /** The core entry path, or null when no standard entry exists. */

@@ -72,7 +72,7 @@ describe('build cache', () => {
 
       // `.js` specifiers resolve to their `.ts` sibling
       const graph = await collectSourceGraph(join(root, 'src', 'core.ts'));
-      assert.ok(graph.some((f) => f.endsWith('nested/helper.ts')), `graph: ${graph.join(', ')}`);
+      assert.ok(graph.some((f) => f.endsWith(join('nested', 'helper.ts'))), `graph: ${graph.join(', ')}`);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
