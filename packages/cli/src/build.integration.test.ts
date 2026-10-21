@@ -88,7 +88,10 @@ describe('zero-config build (integration)', () => {
     assert.equal(profile.exports[0].export, 'add');
     // native artifact + generated client exist
     const artifacts = await Array.fromAsync(new Bun.Glob('.scriptcable/*').scan({ cwd: project }));
-    assert.ok(artifacts.some((a) => a.endsWith('.dylib') || a.endsWith('.so')), `no shared lib in ${artifacts.join(', ')}`);
+    assert.ok(
+      artifacts.some((a) => a.endsWith('.dylib') || a.endsWith('.so') || a.endsWith('.dll')),
+      `no shared lib in ${artifacts.join(', ')}`,
+    );
     const generated = await Array.fromAsync(new Bun.Glob('.scriptcable/generated/*.ts').scan({ cwd: project }));
     assert.ok(generated.some((g) => g.endsWith('node.ts')), `no generated client in ${generated.join(', ')}`);
 
