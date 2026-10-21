@@ -38,6 +38,10 @@ jobs:
       - run: bun run --filter @scriptcable/vite test
       - run: bun run --filter @scriptcable/next test
       - run: bun run --filter @scriptcable/webpack test
+      - run: bun run --filter @scriptcable/react-native test
+      - run: bun run --filter @scriptcable/node test
+      - run: bun run --filter @scriptcable/tauri test
+      - run: bun run --filter @scriptcable/lynx test
       - run: bun run --filter @scriptcable/example-calculator-core build
       - run: bun run --filter @scriptcable/example-bench-core build
       - run: bun run --filter @scriptcable/example-node-app test
@@ -47,6 +51,7 @@ jobs:
         run: |
           bun run --filter @scriptcable/example-vite-app test:ssr
           bun run --filter @scriptcable/example-vite-app test:wasm
+          bun run --filter @scriptcable/example-vite-app test:dropin
           bun run --filter @scriptcable/example-vite-app build
           bun run --filter @scriptcable/example-next-app test
       - run: bun run --filter @scriptcable/example-calculator-core contract:check
