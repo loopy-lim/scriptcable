@@ -9,5 +9,7 @@ export * from './client-package.js';
 export * from './wasi-polyfill.js';
 export * from './build-cache.js';
 export * from './infer.js';
+export * from './intercept.js';
+export * from './dropin-resolve.js';
 export * from './defaults.js';
 export * from './config-loader.js';

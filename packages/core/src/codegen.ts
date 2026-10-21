@@ -112,10 +112,12 @@ function genNodeClient(
   const directMethods = methodBlockDirect(profile);
   return `${header('node')}
 import { access, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { WASI } from 'node:wasi';
-import { loadNativeLibrary } from '@scriptcable/core/native';
+import { loadNativeLibrary, loadNativeLibrarySync } from '@scriptcable/core/native';
 import { loadWasmModule } from '@scriptcable/core/wasm';
 import type { ScriptcableProfile } from '@scriptcable/types';
 import type { ScriptcableClient } from './types.js';
@@ -165,6 +167,69 @@ async function loadAddon(): Promise<Record<string, (...args: unknown[]) => unkno
     /* createRequire unavailable — fall through */
   }
   return null;
+}
+
+/** Sync variant of loadAddon — createRequire keeps the whole path synchronous. */
+function loadAddonSync(): Record<string, (...args: unknown[]) => unknown> | null {
+  try {
+    const req = createRequire(import.meta.url);
+    for (const dir of SEARCH_DIRS) {
+      try {
+        return req(join(dir, ADDON_NAME)) as Record<string, (...args: unknown[]) => unknown>;
+      } catch {
+        /* try the next location */
+      }
+    }
+  } catch {
+    /* createRequire unavailable — fall through */
+  }
+  return null;
+}
+
+function findSharedSync(): string | null {
+  for (const dir of SEARCH_DIRS) {
+    const p = join(dir, SHARED_NAME);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+export type CreateClientSyncOptions = {
+  sharedPath?: string;
+  /** Set false to skip the typed N-API addon and use the shared library */
+  addon?: boolean;
+};
+
+/**
+ * Synchronous client — no await anywhere, so it is safe in CommonJS-output
+ * server bundles (where top-level await is unavailable). Prefers the typed
+ * N-API addon (~24 ns/call), then the shared library via bun:ffi / koffi.
+ * WASM cannot load synchronously: when no native artifact exists this
+ * throws with the fix — run 'scriptcable build' first, or use the async
+ * createClient() for the WASM fallback.
+ */
+export function createClientSync(options: CreateClientSyncOptions = {}): ScriptcableClient {
+  if (options.addon !== false && !options.sharedPath) {
+    const addonFns = loadAddonSync();
+    if (addonFns) {
+      return {
+${directMethods}
+  dispose() {},
+      };
+    }
+  }
+  const shared = options.sharedPath ?? findSharedSync();
+  if (shared) {
+    const mod = loadNativeLibrarySync(shared, PROFILE);
+    return {
+${methods}
+  dispose() { mod.dispose(); },
+    };
+  }
+  throw new Error(
+    "No native artifacts found for '" + PROFILE.name + "' (searched: " + SEARCH_DIRS.join(', ') + '). ' +
+      "Run 'scriptcable build' first, or use the async createClient() for the WASM fallback.",
+  );
 }
 
 export type CreateClientOptions = {
@@ -248,7 +313,47 @@ import type { ScriptcableProfile } from '@scriptcable/types';
 import type { ScriptcableClient } from './types.js';
 
 const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
-const DEFAULT_URL = new URL('${wasmRelPath}', import.meta.url);
+const WASM_FILE = '${wasmRelPath}';
+
+// Candidate locations, probed in order: next to this module (bundler dev
+// servers that serve project files — vite dev), then the origin root (a
+// static directory the bundler plugin copies the wasm into — Next public/,
+// vite public/ → dist root). An explicit wasmUrl option always wins.
+const RELATIVE_URL = new URL(WASM_FILE, import.meta.url);
+function rootUrl(): URL | null {
+  try {
+    if (typeof document !== 'undefined') return new URL('/' + WASM_FILE, document.baseURI);
+    if (typeof location !== 'undefined') return new URL('/' + WASM_FILE, location.href);
+  } catch {
+    /* no DOM / worker location — skip the root candidate */
+  }
+  return null;
+}
+const CANDIDATES: URL[] = [RELATIVE_URL, rootUrl()].filter((u): u is URL => u !== null);
+
+let resolvedUrl: URL | null = null;
+
+async function reachable(url: URL): Promise<boolean> {
+  try {
+    return (await fetch(url, { method: 'HEAD' })).ok;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveWasmUrl(explicit?: string | URL): Promise<URL> {
+  if (explicit) return new URL(explicit);
+  if (resolvedUrl) return resolvedUrl;
+  for (const url of CANDIDATES) {
+    if (await reachable(url)) {
+      resolvedUrl = url;
+      return url;
+    }
+  }
+  // None answered HEAD (or HEAD is refused) — fall back to the original
+  // candidate so its compile error surfaces exactly as before.
+  return CANDIDATES[0]!;
+}
 
 /**
  * Stream-compile the module while it downloads (wasm-pack/wasm-bindgen
@@ -275,7 +380,7 @@ export type CreateClientOptions = {
 };
 
 export async function createClient(options: CreateClientOptions = {}): Promise<ScriptcableClient> {
-  const url = options.wasmUrl ?? DEFAULT_URL;
+  const url = await resolveWasmUrl(options.wasmUrl);
   const module = await compileModule(url);
   const mod: LoadedModule = await loadWasmModule(new Uint8Array(), {
     profile: PROFILE,
@@ -407,6 +512,95 @@ function genLynxClient(profile: ScriptcableProfile, wasmRelPath: string): string
   );
 }
 
+/**
+ * Drop-in clients: modules whose named exports mirror the core entry's own
+ * (same names, signatures, JSDoc) but route every call through the compiled
+ * client. Bundler plugins redirect imports of the entry here, so app code
+ * keeps importing `./core` while the bundle runs the scriptc build — the
+ * "register the plugin, get the speed" contract.
+ */
+function dropinExportBlock(profile: ScriptcableProfile, clientExpr: string): string {
+  return profile.exports
+    .map((e) => {
+      const args = argList(e);
+      return `${docComment(e)}export function ${e.export}(${paramList(e)}): ${tsType(e.returns)} {
+  return ${clientExpr}.${e.export}(${args});
+}`;
+    })
+    .join('\n\n');
+}
+
+function genBrowserDropin(profile: ScriptcableProfile): string {
+  return `${header('browser drop-in')}
+import { createClient } from '../browser.js';
+import type { ScriptcableClient } from '../types.js';
+
+/**
+ * Drop-in client (browser / web graphs). Initialized once at module load
+ * via top-level await — every call afterwards is synchronous WASM at full
+ * speed. Hosts without top-level-await support should not redirect here
+ * (use the async createClient() from '@scriptcable/client' instead).
+ */
+const client: ScriptcableClient = await createClient();
+
+/** The underlying client — for dispose() or advanced use. */
+export function getScriptcableClient(): ScriptcableClient {
+  return client;
+}
+
+${dropinExportBlock(profile, 'client')}
+`;
+}
+
+function genNodeDropin(profile: ScriptcableProfile): string {
+  return `${header('node drop-in')}
+import { createClientSync } from '../node.js';
+import type { ScriptcableClient } from '../types.js';
+
+/**
+ * Drop-in client (server graphs). No await anywhere — safe in
+ * CommonJS-output server bundles. Loads the typed N-API addon, falling
+ * back to the shared library; throws with the fix when no native artifact
+ * has been built yet.
+ */
+const client: ScriptcableClient = createClientSync();
+
+/** The underlying client — for dispose() or advanced use. */
+export function getScriptcableClient(): ScriptcableClient {
+  return client;
+}
+
+${dropinExportBlock(profile, 'client')}
+`;
+}
+
+function genReactNativeDropin(profile: ScriptcableProfile): string {
+  return `${header('react-native drop-in')}
+import { createClient } from '../react-native.js';
+import { createTurboModuleBridge } from '@scriptcable/react-native';
+import NativeCable from '../NativeCable.js';
+import type { ScriptcableClient } from '../types.js';
+
+/**
+ * Drop-in client (Metro graphs). The bridge client is created lazily on
+ * first call — no top-level await needed. On device, TurboModule calls
+ * resolve as Promises (same semantics as createClient(bridge) — see
+ * @scriptcable/react-native); the mock bridge is synchronous.
+ */
+let cached: ScriptcableClient | null = null;
+function client(): ScriptcableClient {
+  return (cached ??= createClient(createTurboModuleBridge(NativeCable)));
+}
+
+/** The underlying client — for dispose() or advanced use. */
+export function getScriptcableClient(): ScriptcableClient {
+  return client();
+}
+
+${dropinExportBlock(profile, 'client()')}
+`;
+}
+
 export function generateClients(
   config: ResolvedConfig,
   targets: CodegenTarget[],
@@ -450,6 +644,13 @@ export function generateClients(
         break;
     }
   }
+
+  // Drop-in mirrors of the entry — one per generated web/server flavor.
+  // Metro (React Native) needs its own: it ignores package export conditions
+  // and the bridge client takes a required bridge argument.
+  if (targets.includes('browser')) files['dropin/browser.ts'] = genBrowserDropin(profile);
+  if (targets.includes('node')) files['dropin/node.ts'] = genNodeDropin(profile);
+  if (targets.includes('react-native')) files['dropin/react-native.ts'] = genReactNativeDropin(profile);
 
   files['index.ts'] = `${header('index')}
 export type { ScriptcableClient } from './types.js';

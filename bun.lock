@@ -7,6 +7,7 @@
       "devDependencies": {
         "@scriptc/runtime-wasm32-wasi": "^0.3.6",
         "@types/bun": "^1.3.0",
+        "enhanced-resolve": "^5.26.0",
         "scriptc": "^0.3.6",
         "typescript": "^5.9.2",
       },
@@ -460,11 +461,15 @@
 
     "bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
 
+    "enhanced-resolve": ["enhanced-resolve@5.26.0", "", { "dependencies": { "graceful-fs": "^4.2.4", "tapable": "^2.3.3" } }, "sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw=="],
+
     "esbuild": ["esbuild@0.25.12", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.25.12", "@esbuild/android-arm": "0.25.12", "@esbuild/android-arm64": "0.25.12", "@esbuild/android-x64": "0.25.12", "@esbuild/darwin-arm64": "0.25.12", "@esbuild/darwin-x64": "0.25.12", "@esbuild/freebsd-arm64": "0.25.12", "@esbuild/freebsd-x64": "0.25.12", "@esbuild/linux-arm": "0.25.12", "@esbuild/linux-arm64": "0.25.12", "@esbuild/linux-ia32": "0.25.12", "@esbuild/linux-loong64": "0.25.12", "@esbuild/linux-mips64el": "0.25.12", "@esbuild/linux-ppc64": "0.25.12", "@esbuild/linux-riscv64": "0.25.12", "@esbuild/linux-s390x": "0.25.12", "@esbuild/linux-x64": "0.25.12", "@esbuild/netbsd-arm64": "0.25.12", "@esbuild/netbsd-x64": "0.25.12", "@esbuild/openbsd-arm64": "0.25.12", "@esbuild/openbsd-x64": "0.25.12", "@esbuild/openharmony-arm64": "0.25.12", "@esbuild/sunos-x64": "0.25.12", "@esbuild/win32-arm64": "0.25.12", "@esbuild/win32-ia32": "0.25.12", "@esbuild/win32-x64": "0.25.12" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-bbPBYYrtZbkt6Os6FiTLCTFxvq4tt3JKall1vRwshA3fdVztsLAatFaZobhkBC8/BrPetoa0oksYoKXoG4ryJg=="],
 
     "fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
 
     "fsevents": ["fsevents@2.3.3", "", { "os": "darwin" }, "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="],
+
+    "graceful-fs": ["graceful-fs@4.2.11", "", {}, "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="],
 
     "koffi": ["koffi@3.3.3", "", { "optionalDependencies": { "@koromix/koffi-android-arm64": "3.3.3", "@koromix/koffi-android-x64": "3.3.3", "@koromix/koffi-darwin-arm64": "3.3.3", "@koromix/koffi-darwin-x64": "3.3.3", "@koromix/koffi-freebsd-arm64": "3.3.3", "@koromix/koffi-freebsd-ia32": "3.3.3", "@koromix/koffi-freebsd-x64": "3.3.3", "@koromix/koffi-linux-arm": "3.3.3", "@koromix/koffi-linux-arm64": "3.3.3", "@koromix/koffi-linux-ia32": "3.3.3", "@koromix/koffi-linux-loong64": "3.3.3", "@koromix/koffi-linux-ppc64": "3.3.3", "@koromix/koffi-linux-riscv64": "3.3.3", "@koromix/koffi-linux-x64": "3.3.3", "@koromix/koffi-openbsd-arm64": "3.3.3", "@koromix/koffi-openbsd-ia32": "3.3.3", "@koromix/koffi-openbsd-x64": "3.3.3", "@koromix/koffi-win32-arm64": "3.3.3", "@koromix/koffi-win32-ia32": "3.3.3", "@koromix/koffi-win32-x64": "3.3.3" } }, "sha512-XWNI4eyxJJzR2MakPZzR3QeZ06JOklLbxglin0dHhx/qIQCby8lqHs9Acq4Q7CpCKnOrBSj+6b9J5y69wfr2ZA=="],
 
@@ -483,6 +488,8 @@
     "scriptc": ["scriptc@0.3.6", "", { "optionalDependencies": { "@scriptc/cli-darwin-arm64": "0.3.6", "@scriptc/cli-darwin-x64": "0.3.6", "@scriptc/cli-linux-arm64-gnu": "0.3.6", "@scriptc/cli-linux-arm64-musl": "0.3.6", "@scriptc/cli-linux-x64-gnu": "0.3.6", "@scriptc/cli-linux-x64-musl": "0.3.6", "@scriptc/cli-win32-x64-msvc": "0.3.6" }, "bin": { "scriptc": "bin/scriptc.exe" } }, "sha512-8A8oTz6cgV1vpVZyay0Qn8QzobFjqE8a55hndN9T9e3vLvTD/tNHG6Ym59MNLSZGak4btU0vNV2XOCKDfj9pkA=="],
 
     "source-map-js": ["source-map-js@1.2.2", "", {}, "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw=="],
+
+    "tapable": ["tapable@2.3.3", "", {}, "sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A=="],
 
     "tinyglobby": ["tinyglobby@0.2.17", "", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.4" } }, "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g=="],
 

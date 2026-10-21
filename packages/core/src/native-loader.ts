@@ -5,6 +5,7 @@
 import type { AbiClass, ExportDef, ScriptcableProfile } from '@scriptcable/types';
 import { ScriptcableError } from '@scriptcable/types';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { sharedLibraryFileName } from './link-shared.js';
 
 export type NativeModule = {
@@ -23,7 +24,12 @@ function isBun(): boolean {
 }
 
 async function bindBun(soPath: string, profile: ScriptcableProfile): Promise<FfiBinding> {
-  const { dlopen, FFIType, ptr, toArrayBuffer } = await import('bun:ffi');
+  return bindBunSync(soPath, profile, await import('bun:ffi'));
+}
+
+/** Same binding as `bindBun`, given the already-loaded bun:ffi module. */
+function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof import('bun:ffi')): FfiBinding {
+  const { dlopen, FFIType, ptr, toArrayBuffer } = ffi;
 
   const mapClass = (c: AbiClass): unknown => {
     const m: Record<string, unknown> = {
@@ -83,8 +89,13 @@ async function bindBun(soPath: string, profile: ScriptcableProfile): Promise<Ffi
   };
 }
 
+type KoffiModule = typeof import('koffi');
+
+const KOFFI_HINT =
+  'Bun is the default engine and loads native libraries with built-in bun:ffi — no extra dependency.\n' +
+  'Node fallback only: npm install koffi';
+
 async function bindKoffi(soPath: string, profile: ScriptcableProfile): Promise<FfiBinding> {
-  type KoffiModule = typeof import('koffi');
   let koffiMod: KoffiModule;
   try {
     koffiMod = await import('koffi');
@@ -92,10 +103,14 @@ async function bindKoffi(soPath: string, profile: ScriptcableProfile): Promise<F
     throw new ScriptcableError(
       'MISSING_DEP',
       'koffi is an optional fallback for running scriptcable native libraries under plain Node.js.',
-      'Bun is the default engine and loads native libraries with built-in bun:ffi — no extra dependency.\n' +
-        'Node fallback only: npm install koffi',
+      KOFFI_HINT,
     );
   }
+  return bindKoffiSync(soPath, profile, koffiMod);
+}
+
+/** Same binding as `bindKoffi`, given the already-loaded koffi module. */
+function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffiMod: KoffiModule): FfiBinding {
   const koffi = koffiMod.default ?? koffiMod;
   const lib = koffi.load(soPath);
   const funcs: Record<string, (...args: unknown[]) => unknown> = {};
@@ -253,11 +268,7 @@ function invokeNative(
   return fn(...ffiArgs);
 }
 
-export async function loadNativeLibrary(
-  sharedPath: string,
-  profile: ScriptcableProfile,
-): Promise<NativeModule> {
-  const binding = isBun() ? await bindBun(sharedPath, profile) : await bindKoffi(sharedPath, profile);
+function makeNativeModule(profile: ScriptcableProfile, binding: FfiBinding): NativeModule {
   const byName = new Map(profile.exports.map((e) => [e.export, e]));
 
   return {
@@ -277,6 +288,31 @@ export async function loadNativeLibrary(
       binding.close?.();
     },
   };
+}
+
+export async function loadNativeLibrary(
+  sharedPath: string,
+  profile: ScriptcableProfile,
+): Promise<NativeModule> {
+  const binding = isBun() ? await bindBun(sharedPath, profile) : await bindKoffi(sharedPath, profile);
+  return makeNativeModule(profile, binding);
+}
+
+/**
+ * Synchronous variant of `loadNativeLibrary` — the underlying dlopen /
+ * koffi.load are synchronous, so given a loaded module this adds no async
+ * hop. The generated clients use it for the drop-in (top-level-await-free)
+ * server flavor.
+ */
+export function loadNativeLibrarySync(
+  sharedPath: string,
+  profile: ScriptcableProfile,
+): NativeModule {
+  const req = createRequire(import.meta.url);
+  const binding = isBun()
+    ? bindBunSync(sharedPath, profile, req('bun:ffi') as typeof import('bun:ffi'))
+    : bindKoffiSync(sharedPath, profile, req('koffi') as KoffiModule);
+  return makeNativeModule(profile, binding);
 }
 
 export async function loadNativeFromOutDir(outDir: string): Promise<NativeModule> {

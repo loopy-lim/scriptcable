@@ -52,7 +52,23 @@ export async function resolveProfile(
   const resolved = resolvedResult as ResolvedConfig;
 
   if (resolved.exports && resolved.exports.length > 0) {
-    return { profile: configToProfile(resolved), inferred: false, skipped: [] };
+    const profile = configToProfile(resolved);
+    // Explicit declarations pin the ABI surface, but the source still holds
+    // codegen-only metadata — merge paramNames/JSDoc by name so generated
+    // clients (and drop-ins) keep the original parameter names and docs.
+    try {
+      const { resolve } = await import('node:path');
+      const entryAbs = resolve(cwd, resolved.entry);
+      const { inferExportsFromFile } = await import('./infer.js');
+      const { exports: found } = await inferExportsFromFile(entryAbs);
+      profile.exports = profile.exports.map((e) => {
+        const src = found.find((f) => f.name === e.export);
+        return src ? { ...e, paramNames: src.paramNames, doc: src.doc } : e;
+      });
+    } catch {
+      /* source unavailable — positional arg names are fine */
+    }
+    return { profile, inferred: false, skipped: [] };
   }
   const { resolve } = await import('node:path');
   const entryAbs = resolve(cwd, resolved.entry);

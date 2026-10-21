@@ -2,7 +2,7 @@
   "name": "scriptcable",
   "version": "0.1.0",
   "private": true,
-  "description": "One TypeScript core (compiled by scriptc) \u2192 type-safe clients for Bun, Node, Tauri, React Native, Lynx, Vite, and Next.js",
+  "description": "One TypeScript core (compiled by scriptc) → type-safe clients for Bun, Node, Tauri, React Native, Lynx, Vite, and Next.js",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.4.3",
@@ -23,10 +23,11 @@
     "postbuild": "bun install --silent"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
+    "@scriptc/runtime-wasm32-wasi": "^0.3.6",
     "@types/bun": "^1.3.0",
+    "enhanced-resolve": "^5.26.0",
     "scriptc": "^0.3.6",
-    "@scriptc/runtime-wasm32-wasi": "^0.3.6"
+    "typescript": "^5.9.2"
   },
   "trustedDependencies": [
     "scriptc",

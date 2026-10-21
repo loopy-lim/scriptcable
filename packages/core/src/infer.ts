@@ -142,6 +142,116 @@ export function inferExportsFromSource(source: string, fileName = 'core.ts'): In
   return { exports, skipped };
 }
 
+export type EntryExportSurface = {
+  /** Runtime export names the drop-in client can provide (ABI-mappable functions). */
+  mapped: string[];
+  /** Runtime export names a drop-in cannot provide, with the reason. */
+  unmapped: Array<{ name: string; reason: string }>;
+};
+
+/**
+ * Full runtime export surface of the entry — everything a drop-in client
+ * would have to provide for imports of the entry to keep working. Functions
+ * the inference maps count as `mapped`; anything else that exists at
+ * runtime (values, classes, re-exports, default exports, unmappable
+ * functions) counts as `unmapped`, because a missing named export would
+ * break the importing module. Type-only exports (`export type` /
+ * `export interface`) are erased at runtime and ignored.
+ */
+export function analyzeEntryExports(source: string, fileName = 'core.ts'): EntryExportSurface {
+  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true);
+  const { exports: inferred, skipped } = inferExportsFromSource(source, fileName);
+  const skipReason = new Map(skipped.map((s) => [s.name, s.reason]));
+  const mappedNames = new Set(inferred.map((e) => e.name));
+  const mapped: string[] = [];
+  const unmapped: EntryExportSurface['unmapped'] = [];
+
+  const addRuntime = (name: string, reason: string): void => {
+    if (mappedNames.has(name)) mapped.push(name);
+    else unmapped.push({ name, reason });
+  };
+
+  for (const st of sf.statements) {
+    // `export { a, b }` / `export … from '…'` carry no export modifier — the
+    // keyword is part of the node itself. Handle before the modifier gate.
+    if (ts.isExportDeclaration(st)) {
+      if (st.moduleSpecifier) {
+        unmapped.push({
+          name: st.getText(sf).slice(0, 40),
+          reason: 're-export — drop-in provides this module\'s own functions only',
+        });
+      } else if (st.exportClause && ts.isNamedExports(st.exportClause)) {
+        for (const el of st.exportClause.elements) {
+          addRuntime(el.name.getText(sf), 'not a function export — drop-in provides functions only');
+        }
+      }
+      continue;
+    }
+
+    const modifiers = ts.canHaveModifiers(st) ? ts.getModifiers(st) : undefined;
+    const exported = modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false;
+    if (!exported) continue;
+
+    // Type-only declarations are erased at runtime — a drop-in needn't carry them.
+    if (ts.isTypeAliasDeclaration(st) || ts.isInterfaceDeclaration(st)) continue;
+
+    // `export default …` binds `default`, never the local name — not a named export.
+    if (modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)) {
+      unmapped.push({ name: 'default', reason: 'default export — drop-in provides named functions only' });
+      continue;
+    }
+
+    if (ts.isFunctionDeclaration(st)) {
+      if (st.name) {
+        const name = st.name.getText(sf);
+        addRuntime(name, skipReason.get(name) ?? 'not ABI-mappable');
+        if (mapped.includes(name) && st.parameters.some((p) => p.questionToken !== undefined || p.initializer !== undefined)) {
+          // The drop-in re-declares the function — an omitted argument would
+          // hit the ABI boundary as undefined instead of the declared default.
+          mapped.splice(mapped.indexOf(name), 1);
+          unmapped.push({
+            name,
+            reason: 'optional/default parameter — drop-in calls cannot reproduce omitted-argument defaults',
+          });
+        }
+      }
+      continue;
+    }
+    if (ts.isVariableStatement(st)) {
+      for (const d of st.declarationList.declarations) {
+        if (!ts.isIdentifier(d.name)) {
+          // `export const { a, b } = …` / `export const [x] = …` bind several
+          // names no drop-in mirrors — block rather than break the importer.
+          unmapped.push({
+            name: d.name.getText(sf).slice(0, 40),
+            reason: 'destructuring export — drop-in provides plain function exports only',
+          });
+          continue;
+        }
+        addRuntime(d.name.getText(sf), 'not a function export — drop-in provides functions only');
+      }
+      continue;
+    }
+    // enum and namespace declare runtime values a drop-in can't mirror.
+    if (ts.isEnumDeclaration(st)) {
+      unmapped.push({ name: st.name.getText(sf), reason: 'enum export — drop-in provides functions only' });
+      continue;
+    }
+    if (ts.isModuleDeclaration(st) && st.body && !ts.isStringLiteral(st.body)) {
+      unmapped.push({ name: st.name.getText(sf), reason: 'namespace export — drop-in provides functions only' });
+      continue;
+    }
+    if (ts.isClassDeclaration(st)) {
+      if (st.name) {
+        unmapped.push({ name: st.name.getText(sf), reason: 'class export — drop-in provides functions only' });
+      }
+      continue;
+    }
+  }
+
+  return { mapped, unmapped };
+}
+
 /** Placeholder — local type checking without a full program (fast path). */
 function makeLocalChecker(_sf: ts.SourceFile): null {
   return null;
