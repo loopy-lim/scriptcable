@@ -82,7 +82,7 @@ describe('metro drop-in resolver', () => {
     assert.equal(createScriptcableResolveRequest({ cwd: root }), null);
   });
 
-  it('withScriptcableMetro wraps the config and keeps an existing resolver in front', async () => {
+  it('withScriptcableMetro: the entry redirect WINS over an existing resolver, the rest delegates', async () => {
     const root = await makeProject({ withDropin: true });
     const existing = (ctx: MetroResolveContext, moduleName: string): MetroResolution | null =>
       moduleName === 'mine' ? { type: 'sourceFile', filePath: 'custom' } : null;
@@ -90,9 +90,26 @@ describe('metro drop-in resolver', () => {
     const chained = config.resolver?.resolveRequest;
     assert.ok(chained);
     const { context, delegated } = ctxOf(join(root, 'src', 'App.tsx'));
-    assert.equal(chained(context, 'mine', 'ios')?.filePath, 'custom', 'existing resolver keeps priority');
+    // An existing resolver (Metro's default config ships one — metro 0.87 /
+    // RN 0.88 verified) would resolve the entry itself and swallow the
+    // redirect if it ran first. The entry redirect must win…
     assert.equal(chained(context, './core', 'ios')?.filePath, join(root, '.scriptcable', 'generated', 'dropin', 'react-native.ts'));
-    assert.deepEqual(delegated, []);
+    assert.deepEqual(delegated, [], 'the entry must not reach the existing resolver');
+    // …and everything else must still reach it.
+    assert.equal(chained(context, 'mine', 'ios')?.filePath, 'custom', 'non-entry requests keep the existing resolver');
+  });
+
+  it('resolves the importing file from originModulePath (metro 0.87 field name)', async () => {
+    const root = await makeProject({ withDropin: true });
+    const resolveRequest = createScriptcableResolveRequest({ cwd: root });
+    assert.ok(resolveRequest);
+    // metro 0.87 / RN 0.88 expose originModulePath (originPath is undefined)
+    const context: MetroResolveContext = {
+      originModulePath: join(root, 'src', 'App.tsx'),
+      resolveRequest: (ctx, moduleName) => ({ type: 'sourceFile', filePath: `default:${moduleName}` }),
+    };
+    const result = resolveRequest(context, './core', 'ios');
+    assert.equal(result?.filePath, join(root, '.scriptcable', 'generated', 'dropin', 'react-native.ts'));
   });
 
   it('withScriptcableMetro is a no-op without an entry', async () => {

@@ -1,0 +1,6 @@
+{
+  "name": "calculator",
+  "entry": "../calculator-core/src/core.ts",
+  "prefix": "calc_",
+  "outDir": ".scriptcable"
+}

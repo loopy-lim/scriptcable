@@ -28,7 +28,12 @@ const SOURCE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 
 export type MetroResolution = { type: 'sourceFile'; filePath: string };
 export type MetroResolveContext = {
-  /** Absolute path of the importing file (Metro ≥ 0.72). */
+  /**
+   * Absolute path of the importing file. The field name moved between Metro
+   * versions: `originModulePath` in metro 0.87 / RN 0.88 (verified), older
+   * docs said `originPath` — read both.
+   */
+  originModulePath?: string;
   originPath?: string;
   resolveRequest: (
     context: MetroResolveContext,
@@ -58,50 +63,100 @@ export function resolveScriptcableEntry(opts: ScriptcableMetroOptions = {}): str
   return null;
 }
 
+/** Does this request resolve to the core entry (and a drop-in exists)? */
+function matchesEntryRequest(
+  context: MetroResolveContext,
+  moduleName: string,
+  cwd: string,
+  entryAbs: string,
+  dropinPath: string,
+): boolean {
+  try {
+    if (!existsSync(dropinPath)) return false;
+    if (!moduleName.startsWith('.') && !isAbsolute(moduleName)) return false;
+    const origin = context.originModulePath ?? context.originPath;
+    const from = origin ? dirname(origin) : cwd;
+    return baseOf(resolvePath(from, moduleName)) === baseOf(entryAbs);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The generated clients import each other with explicit `.js` specifiers
+ * (Node convention — plain Node type-stripping needs them). Metro does no
+ * `.js` → `.ts` aliasing, so map it — scoped to requests inside (or into)
+ * the generated tree, where those specifiers come from us.
+ */
+function resolveGeneratedJsSpecifier(
+  context: MetroResolveContext,
+  moduleName: string,
+  cwd: string,
+): MetroResolution | null {
+  try {
+    if (!moduleName.startsWith('.')) return null;
+    const origin = context.originModulePath ?? context.originPath;
+    const from = origin ? dirname(origin) : cwd;
+    const target = resolvePath(from, moduleName);
+    const generatedRoot = resolvePath(cwd, '.scriptcable', 'generated');
+    if (!target.startsWith(generatedRoot) && !(origin && origin.startsWith(generatedRoot))) return null;
+    if (extname(target) !== '.js') return null;
+    const tsSibling = target.slice(0, -3) + '.ts';
+    if (existsSync(tsSibling)) return { type: 'sourceFile', filePath: tsSibling };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * A Metro `resolver.resolveRequest` that redirects imports resolving to the
- * core entry onto the generated RN drop-in. Returns null when the project
- * has no entry (nothing to intercept — use the default resolution).
+ * core entry onto the generated RN drop-in; everything else falls through to
+ * the default resolution. Returns null when the project has no entry
+ * (nothing to intercept).
  */
 export function createScriptcableResolveRequest(opts: ScriptcableMetroOptions = {}): MetroResolveRequest | null {
   const cwd = opts.cwd ?? process.cwd();
   const entryAbs = resolveScriptcableEntry(opts);
   if (!entryAbs) return null;
-  const entryBase = baseOf(entryAbs);
   const dropinPath = resolvePath(cwd, GENERATED_DROPIN);
 
   return (context, moduleName, platform) => {
-    try {
-      if (
-        existsSync(dropinPath) &&
-        (moduleName.startsWith('.') || isAbsolute(moduleName)) &&
-        baseOf(resolvePath(context.originPath ? dirname(context.originPath) : cwd, moduleName)) === entryBase
-      ) {
-        return { type: 'sourceFile', filePath: dropinPath };
-      }
-    } catch {
-      /* fall through to the default resolution */
+    if (matchesEntryRequest(context, moduleName, cwd, entryAbs, dropinPath)) {
+      return { type: 'sourceFile', filePath: dropinPath };
     }
+    const generatedJs = resolveGeneratedJsSpecifier(context, moduleName, cwd);
+    if (generatedJs) return generatedJs;
     return context.resolveRequest(context, moduleName, platform);
   };
 }
 
 /**
- * Wrap a Metro config so entry imports resolve to the compiled client. An
- * existing `resolver.resolveRequest` keeps priority: it runs first, and the
- * drop-in redirect applies when it declines.
+ * Wrap a Metro config so entry imports resolve to the compiled client.
+ *
+ * The entry redirect WINS over any existing `resolver.resolveRequest`:
+ * Metro's own default config ships one, and it resolves the entry import
+ * happily — verified against metro 0.87 / RN 0.88, an "existing resolver
+ * first" chain would silently disable the drop-in (the unit-suite stub that
+ * declines everything hid exactly this). Every other request delegates to
+ * the previous resolver, then to Metro's default resolution.
  */
 export function withScriptcableMetro<
   T extends { resolver?: { resolveRequest?: MetroResolveRequest } },
 >(config: T, opts: ScriptcableMetroOptions = {}): T {
-  const resolveRequest = createScriptcableResolveRequest(opts);
-  if (!resolveRequest) return config;
+  const cwd = opts.cwd ?? process.cwd();
+  const entryAbs = resolveScriptcableEntry(opts);
+  if (!entryAbs) return config;
+  const dropinPath = resolvePath(cwd, GENERATED_DROPIN);
   const prev = config.resolver?.resolveRequest;
-  const chained: MetroResolveRequest = prev
-    ? (context, moduleName, platform) => {
-        const theirs = prev(context, moduleName, platform);
-        return theirs ?? resolveRequest(context, moduleName, platform);
-      }
-    : resolveRequest;
+  const chained: MetroResolveRequest = (context, moduleName, platform) => {
+    if (matchesEntryRequest(context, moduleName, cwd, entryAbs, dropinPath)) {
+      return { type: 'sourceFile', filePath: dropinPath };
+    }
+    const generatedJs = resolveGeneratedJsSpecifier(context, moduleName, cwd);
+    if (generatedJs) return generatedJs;
+    if (prev) return prev(context, moduleName, platform);
+    return context.resolveRequest(context, moduleName, platform);
+  };
   return { ...config, resolver: { ...config.resolver, resolveRequest: chained } };
 }

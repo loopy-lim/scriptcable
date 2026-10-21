@@ -1,7 +1,7 @@
 {
   "name": "@scriptcable/react-native",
   "version": "0.1.0",
-  "description": "React Native adapter — typed bridge to a scriptcable native module",
+  "description": "React Native adapter \u2014 typed bridge to a scriptcable native module",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -28,7 +28,8 @@
   },
   "dependencies": {
     "@scriptcable/core": "workspace:*",
-    "@scriptcable/types": "workspace:*"
+    "@scriptcable/types": "workspace:*",
+    "@babel/runtime": "^8.0.0"
   },
   "engines": {
     "bun": ">=1.2.0"

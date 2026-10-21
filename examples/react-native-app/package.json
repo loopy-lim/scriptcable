@@ -9,5 +9,13 @@
   },
   "dependencies": {
     "@scriptcable/react-native": "workspace:*"
+  },
+  "devDependencies": {
+    "@babel/runtime": "^8.0.7",
+    "@react-native/metro-config": "^0.88.0",
+    "@scriptcable/types": "workspace:*",
+    "metro": "^0.87.1",
+    "react": "^19.3.1",
+    "react-native": "^0.88.0"
   }
 }
