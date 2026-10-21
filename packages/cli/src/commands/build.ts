@@ -42,13 +42,14 @@ export async function runBuild(opts: BuildCliOptions = {}): Promise<number> {
     cwd,
     profile: result.profile,
     wasmFileName: wasmName,
-    copy: { wasmPath: result.wasmPath, sharedPath: result.sharedPath },
+    copy: { wasmPath: result.wasmPath, sharedPath: result.sharedPath, addonPath: result.addonPath },
   });
 
   const snap = snapshotFromProfile(result.profile);
   console.log(`  profile:   ${result.profilePath}`);
   if (result.nativePath) console.log(`  native:    ${result.nativePath}`);
   if (result.sharedPath) console.log(`  shared:    ${result.sharedPath}`);
+  if (result.addonPath) console.log(`  addon:     ${result.addonPath} (typed N-API direct binding)`);
   if (result.wasmPath) console.log(`  wasm:      ${result.wasmPath}`);
   console.log(`  generated: ${genDir}`);
   console.log(

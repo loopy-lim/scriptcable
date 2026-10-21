@@ -1,7 +1,7 @@
 {
   "name": "@scriptcable/core",
   "version": "0.1.0",
-  "description": "scriptcable core \u2014 profile generation, scriptc toolchain, WASM loader, contract hashing",
+  "description": "scriptcable core — profile generation, scriptc toolchain, WASM loader, contract hashing",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -56,6 +56,7 @@
   },
   "dependencies": {
     "@scriptcable/types": "workspace:*",
+    "node-api-headers": "^1.9.0",
     "typescript": "^5.9.2"
   },
   "devDependencies": {

@@ -238,7 +238,7 @@ scriptcable diff --fail-on-breaking   # exit 1 on removals / signature changes
 
 ## Performance
 
-Benchmarks live in `examples/bench-core` (`bun run bench`): native (bun:ffi) vs wasm (WASI) call latency/throughput plus cold/warm build times. Headline numbers on an M1 Max: **~75 ns/call on both engines**, cold core build **~1.1 s**, warm (cached) **~166 ms** — **6.4× faster**. The `@scriptcable/client` package adds no call-path cost (flavor selection is import-time resolution). See [BENCHMARK.md](./BENCHMARK.md).
+Benchmarks live in `examples/bench-core` (`bun run bench`): native (typed N-API addon / FFI) vs wasm (WASI) call latency/throughput plus cold/warm build times. Headline numbers on an M1 Max: **~24.5 ns/call** via the generated typed N-API addon on Node (~47 ns on Bun, still ahead of bun:ffi), 48 ns browser WASM, cold core build **~1.1 s**, warm (cached) **~166 ms** — **6.4× faster**. The `@scriptcable/client` package adds no call-path cost (flavor selection is import-time resolution). See [BENCHMARK.md](./BENCHMARK.md).
 
 Repeat builds are cached automatically — `scriptcable build --force` bypasses the cache.
 

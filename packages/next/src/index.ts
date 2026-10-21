@@ -30,7 +30,7 @@ async function runScriptcableBuild(projectRoot: string, configPath?: string): Pr
     outDir,
     cwd: projectRoot,
     wasmFileName: `${config.name}.wasm`,
-    copy: { sharedPath: result.sharedPath, wasmPath: result.wasmPath },
+    copy: { sharedPath: result.sharedPath, wasmPath: result.wasmPath, addonPath: result.addonPath },
     profile: result.profile,
   });
   if (clientLink === 'blocked') {

@@ -23,7 +23,7 @@ Median of 3 runs (2,000,000 iterations for cheap calls; 200,000 for compute/stri
 
 **Reading:**
 
-- The FFI/WASM boundary costs **~73–80 ns per call** on both engines — effectively identical. Choose native or WASM by deployment target, not speed.
+- The FFI/WASM boundary costs **~73–80 ns per call** through generic FFI; the generated typed N-API addon cuts that to **~24.5 ns on Node** and **~47 ns on Bun**. Choose native or WASM by deployment target, not speed.
 - `fib(30)` shows compiled-core throughput (~10M calls/s each doing 30 iterations of work) — the boundary cost dominates; the compiled code itself runs at JS-comparable speed (JS baseline: `fib(30)` in 18 ns in-process, but that comparison ignores isolation/type-safety benefits).
 - String round-trips cost ~1.2–1.3 µs because both directions copy through `(ptr, len)` marshalling. For chatty string APIs, batch work inside a single export.
 
@@ -33,9 +33,11 @@ Same export (`add`, f64×2 → f64), same generated client surface, per-runtime 
 
 | runtime | JS engine | call path | mean/call | ops/s | notes |
 | --- | --- | --- | --- | --- | --- |
-| Bun 1.4.3 | JSC | bun:ffi → dylib | 73–80 ns | ~12.5M | default engine, zero extra deps |
-| Node 22.21 | V8 | koffi 3.3 → dylib | 70–76 ns | ~13–14M | `npm i koffi` fallback |
-| Web — Chromium 156 | V8 | WASM + minimal WASI | **48 ns** | ~20.9M | fastest path measured; `vite dev`, in-page loop |
+| Bun 1.4.3 | JSC | typed N-API addon (.node) | **~47 ns** | ~21M | Bun's N-API layer costs more than Node's; still beats bun:ffi (70–80 ns) |
+| Bun 1.4.3 | JSC | bun:ffi → dylib (fallback) | 70–80 ns | ~12.5M | zero extra deps |
+| Node 22.21 | V8 | typed N-API addon (.node) | **~24.5 ns** | ~40M | koffi fallback 70–76 ns |
+| Node 22.21 | V8 | koffi 3.3 → dylib (fallback) | 70–76 ns | ~13–14M | generic FFI |
+| Web — Chromium 156 | V8 | WASM + minimal WASI | **48 ns** | ~20.9M | `vite dev`, in-page loop |
 | React Native (bridge pattern) | JSC* | async + JSON marshal hop | 165–181 ns | ~5.9M | *measured under Bun/JSC; **native transport excluded** — the device IPC hop dominates on hardware and was not measured (no device/simulator) |
 
 **Reading:**
@@ -51,6 +53,8 @@ Same `add(f64, f64) → f64` export, this machine. Measured rows are our runs; c
 | technology | measured | mean/call | notes |
 | --- | --- | --- | --- |
 | napi-rs 2 addon (Rust, statically typed export) | ✅ | **22 ns** | built for this comparison (LTO, Node 22) — direct N-API boundary, no per-call type conversion |
+| **scriptcable typed N-API addon (Node)** | ✅ | **24.5–24.7 ns** | shipped: the build compiles a per-export typed C wrapper against the same core archive — napi-rs class, generated |
+| scriptcable typed N-API addon (Bun) | ✅ | **46.5–47.8 ns** | same addon under Bun's N-API layer — still faster than bun:ffi |
 | scriptcable browser client (Chromium, raw WASM) | ✅ | **48 ns** | thin generated glue over plain wasm — competitive with statically bound addons |
 | koffi 3.3 (generic FFI, Node) | ✅ | 70–76 ns | generic symbol binding + per-call dynamic conversion |
 | bun:ffi (generic FFI, Bun) | ✅ | 73–80 ns | same class as koffi |
@@ -73,12 +77,12 @@ All three cross one boundary; they differ in how much work the boundary does per
 - **WASM in a browser (48 ns)**: the JS caller and the wasm module share one JIT (V8). The JS→wasm wrapper is signature-specialized and compiled once, then cached — parameters travel in registers, no boxing, no runtime type inspection.
 - **Generic FFI — bun:ffi / koffi (70–80 ns)**: the binding must handle *any* signature at runtime. Each call converts tagged JS values to C types dynamically, sets up a GC/trampoline scope, and dispatches through a generic layer. That generality is the extra ~25–30 ns.
 
-**Can scriptcable reach the 22 ns class natively? Yes — the types are already fixed at compile time.** The build emits a per-export ABI profile (`f64×2→f64`, …), which is everything a statically typed binding needs. Two validated routes, both proven by rustra, this project's predecessor:
+**Can scriptcable reach the 22 ns class natively? It does now.** The types are fixed at compile time, and `scriptcable build` compiles a per-export typed C wrapper (node_api.h) against the same core archive: `{name}.node`. Generated clients prefer it automatically — measured **24.5–24.7 ns/call** under Node (napi-rs class from generated code, ~3× faster than the generic-FFI fallback) and **~47 ns** under Bun (Bun's N-API layer carries more overhead than Node's; both beat their generic-FFI fallbacks). The fallbacks remain automatic. Two routes were validated against this project's predecessor rustra:
 
-1. **Generated N-API addon**: `scriptcable build` already compiles the core with clang/zig; emitting a thin typed N-API wrapper (node_api headers) into the same build gives Node and Bun a ~22 ns-class sync path with no wire, no framing — just per-export typed exports.
-2. **JSI for RN**: rustra measured parity with a Nitro HybridObject (±5%, iOS simulator) over JSI — the same route takes scriptcable's RN flavor from bridge-class (~165 ns + transport) to JSI-class.
+1. **Generated N-API addon** — shipped (the row above).
+2. **JSI for RN** — rustra measured parity with a Nitro HybridObject (±5%, iOS simulator) over JSI; the same route takes scriptcable's RN flavor from bridge-class (~165 ns + transport) to JSI-class (future work).
 
-Until then, the honest current position: scriptcable's direct-ABI calls (70–80 ns) already beat rustra's host-level RPC paths (1.26–2.27 µs) ~16–30× for scalar calls, because rustra spends its budget on the wire, async semantics, and rich types rather than a bare sync boundary.
+Before the addon, scriptcable's direct-ABI calls (70–80 ns) already beat rustra's host-level RPC paths (1.26–2.27 µs) ~16–30× for scalar calls, because rustra spends its budget on the wire, async semantics, and rich types rather than a bare sync boundary.
 
 **Reading:**
 
@@ -135,7 +139,7 @@ The ~6 ms figure is measured inside the process (`performance.now()` around `imp
 
 The package published into `.scriptcable/generated/` and linked as `node_modules/@scriptcable/client` is the generated client itself, exposed through export conditions — no wrapper layer, no indirection at call time:
 
-- Resolution happens once at import; the bound methods are the same generated functions measured in §1 (73–80 ns/call).
+- Resolution happens once at import; the bound methods call the typed N-API addon directly when present (24.5 ns class), else the shared library via the host's FFI, else WASM.
 - Runtime flavor selection (bun/node/browser/react-native) is static per environment — no branching in the call path.
 - Verified end-to-end in a real browser: headless Chromium + `vite dev`, `createClient()` → WASM → `add(20, 22) = 42` (see the plan doc in `docs/plans/`).
 
@@ -153,4 +157,4 @@ The package published into `.scriptcable/generated/` and linked as `node_modules
 3. **Coarse exports beat chatty ones** — batch string/bytes work to amortize the ~1.3 µs marshalling.
 4. **`@scriptcable/client` adds no runtime cost** — flavor selection is import-time resolution; calls run at the measured engine speed everywhere (Bun CLI, Next server, browser).
 5. Startup is snappy: ~6 ms from import to a loaded, callable native engine.
-6. **Against the alternatives**: scriptcable's native calls cost exactly the host's FFI (no own layer). A dedicated napi-rs addon is ~3× faster at the boundary (22 ns) but is Node-only and per-language; scriptcable compiles one TS core for Bun + Node + browser + RN at 48–80 ns/call — and the browser WASM path (48 ns) is already in napi-rs territory.
+6. **Against the alternatives**: scriptcable now generates a typed N-API addon — 24.5 ns/call under Node, ~47 ns under Bun (napi-rs class from generated code on Node), with generic FFI (70–80 ns) as the automatic fallback and browser WASM at 48 ns. Node-only and per-language addon codebases buy ~2 ns over that; scriptcable compiles one TS core for all four hosts.

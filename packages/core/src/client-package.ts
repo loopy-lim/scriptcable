@@ -160,7 +160,7 @@ export async function writeGeneratedClients(opts: {
   profile?: ScriptcableProfile;
   wasmFileName?: string;
   /** Build artifacts to copy next to the clients (from buildCore). */
-  copy?: { wasmPath?: string; sharedPath?: string };
+  copy?: { wasmPath?: string; sharedPath?: string; addonPath?: string };
 }): Promise<{ genDir: string; clientLink: ClientLinkResult }> {
   const genDir = join(opts.outDir, 'generated');
   const wasmName = opts.wasmFileName ?? `${opts.config.name}.wasm`;
@@ -180,6 +180,9 @@ export async function writeGeneratedClients(opts: {
   }
   if (opts.copy?.sharedPath) {
     await copyIfChanged(opts.copy.sharedPath, join(genDir, basename(opts.copy.sharedPath)));
+  }
+  if (opts.copy?.addonPath) {
+    await copyIfChanged(opts.copy.addonPath, join(genDir, `${opts.config.name}.node`));
   }
   if (opts.copy?.wasmPath) {
     await copyIfChanged(opts.copy.wasmPath, join(genDir, wasmName));

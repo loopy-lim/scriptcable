@@ -42,7 +42,7 @@ async function rebuild(root: string, configPath?: string): Promise<{ genDir: str
     outDir,
     cwd: root,
     wasmFileName: `${config.name}.wasm`,
-    copy: { wasmPath: result.wasmPath, sharedPath: result.sharedPath },
+    copy: { wasmPath: result.wasmPath, sharedPath: result.sharedPath, addonPath: result.addonPath },
     profile: result.profile,
   });
   if (clientLink === 'blocked') {

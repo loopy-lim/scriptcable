@@ -149,6 +149,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@scriptcable/types": "workspace:*",
+        "node-api-headers": "^1.9.0",
         "typescript": "^5.9.2",
       },
       "devDependencies": {
@@ -468,6 +469,8 @@
     "koffi": ["koffi@3.3.3", "", { "optionalDependencies": { "@koromix/koffi-android-arm64": "3.3.3", "@koromix/koffi-android-x64": "3.3.3", "@koromix/koffi-darwin-arm64": "3.3.3", "@koromix/koffi-darwin-x64": "3.3.3", "@koromix/koffi-freebsd-arm64": "3.3.3", "@koromix/koffi-freebsd-ia32": "3.3.3", "@koromix/koffi-freebsd-x64": "3.3.3", "@koromix/koffi-linux-arm": "3.3.3", "@koromix/koffi-linux-arm64": "3.3.3", "@koromix/koffi-linux-ia32": "3.3.3", "@koromix/koffi-linux-loong64": "3.3.3", "@koromix/koffi-linux-ppc64": "3.3.3", "@koromix/koffi-linux-riscv64": "3.3.3", "@koromix/koffi-linux-x64": "3.3.3", "@koromix/koffi-openbsd-arm64": "3.3.3", "@koromix/koffi-openbsd-ia32": "3.3.3", "@koromix/koffi-openbsd-x64": "3.3.3", "@koromix/koffi-win32-arm64": "3.3.3", "@koromix/koffi-win32-ia32": "3.3.3", "@koromix/koffi-win32-x64": "3.3.3" } }, "sha512-XWNI4eyxJJzR2MakPZzR3QeZ06JOklLbxglin0dHhx/qIQCby8lqHs9Acq4Q7CpCKnOrBSj+6b9J5y69wfr2ZA=="],
 
     "nanoid": ["nanoid@3.3.20", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ=="],
+
+    "node-api-headers": ["node-api-headers@1.9.0", "", {}, "sha512-2oNILP4jXwRB4ywnYKjVk1YyJ96n2D4EOVJO6S3oYZ5PtbJrw3Yt9TpAuX3nBLMuzn74rnfGQrv13pS9vC+YiA=="],
 
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 

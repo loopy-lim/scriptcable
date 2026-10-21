@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { access, constants, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { access, constants, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ScriptcableToolchainError } from '@scriptcable/types';
@@ -7,6 +7,7 @@ import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
 import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
 import { ensureClientPackageLink } from './client-package.js';
+import { buildNodeAddon, canBuildNodeAddon, napiAddonFileName } from './napi-addon.js';
 
 export type ToolchainInfo = {
   scriptcBin: string;
@@ -197,6 +198,8 @@ export type BuildResult = {
   nativePath?: string;
   /** Loadable shared library linked from the archive (.so/.dylib/.dll) */
   sharedPath?: string;
+  /** Typed N-API direct-binding addon (.node) — preferred by generated clients, soft-failed */
+  addonPath?: string;
   profile: ScriptcableProfile;
   /** True when this result came from the build cache (no recompile) */
   cached?: boolean;
@@ -274,12 +277,24 @@ export async function buildCore(
   const configInputs = [join(cwd, 'scriptcable.config.ts'), join(cwd, 'scriptcable.json')]
     .filter((p) => p.startsWith(outDir) === false);
   const buildHash = await computeBuildHash({ cwd, config, profile, target, extraInputs: configInputs });
+  const addonEligible = target !== 'wasm' && canBuildNodeAddon(profile);
+  // A previous soft-failed addon attempt is recorded in a marker — keep the
+  // cache valid without demanding the artifact until a build succeeds again
+  // (any successful build clears the marker; --force bypasses everything).
+  const addonFailedBefore =
+    addonEligible &&
+    (await readFile(join(outDir, 'addon-failed'), 'utf8').then(
+      () => true,
+      () => false,
+    ));
   const wantedArtifacts =
     target === 'wasm'
       ? [join(outDir, `${config.name}.wasm`)]
       : target === 'both'
         ? [join(outDir, `${config.name}.wasm`), join(outDir, sharedLibraryFileName(config.name))]
         : [join(outDir, sharedLibraryFileName(config.name))];
+  const addonDemanded = addonEligible && !addonFailedBefore;
+  if (addonDemanded) wantedArtifacts.push(join(outDir, napiAddonFileName(config.name)));
   const cacheHit =
     options.force !== true &&
     (await isCachedBuild({ outDir, target, hash: buildHash, artifactPaths: wantedArtifacts }));
@@ -291,6 +306,7 @@ export async function buildCore(
     if (target === 'native' || target === 'both') {
       result.nativePath = join(outDir, `${config.name}.lib.a`);
       result.sharedPath = join(outDir, sharedLibraryFileName(config.name));
+      if (addonDemanded) result.addonPath = join(outDir, napiAddonFileName(config.name));
     }
     result.cached = true;
     return result;
@@ -343,6 +359,26 @@ export async function buildCore(
       outPath: join(outDir, sharedLibraryFileName(config.name)),
       cwd,
     });
+    // Typed N-API direct binding — soft failure: generic FFI remains the fallback.
+    if (addonEligible) {
+      try {
+        result.addonPath = await buildNodeAddon({
+          archivePath: result.nativePath!,
+          outDir,
+          name: config.name,
+          profile,
+        });
+        await rm(join(outDir, 'addon-failed'), { force: true });
+      } catch (e) {
+        const reason = e instanceof Error ? e.message.split('\n')[0] : String(e);
+        console.warn(`  addon:     skipped — ${reason}`);
+        await writeFile(join(outDir, 'addon-failed'), reason + '\n');
+      }
+    } else if (profile.callbacks?.length) {
+      console.log(
+        `  addon:     skipped — callbacks are not supported by the typed addon yet (generic FFI path)`,
+      );
+    }
     // Self-contained static archive for hosts that link natively (Tauri/RN/Lynx)
     await buildCompleteStaticArchive({
       archivePath: result.nativePath!,
