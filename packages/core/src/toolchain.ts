@@ -57,8 +57,12 @@ async function tryResolveScriptcFrom(dir: string): Promise<string | undefined> {
   try {
     const require = createRequire(join(dir, 'package.json'));
     const pkg = dirname(require.resolve('scriptc/package.json'));
-    // Prefer the published bin shim
+    // Prefer the published bin shim. On Windows the package ships
+    // bin/scriptc.exe — an extensionless shim cannot be spawned there
+    // (found by the allow-fail Windows CI job).
+    const win32 = process.platform === 'win32';
     for (const candidate of [
+      ...(win32 ? [join(pkg, 'bin', 'scriptc.exe')] : []),
       join(pkg, 'bin', 'scriptc.js'),
       join(pkg, 'bin', 'scriptc'),
       join(dir, 'node_modules', '.bin', 'scriptc'),
