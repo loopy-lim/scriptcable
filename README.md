@@ -82,24 +82,48 @@ Export conditions resolve the right flavor per environment — no branching in y
 | Browser bundles served from project files (e.g. `vite dev`) | `browser.ts` (WASM — a minimal WASI polyfill is built in, so no-arg works) |
 | Metro (React Native) | `react-native.ts` (bridge-based) |
 
-The `browser` flavor fetches the WASM next to the generated module, which works where the bundler serves project files (`vite dev`). In Next.js client graphs, copy `<name>.wasm` to your static directory and call `createClient({ wasmUrl: '/<name>.wasm' })` — server code needs nothing, the node flavor loads the shared library automatically.
+The `browser` flavor resolves its WASM automatically: it probes the module-relative location first (works wherever the bundler serves project files, e.g. `vite dev`), then the origin root — the Vite / Next.js / Webpack plugins copy `<name>.wasm` into your static directory (`public/`) on every build, so `createClient()` works in client graphs with no manual copy step. An explicit `createClient({ wasmUrl })` always wins (e.g. behind a base path or on a CDN). Server code needs nothing — the node flavor loads the shared library automatically.
 
 Explicit subpaths pin a flavor: `@scriptcable/client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`. Editors resolve the same package, so TypeScript works with no `paths` config. The bundler plugins run the same emit: `withScriptcable` (which also adds `transpilePackages` for you) and the Webpack/Rspack plugin link the package during `next dev` / `next build`; on Turbopack, the predev `scriptcableBuild()` call does it.
 
-If the link is missing — a fresh checkout before the first build — `scriptcable doctor` reports and repairs it. For CI durability, add `"@scriptcable/client": "file:.scriptcable/generated"` to your dependencies.
+If the link is missing — a fresh checkout before the first build — `scriptcable doctor` reports and repairs it. `scriptcable init` scaffolds CI durability out of the box: it records `"@scriptcable/client": "file:.scriptcable/generated"` in your dependencies together with a placeholder manifest and the gitignore negations that keep `bun install` working before the first build. For projects not created by `init`, `doctor` prints the exact snippet.
+
+### Zero changes: the drop-in
+
+With a bundler plugin registered, you don't even need the import above. The plugins redirect module imports that resolve to your core entry onto a generated **drop-in client** — same export names, parameter names, and JSDoc as your source — so existing code keeps reading `./core` while the bundle runs the compiled library:
+
+```ts
+// unchanged app code — the plugin swaps the module behind this import
+import { add } from './src/core';
+add(20, 22); // 42, native-addon speed
+```
+
+| Host | How interception wires up |
+|---|---|
+| **Vite** | automatic — `resolveId` (runs before the builtin resolver) |
+| **Webpack / Rspack / Rspeedy (Lynx)** | automatic — an `enhanced-resolve` plugin |
+| **Next.js (webpack)** | automatic — client graphs get the browser drop-in, server/edge graphs the node one |
+| **Next.js (Turbopack)** | `withScriptcableAsync()` emits `turbopack.resolveAlias` (await it in `next.config.mjs`) |
+| **React Native (Metro)** | `withScriptcableMetro()` from `@scriptcable/react-native/metro` in `metro.config.js` |
+| **Electron** | main process: `import { createClient } from '@scriptcable/client'` (node conditions); renderer: the Vite/Webpack plugin as usual |
+
+Drop-in flavors: browser graphs initialize WASM once at module load (top-level await — build for **ES2022+**, e.g. vite `build.target: 'es2022'`); server graphs are **await-free** (`createClientSync()` — safe in CommonJS-output server bundles); Metro creates the bridge client lazily on first call.
+
+Accuracy comes first: if your entry exports anything a drop-in can't provide — a non-function value, a class, a `default`/re-export, a function with unmappable types, or an `exports` list that pins a subset — that project is **not** intercepted and one warning line says why. Opt out entirely with `dropin: false` (Vite) / `dropin: false` (Webpack) / `{ dropin: false }` (`withScriptcable`). Externally hosted runtimes (Turbopack, Metro, Rspeedy) are wired by config emission here; end-to-end verification needs those hosts installed.
 
 ### Before → after: what you stop knowing
 
-Using scriptcable used to require seven pieces of knowledge; now it requires one (`scriptcable build`, or a bundler plugin to run it):
+Using scriptcable used to require seven pieces of knowledge; now it requires one — running `scriptcable build`, or registering a bundler plugin that runs it:
 
 | You had to know | Before | Now |
 | --- | --- | --- |
 | Config file | `scriptcable.config.ts` required (`name`, `entry`) | optional — inferred from `package.json` + standard locations |
-| Generated artifact paths | relative imports into `.scriptcable/generated/`, `outDir` option | nothing — one bare specifier |
+| Generated artifact paths | relative imports into `.scriptcable/generated/`, `outDir` option | nothing — one bare specifier, or none at all (drop-in) |
 | Flavor selection | per-host adapter/file choice | automatic per environment (export conditions) |
 | Browser WASI adapter | construct & pass `createMinimalWasi()` | `createClient()` takes no args |
 | Bundler wiring | manual alias/transpile (Next), JSON-only plugin config | plugins wire everything |
 | Editor types | manual tsconfig `paths` | real package — resolved as-is |
+| **Call sites** | rewrite to `createClient()` + method calls | **unchanged** — plugins redirect `./core` imports onto the compiled client |
 
 ```ts
 // before — per-host imports, paths, adapters
@@ -183,7 +207,10 @@ Under Bun (default), native loading uses built-in `bun:ffi`. Under plain Node, i
 ```ts
 // vite.config.ts
 import scriptcable from '@scriptcable/vite';
-export default { plugins: [scriptcable()] };
+export default {
+  plugins: [scriptcable()], // imports of ./core resolve to the compiled client
+  build: { target: 'es2022' }, // drop-in browser client uses top-level await
+};
 ```
 
 Run vite with `bun --bun vite` so toolchain checks use the Bun runtime.
@@ -191,13 +218,14 @@ Run vite with `bun --bun vite` so toolchain checks use the Bun runtime.
 ### Next.js / Turbopack
 
 ```js
-// next.config.mjs — webpack path
-import { withScriptca } from '@scriptcable/next';
-export default withScriptca({});
+// next.config.mjs — webpack path (drop-in per graph: client → browser, server → node)
+import { withScriptcable } from '@scriptcable/next';
+export default withScriptcable({});
 
-// Turbopack: predev script → scriptcableBuild()
-import { scriptcableBuild } from '@scriptcable/next';
-await scriptcableBuild();
+// Turbopack: await the async variant for the resolveAlias drop-in,
+// and keep scriptcableBuild() as the predev script
+import { withScriptcableAsync, scriptcableBuild } from '@scriptcable/next';
+export default await withScriptcableAsync({});
 ```
 
 ### Tauri
@@ -207,7 +235,22 @@ import { createTauriSidecarEngine } from '@scriptcable/tauri';
 const engine = createTauriSidecarEngine({ invoke, profile });
 ```
 
-In the Tauri Rust shell, link `scriptcable build`'s `lib{name}.a` (build script / `cc`) and wrap the C ABI symbols with `#[tauri::command]`.
+In the Tauri Rust shell, link `scriptcable build`'s `lib{name}.a` (build script / `cc`) and wrap the C ABI symbols with `#[tauri::command]`. A Tauri v2 frontend built with Vite gets the drop-in browser client from the Vite plugin like any web app.
+
+### Electron
+
+No new package needed — Electron is two scriptcable hosts:
+
+```ts
+// main process (Node runtime) — one import, export conditions pick the
+// native node flavor; calls are synchronous
+import { createClient } from '@scriptcable/client';
+const client = await createClient();
+client.add(20, 22); // 42
+
+// renderer (built with vite or webpack) — register the plugin as usual and
+// imports of ./core resolve to the browser drop-in, same as any web app
+```
 
 ### React Native
 
@@ -221,13 +264,30 @@ import { createTurboModuleBridge } from '@scriptcable/react-native';
 import NativeCable from '../.scriptcable/generated/NativeCable';
 const engine = createReactNativeEngine(createTurboModuleBridge(NativeCable));
 await engine.invoke('add', [20, 22]); // 42
+
+// 3. Drop-in — metro.config.js: imports of ./core resolve to the compiled
+//    client (keep `scriptcable build --watch` running alongside Metro)
+import { withScriptcableMetro } from '@scriptcable/react-native/metro';
+export default withScriptcableMetro(getDefaultConfig(__dirname));
 ```
+
+On device, TurboModule drop-in calls resolve as Promises — same semantics as the bridge client above.
 
 `scriptcable build --hosts react-native` also emits `NativeCable.ts` (TurboModule spec) and `cable.json` (RN CLI codegen config). Link the iOS/Android archives in your Expo module (Xcode / NDK CMake) — see `packages/react-native/README.md` for the full recipe and `examples/react-native-app` for the `useCable` hook pattern with automatic mock fallback.
 
 ### Lynx
 
 Use `@scriptcable/webpack`'s `ScriptcableRspackPlugin` inside Rspeedy/Rsbuild, and `scriptcable build --hosts lynx`.
+
+## Watch mode
+
+For hosts without their own watcher (Next.js on Turbopack via a predev script, plain Bun/Node apps):
+
+```bash
+scriptcable build --watch
+```
+
+It watches the same inputs the build cache hashes — your core entry, its same-directory siblings, and the config files — and rebuilds (codegen and the `@scriptcable/client` link included) when they change. Errors don't kill the watcher: fix the file and it rebuilds.
 
 ## Contract gate (CI)
 
@@ -262,6 +322,9 @@ Note: `scriptc` must be a trusted dependency so Bun runs its install script (alr
 - String/bytes use `(ptr, len)` in / `(out_ptr, out_len)` out on the native boundary.
 - **clang** is required for the default native shared-library link.
 - WASM (`--target wasm`) still needs zig **0.13.x** with scriptc 0.3.x, plus a WASI polyfill in browsers.
+- The **browser drop-in** initializes WASM with top-level await — build for **ES2022+** (Chrome 89+, Safari 15+, Firefox 89+). On stricter targets use `dropin: false` and the async `createClient()`.
+- **Drop-in interception** applies only when the entry's entire runtime export surface is ABI-mappable (named functions); anything else disables it with a printed reason.
+- Turbopack / Metro / Rspeedy drop-in wiring is emitted as config here and verified at the unit level; end-to-end behavior needs those hosts installed.
 
 ## License
 
