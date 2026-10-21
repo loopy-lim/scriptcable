@@ -34,11 +34,14 @@ describe('napi-addon', () => {
     assert.match(src, /extern bool demo_flag\(bool\);/);
   });
 
-  it('extracts JS args per ABI class (bigint passes a lossless flag) and validates JS-level argc', () => {
+  it('extracts JS args per ABI class (i64 accepts number and BigInt) and validates JS-level argc', () => {
     const src = generateNodeAddonSource(PROFILE);
     assert.match(src, /napi_get_value_double\(env, argv\[0\], &a0\)/);
     assert.match(src, /napi_get_value_string_utf8\(env, argv\[0\], NULL, 0, &s0_len\)/);
-    assert.match(src, /napi_get_value_bigint_int64\(env, argv\[0\], &a0, &lossless0\)/);
+    // i64/u64 are TS-number classes (scriptc ≥ 0.4): coerce numbers, keep the
+    // BigInt path for lossless callers
+    assert.match(src, /if \(vt0 == napi_bigint\) \{ NAPI_CHECK\(napi_get_value_bigint_int64\(env, argv\[0\], &a0, &lossless0\)\); \}/);
+    assert.match(src, /else \{ NAPI_CHECK\(napi_get_value_int64\(env, argv\[0\], &a0\)\); \}/);
     assert.match(src, /napi_get_value_uint32\(env, argv\[0\], &t0\)/);
     assert.match(src, /napi_get_value_boolean\(env, argv\[0\], &a0\)/);
     // greet takes ONE js argument (two C slots) — the check counts JS args
@@ -60,7 +63,8 @@ describe('napi-addon', () => {
     assert.match(src, /napi_get_boolean\(env, r, &res\)/);
     assert.match(src, /napi_create_uint32\(env, \(uint32_t\)r, &res\)/);
     assert.match(src, /napi_create_string_utf8\(env, \(const char\*\)out_ptr, \(size_t\)out_len, &res\)/);
-    assert.match(src, /napi_create_bigint_int64\(env, r, &res\)/);
+    // i64 returns carry as double — the class contract bounds them to ±(2^53 − 1)
+    assert.match(src, /napi_create_double\(env, \(double\)r, &res\)/);
   });
 
   it('registers exports and runs the init symbol in NAPI_MODULE_INIT', () => {

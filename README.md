@@ -143,7 +143,7 @@ There is no speed trade-off for the convenience: calls run at the measured engin
 TypeScript core  →  scriptc library (WASM / .lib.a)  →  generated clients + adapters
 ```
 
-1. **Zero-duplication ABI**: `scriptcable build` parses `src/core.ts` with the TS compiler API and infers every ABI-mappable exported function — names, parameter names, JSDoc, and types (`number`→`f64`, `string`, `boolean`→`bool`, `Uint8Array`→`bytes`). Functions with unmappable types are skipped with a printed reason. scriptc 0.3.x marshals only f64/u8/u32/i32 at the TS level — in practice cores use `number`/`string`/`boolean`/`Uint8Array`; wider integers (`i64`/`u64`) arrive when scriptc exposes them.
+1. **Zero-duplication ABI**: `scriptcable build` parses `src/core.ts` with the TS compiler API and infers every ABI-mappable exported function — names, parameter names, JSDoc, and types (`number`→`f64`, `string`, `boolean`→`bool`, `Uint8Array`→`bytes`). Functions with unmappable types are skipped with a printed reason. Cores use `number`/`string`/`boolean`/`Uint8Array`; **wider integers (`i64`/`u64`) work on scriptc ≥ 0.4** — declare them in `scriptcable.json` (`"params": ["i64"]`) with the TS type `number`; scriptc proves the value range stays within ±(2^53 − 1) and refuses otherwise (SC4023). `bigint` stays unsupported — i64 rides float64 by design.
 2. `scriptcable build` writes a scriptc library profile, compiles with `scriptc build --lib` to a **native** `.lib.a`, links a loadable shared library, and generates typed clients that keep your parameter names and JSDoc.
 3. Bun loads via **bun:ffi** (built-in — no extra dependency). Plain Node can optionally load via koffi. Tauri / React Native / Lynx link the archive natively. Browser UIs opt into WASM.
 

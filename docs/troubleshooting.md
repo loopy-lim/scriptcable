@@ -41,9 +41,9 @@ xcode-select --install
 sudo apt install clang
 ```
 
-### `error SC4003: … does not fit the declared marshalling class 'i64'` (on `bigint` params)
+### `error SC4003: … has IR type 'bigint', which does not fit the declared marshalling class 'i64'`
 
-scriptc 0.3.x marshals only **f64 / u8 / u32 / i32** at the TypeScript level — `bigint` (i64) and wider classes are rejected. Use `number` for now; the generated N-API addon already speaks i64/u64 for when scriptc exposes them. Verify with `scriptcable coverage src/core.ts`.
+scriptc ≥ 0.4 exposes **i64/u64 as TS `number`** (not `bigint`) — the compiler proves your value range and refuses anything that can't stay within ±(2^53 − 1) (error SC4023). So: declare the export in `scriptcable.json` with `"params": ["i64"]`, keep the TS type `number`, and keep values bounded (`if (n > 94906265) return 0;` makes `n * n` provable). `bigint` stays unsupported — `n * 2^n`-style unbounded math can't ride float64. Narrow classes (`u8/u32/i32`) are param-only; `f64` is the general number.
 
 ### `error SC0001: Cannot find name 'u32'` (on `type X = u32` alias types)
 

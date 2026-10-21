@@ -68,8 +68,23 @@ function cReadArg(cls: AbiClass, i: number, check: string): string {
       return `NAPI_CHECK${check}(napi_get_value_uint32(env, ${v}, &t${i})); a${i} = (${cParamType(cls)})t${i};`;
     case 'i8': case 'i16': case 'i32':
       return `NAPI_CHECK${check}(napi_get_value_int32(env, ${v}, &t${i})); a${i} = (${cParamType(cls)})t${i};`;
-    case 'i64': return `NAPI_CHECK${check}(napi_get_value_bigint_int64(env, ${v}, &a${i}, &lossless${i}));`;
-    case 'u64': return `NAPI_CHECK${check}(napi_get_value_bigint_uint64(env, ${v}, &a${i}, &lossless${i}));`;
+    // scriptc ≥ 0.4 exposes i64/u64 as TS number (values proven within
+    // ±(2^53 − 1)); accept BigInt too — a lossless caller shouldn't pay for
+    // the contract boundary with a type error.
+    case 'i64':
+      return [
+        `napi_valuetype vt${i};`,
+        `NAPI_CHECK${check}(napi_typeof(env, ${v}, &vt${i}));`,
+        `if (vt${i} == napi_bigint) { NAPI_CHECK${check}(napi_get_value_bigint_int64(env, ${v}, &a${i}, &lossless${i})); }`,
+        `else { NAPI_CHECK${check}(napi_get_value_int64(env, ${v}, &a${i})); }`,
+      ].join('\n  ');
+    case 'u64':
+      return [
+        `napi_valuetype vt${i};`,
+        `NAPI_CHECK${check}(napi_typeof(env, ${v}, &vt${i}));`,
+        `if (vt${i} == napi_bigint) { NAPI_CHECK${check}(napi_get_value_bigint_uint64(env, ${v}, &a${i}, &lossless${i})); }`,
+        `else { int64_t s${i}; NAPI_CHECK${check}(napi_get_value_int64(env, ${v}, &s${i})); a${i} = (uint64_t)s${i}; }`,
+      ].join('\n  ');
     case 'bool': return `NAPI_CHECK${check}(napi_get_value_boolean(env, ${v}, &a${i}));`;
     case 'string': case 'cstring':
       return [
@@ -159,8 +174,10 @@ function cWrapper(e: ScriptcableProfile['exports'][number], prefix: string): str
       case 'f64': lines.push(`  NAPI_CHECK${check}(napi_create_double(env, r, &res));`); break;
       case 'f32': lines.push(`  NAPI_CHECK${check}(napi_create_double(env, (double)r, &res));`); break;
       case 'bool': lines.push(`  NAPI_CHECK${check}(napi_get_boolean(env, r, &res));`); break;
-      case 'i64': lines.push(`  NAPI_CHECK${check}(napi_create_bigint_int64(env, r, &res));`); break;
-      case 'u64': lines.push(`  NAPI_CHECK${check}(napi_create_bigint_uint64(env, r, &res));`); break;
+      // TS-number classes: values are proven within ±(2^53 − 1), so a
+      // double carries them exactly
+      case 'i64': lines.push(`  NAPI_CHECK${check}(napi_create_double(env, (double)r, &res));`); break;
+      case 'u64': lines.push(`  NAPI_CHECK${check}(napi_create_double(env, (double)r, &res));`); break;
       case 'u8': case 'u16': case 'u32': lines.push(`  NAPI_CHECK${check}(napi_create_uint32(env, (uint32_t)r, &res));`); break;
       default: lines.push(`  NAPI_CHECK${check}(napi_create_int32(env, (int32_t)r, &res));`);
     }

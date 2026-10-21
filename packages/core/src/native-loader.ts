@@ -265,6 +265,12 @@ function invokeNative(
     return undefined;
   }
   if (def.returns === 'bool') return Boolean(fn(...ffiArgs));
+  // i64/u64 are TS-number classes (scriptc ≥ 0.4 prove-or-refuse keeps values
+  // within ±(2^53 − 1)) — bun:ffi still returns BigInt for those slots
+  if (def.returns === 'i64' || def.returns === 'u64') {
+    const r = fn(...ffiArgs);
+    return typeof r === 'bigint' ? Number(r) : r;
+  }
   return fn(...ffiArgs);
 }
 

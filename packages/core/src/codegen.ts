@@ -57,10 +57,11 @@ function tsType(cls: string): string {
     case 'i8':
     case 'i16':
     case 'i32':
-      return 'number';
+    // scriptc ≥ 0.4 exposes i64/u64 as TS number (prove-or-refuse: values
+    // must stay within ±(2^53 − 1), so float64 carries them exactly)
     case 'i64':
     case 'u64':
-      return 'bigint';
+      return 'number';
     case 'bool':
       return 'boolean';
     case 'string':
