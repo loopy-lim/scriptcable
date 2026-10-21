@@ -4,12 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "scriptcable build --target both --hosts browser,node && bun run scripts/sync-public.mjs",
+    "build:core": "scriptcable build --target both --hosts browser,node",
     "dev": "bun run build:core && bun --bun vite",
     "build": "bun run build:core && bun --bun vite build",
     "test:ssr": "bun run build:core && bun src/ssr.ts",
     "test:wasm": "bun run build:core && bun src/wasm-smoke.ts",
-    "test": "bun run test:ssr && bun run test:wasm && bun run build"
+    "test": "bun run test:ssr && bun run test:wasm && bun run test:dropin && bun run build",
+    "test:dropin": "bun src/dropin-smoke.ts"
   },
   "dependencies": {
     "@scriptcable/core": "workspace:*",
