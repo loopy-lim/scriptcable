@@ -338,8 +338,11 @@ export async function loadWasmFile(
     wasi?: LoadWasmOptions['wasi'];
   },
 ): Promise<LoadedModule> {
-  const { readFile } = await import('node:fs/promises');
-  const { WASI } = await import('node:wasi');
+  // webpackIgnore / turbopackIgnore: these node: builtins sit behind a
+  // runtime guard (Node-only path) — bundlers compiling this file for the
+  // browser must not resolve them at build time (UnhandledSchemeError).
+  const { readFile } = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ 'node:fs/promises');
+  const { WASI } = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ 'node:wasi');
   const bytes = await readFile(path);
   let wasi = options.wasi;
   if (!wasi) {

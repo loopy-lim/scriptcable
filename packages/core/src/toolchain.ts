@@ -123,7 +123,7 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-export async function doctor(cwd = process.cwd()): Promise<ToolchainInfo> {
+export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: boolean } = {}): Promise<ToolchainInfo> {
   const nodeVersion = process.version;
   const bunVersion = process.versions.bun;
   const runtime: 'bun' | 'node' = bunVersion ? 'bun' : 'node';
@@ -135,7 +135,12 @@ export async function doctor(cwd = process.cwd()): Promise<ToolchainInfo> {
       'Upgrade: curl -fsSL https://bun.sh/install | bash',
     );
   }
-  if (runtime === 'node') {
+  // The node >= 24 floor is a client-RUNTIME policy (node 24 strips TS types
+  // natively, so generated clients import without a loader). It is not a
+  // build-feasibility constraint: bundler plugins compile inside the HOST's
+  // build (often node 22), where the generated TypeScript is transpiled by
+  // the bundler. Pass skipRuntimeGate from those paths.
+  if (!opts.skipRuntimeGate && runtime === 'node') {
     const major = Number(nodeVersion.slice(1).split('.')[0]);
     if (major < 24) {
       throw new ScriptcableToolchainError(
@@ -189,6 +194,12 @@ export type BuildOptions = {
   env?: NodeJS.ProcessEnv;
   /** Bypass the build cache (default: false — cached hits skip scriptc + link) */
   force?: boolean;
+  /**
+   * Bundler plugins run inside the host's build process (any node version) —
+   * the generated TypeScript is transpiled by the bundler, so the node >= 24
+   * client-runtime policy must not fail the host build. Pass 'skip' there.
+   */
+  doctorRuntimeGate?: 'strict' | 'skip';
 };
 
 export type BuildResult = {
@@ -249,7 +260,7 @@ export async function buildCore(
   const target = options.target ?? config.target ?? 'native';
   await mkdir(outDir, { recursive: true });
 
-  const info = await doctor(cwd);
+  const info = await doctor(cwd, { skipRuntimeGate: options.doctorRuntimeGate === 'skip' });
   // Infer exports from the TS entry when not declared in scriptcable.json.
   const { resolveProfile } = await import('./profile.js');
   const { profile, inferred, skipped } = await resolveProfile(config, cwd);
