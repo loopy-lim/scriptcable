@@ -72,6 +72,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      # clang targets x86_64-pc-windows-msvc on these runners — without the
+      # MSVC dev environment (INCLUDE/LIB/link.exe) the link stage fails with
+      # an opaque scriptc error
+      - uses: ilammy/msvc-dev-cmd@v1
       - name: Toolchain inventory
         run: |
           clang --version || echo "clang: MISSING"
