@@ -10,7 +10,7 @@ function usage(): void {
 
 Usage:
   scriptcable init <name> [--host bun|node|vite|next|tauri|react-native|lynx]
-  scriptcable build [--target wasm|native|both] [--hosts bun,node,browser,...] [--force]
+  scriptcable build [--target wasm|native|both] [--hosts bun,node,browser,...] [--force] [--watch]
   scriptcable diff [--snapshot path]   compare scriptcable.json to committed contract
   scriptcable doctor                   check Bun / scriptc / zig / clang
   scriptcable --help
@@ -47,14 +47,16 @@ async function main(argv: string[]): Promise<number> {
       let target: 'wasm' | 'native' | 'both' | undefined;
       let hosts: CodegenTarget[] | undefined;
       let force = false;
+      let watch = false;
       for (let i = 0; i < rest.length; i++) {
         if (rest[i] === '--target') target = rest[++i] as typeof target;
         if (rest[i] === '--hosts') {
           hosts = rest[++i]!.split(',') as CodegenTarget[];
         }
         if (rest[i] === '--force') force = true;
+        if (rest[i] === '--watch') watch = true;
       }
-      return runBuild({ target, hosts, force });
+      return runBuild({ target, hosts, force, watch });
     }
     case 'diff': {
       let snapshot: string | undefined;

@@ -1,7 +1,14 @@
-import { resolve } from 'node:path';
-import { buildCore, snapshotFromProfile, loadProjectConfig, loadConfigFile, writeGeneratedClients } from '@scriptcable/core';
-import { resolveProfile } from '@scriptcable/core';
+import { resolve, join, dirname } from 'node:path';
+import { readdir, stat } from 'node:fs/promises';
+import {
+  buildCore,
+  snapshotFromProfile,
+  loadProjectConfig,
+  loadConfigFile,
+  writeGeneratedClients,
+} from '@scriptcable/core';
 import { type CodegenTarget } from '@scriptcable/core/codegen';
+import { formatError } from '../errors.js';
 
 export type BuildCliOptions = {
   cwd?: string;
@@ -11,17 +18,32 @@ export type BuildCliOptions = {
   configPath?: string;
   /** Bypass the build cache */
   force?: boolean;
+  /** Keep running and rebuild automatically when the core sources or config change */
+  watch?: boolean;
 };
 
-export async function runBuild(opts: BuildCliOptions = {}): Promise<number> {
-  const cwd = opts.cwd ?? process.cwd();
-  const config = opts.configPath
-    ? await loadConfigFile(resolve(cwd, opts.configPath), cwd)
+/** Poll cadence for `--watch` — source saves coalesce into one rebuild. */
+const WATCH_POLL_MS = 400;
+
+async function resolveConfig(cwd: string, configPath?: string) {
+  return configPath
+    ? await loadConfigFile(resolve(cwd, configPath), cwd)
     : (await loadProjectConfig(cwd)).config;
+}
+
+export async function runBuild(opts: BuildCliOptions = {}): Promise<number> {
+  if (opts.watch) return runWatch(opts);
+  await buildAndEmit(opts, true);
+  return 0;
+}
+
+async function buildAndEmit(opts: BuildCliOptions, announce: boolean): Promise<void> {
+  const cwd = opts.cwd ?? process.cwd();
+  const config = await resolveConfig(cwd, opts.configPath);
   const outDir = resolve(cwd, config.outDir ?? '.scriptcable');
 
   const target = opts.target ?? config.target ?? 'native';
-  console.log(`Building ${config.name} (${target})…`);
+  if (announce) console.log(`Building ${config.name} (${target})…`);
   const result = await buildCore(config, {
     cwd,
     target,
@@ -58,5 +80,105 @@ export async function runBuild(opts: BuildCliOptions = {}): Promise<number> {
       : `  client:    import { createClient } from '@scriptcable/client'`,
   );
   console.log(`  contract:  ${snap.hash}`);
+}
+
+type Stamps = Map<string, number>;
+
+/**
+ * Watch mode: rebuild on change, for hosts without their own watcher (Next
+ * Turbopack predev, Bun/Node apps). Polls the same inputs the build cache
+ * hashes — the entry plus its same-directory siblings and the config files —
+ * so what triggers a rebuild is exactly what can change the artifacts.
+ */
+async function runWatch(opts: BuildCliOptions = {}): Promise<number> {
+  const cwd = opts.cwd ?? process.cwd();
+
+  let config;
+  try {
+    config = await resolveConfig(cwd, opts.configPath);
+  } catch (e) {
+    console.error(formatError(e));
+    return 1;
+  }
+
+  try {
+    await buildAndEmit(opts, true);
+  } catch (e) {
+    // A broken core still watches — fixing the file triggers the rebuild.
+    console.error(formatError(e));
+    console.log('  still watching — fix the error to rebuild');
+  }
+  console.log(`watching for changes — Ctrl+C to stop`);
+
+  const entryDir = dirname(resolve(cwd, config.entry));
+  const configFiles = () => {
+    const files = [join(cwd, 'scriptcable.config.ts'), join(cwd, 'scriptcable.json')];
+    if (opts.configPath) files.push(resolve(cwd, opts.configPath));
+    return files;
+  };
+  // Same conservative source set as the build cache's collectSourceHashes.
+  const watchedSources = async (): Promise<string[]> => {
+    try {
+      return (await readdir(entryDir))
+        .filter((f) => /\.ts$/.test(f) && !/\.test\./.test(f) && !/\.bench\./.test(f))
+        .map((f) => join(entryDir, f));
+    } catch {
+      return [];
+    }
+  };
+  const stampOf = async (paths: string[]): Promise<Stamps> => {
+    const stamps: Stamps = new Map();
+    await Promise.all(
+      paths.map(async (p) => {
+        try {
+          stamps.set(p, (await stat(p)).mtimeMs);
+        } catch {
+          stamps.set(p, -1); // deleted / not there yet
+        }
+      }),
+    );
+    return stamps;
+  };
+  const differs = (a: Stamps, b: Stamps): boolean =>
+    a.size !== b.size || [...a].some(([k, v]) => b.get(k) !== v);
+
+  let configStamps = await stampOf(configFiles());
+  let sourceStamps = await stampOf(await watchedSources());
+  let building = false;
+
+  const tick = async (): Promise<void> => {
+    if (building) return;
+    building = true;
+    try {
+      const nextConfigStamps = await stampOf(configFiles());
+      const nextSourceStamps = await stampOf(await watchedSources());
+      if (!differs(nextConfigStamps, configStamps) && !differs(nextSourceStamps, sourceStamps)) return;
+      configStamps = nextConfigStamps;
+      sourceStamps = nextSourceStamps;
+      const started = Date.now();
+      await buildAndEmit(opts, false);
+      console.log(`  rebuilt in ${Date.now() - started}ms — watching…`);
+    } catch (e) {
+      // Mid-edit source/config — report and keep watching; the next save
+      // changes the stamps again and triggers a fresh rebuild attempt.
+      console.error(formatError(e));
+      console.log('  still watching — fix the error to rebuild');
+    } finally {
+      building = false;
+    }
+  };
+
+  const timer = setInterval(() => {
+    void tick();
+  }, WATCH_POLL_MS);
+  await new Promise<void>((stopWaiting) => {
+    const stop = () => {
+      clearInterval(timer);
+      console.log('\nwatch stopped');
+      stopWaiting();
+    };
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+  });
   return 0;
 }
