@@ -10,6 +10,7 @@
  * fails the build.
  */
 import { spawn } from 'node:child_process';
+import { which } from './which.js';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
@@ -241,15 +242,6 @@ ${registrations}
   return exports;
 }
 `;
-}
-
-async function which(cmd: string): Promise<string | undefined> {
-  return new Promise((resolvePromise) => {
-    const child = spawn('which', [cmd], { stdio: ['ignore', 'pipe', 'ignore'] });
-    let out = '';
-    child.stdout.on('data', (d: Buffer) => (out += d.toString()));
-    child.on('close', (code) => resolvePromise(code === 0 ? out.trim() || undefined : undefined));
-  });
 }
 
 async function run(cmd: string, args: string[]): Promise<{ code: number; stderr: string }> {

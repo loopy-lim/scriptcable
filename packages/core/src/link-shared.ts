@@ -6,15 +6,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, writeFile, access, constants } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { ScriptcableToolchainError } from '@scriptcable/types';
-
-async function which(cmd: string): Promise<string | undefined> {
-  return new Promise((resolvePromise) => {
-    const child = spawn('which', [cmd], { stdio: ['ignore', 'pipe', 'ignore'] });
-    let out = '';
-    child.stdout.on('data', (d: Buffer) => (out += d.toString()));
-    child.on('close', (code) => resolvePromise(code === 0 ? out.trim() || undefined : undefined));
-  });
-}
+import { which } from './which.js';
 
 async function run(
   cmd: string,
