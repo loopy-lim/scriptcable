@@ -1,7 +1,7 @@
 {
   "name": "@scriptcable/react-native",
   "version": "0.1.0",
-  "description": "React Native adapter \u2014 typed bridge to a scriptcable native module",
+  "description": "React Native adapter — typed bridge to a scriptcable native module",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./metro": {
+      "types": "./dist/metro.d.ts",
+      "import": "./dist/metro.js"
     }
   },
   "files": [
