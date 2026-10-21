@@ -79,12 +79,15 @@ jobs:
       - name: Toolchain inventory
         run: |
           clang --version || echo "clang: MISSING"
-      - name: Install zig (WASM toolchain)
+      - name: Install zig (WASM toolchain — and the linker driver on Windows)
         shell: bash
         run: |
           curl -fsSL https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip -o zig.zip
-          unzip -q zig.zip
-          echo "$PWD/zig-windows-x86_64-0.13.0" >> $GITHUB_PATH
+          unzip -q zig.zip -d "$GITHUB_WORKSPACE"
+          # $PWD here is a Git-Bash POSIX path (/d/a/...) which Windows
+          # processes cannot resolve — write the Windows form
+          echo "$GITHUB_WORKSPACE/zig-windows-x86_64-0.13.0" >> "$GITHUB_PATH"
+          zig version
       - run: bun install
       - run: bun run build
       - run: bun install
