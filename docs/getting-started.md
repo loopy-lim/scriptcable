@@ -63,7 +63,7 @@ Expected from `doctor` (trimmed):
 
 ```
   bun:      1.4.3 ✓
-  scriptc:  0.3.6 …
+  scriptc:  0.4.0 …
   clang:    /usr/bin/clang ✓
 OK — ready to build native cores.
 ```
