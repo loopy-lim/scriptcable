@@ -1,0 +1,5 @@
+# Bun 1.4 defaulted to the isolated linker, which breaks workspace-package
+# resolution in this monorepo (bun cannot resolve @scriptcable/* through the
+# per-workspace links it creates). Keep the classic hoisted layout.
+[install]
+linker = "hoisted"

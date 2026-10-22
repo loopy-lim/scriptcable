@@ -31,6 +31,7 @@
   },
   "trustedDependencies": [
     "scriptc",
-    "@scriptc/runtime-wasm32-wasi"
+    "@scriptc/runtime-wasm32-wasi",
+    "electron"
   ]
 }
