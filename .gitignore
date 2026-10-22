@@ -1,5 +1,6 @@
 node_modules/
 dist/
+build/
 dist-ts/
 .scriptc/
 .scriptcable/
@@ -11,6 +12,9 @@ dist-ts/
 *.log
 .turbo/
 .next/
+.astro/
+.svelte-kit/
+dist-main/
 coverage/
 *.tgz
 .cache/
