@@ -1,0 +1,23 @@
+{
+  "name": "@scriptcable/example-electron-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist-main/main.js",
+  "scripts": {
+    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "build:main": "bun build src/main.ts --outdir dist-main --target node --format esm --external electron --external @scriptcable/client",
+    "build:renderer": "bun run build:core && bun --bun vite build",
+    "start": "electron .",
+    "test": "bun run build:renderer && bun run build:main && xvfb-run -a electron . || electron ."
+  },
+  "dependencies": {
+    "@scriptcable/example-calculator-core": "workspace:*",
+    "@scriptcable/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@scriptcable/vite": "workspace:*",
+    "electron": "^33.0.0",
+    "vite": "^6.0.0"
+  }
+}
