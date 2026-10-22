@@ -71,6 +71,22 @@ describe('clientPackageManifest', () => {
     assert.equal(exports['./react-native'], './react-native.ts');
     assert.equal(exports['./browser'], undefined);
   });
+
+  it('deno ships as .js ahead of node; workerd resolves ahead of browser', () => {
+    const m = clientPackageManifest(['bun', 'deno', 'node', 'workers', 'browser']);
+    const dot = (m.exports as Record<string, unknown>)['.'] as Record<string, string>;
+    // Deno won't strip types under node_modules — the flavor must be .js.
+    assert.equal(dot.deno, './deno.js');
+    assert.equal(dot.node, './node.js');
+    // Bundler-resolved: wrangler's esbuild handles the TS.
+    assert.equal(dot.workerd, './workers.ts');
+    const keys = Object.keys(dot);
+    assert.ok(keys.indexOf('deno') < keys.indexOf('node'), 'deno must precede node (Deno enables the node condition itself)');
+    assert.ok(keys.indexOf('workerd') < keys.indexOf('browser'), 'workerd must precede browser (wrangler resolves with both on)');
+    const exports = m.exports as Record<string, unknown>;
+    assert.equal(exports['./deno'], './deno.js');
+    assert.equal(exports['./workerd'], './workers.ts');
+  });
 });
 
 describe('writeClientPackage', () => {

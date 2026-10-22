@@ -61,6 +61,17 @@ describe('vite plugin', () => {
     assert.equal(profile.exports.length, 1);
   }, 120_000);
 
+  it('explicit root survives configResolved (Nuxt points vite root at its srcDir)', async () => {
+    const root = await makeProject(false);
+    const plugin = scriptcable({ root });
+    // Nuxt-style: vite's resolved root is a subdirectory (srcDir), not the
+    // project root — config discovery must stay on the explicit option.
+    plugin.configResolved!({ root: join(root, 'app') });
+    await plugin.buildStart!();
+    const profile = JSON.parse(await Bun.file(join(root, '.scriptcable', 'profile.json')).text());
+    assert.equal(profile.name, 'vite_plugin_it'); // inferred from the project root's package name
+  }, 120_000);
+
   it('drop-in gate: build targets without TLA disable interception, es2022 and dev stay on', async () => {
     const root = await makeProject(false);
     const entryAbs = resolve(root, 'src', 'core.ts');

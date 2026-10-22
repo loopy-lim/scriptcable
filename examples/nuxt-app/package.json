@@ -1,0 +1,20 @@
+{
+  "name": "@scriptcable/example-nuxt-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "build": "bun run build:core && bunx --bun nuxt build",
+    "test": "bun run build && bun scripts/assert-output.mjs"
+  },
+  "dependencies": {
+    "@scriptcable/example-calculator-core": "workspace:*",
+    "@scriptcable/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@scriptcable/vite": "workspace:*",
+    "nuxt": "^4.6.2",
+    "vue": "^3.5.0"
+  }
+}

@@ -58,6 +58,30 @@ describe('generated browser client', () => {
   });
 });
 
+describe('deno and workers clients', () => {
+  it('deno reads the wasm next to the module — no URL probing, no fetch', () => {
+    const { files } = generateClients(CONFIG, ['deno']);
+    const src = files['deno.ts']!;
+    assert.match(src, /Deno\.readFile\(new URL\(WASM_FILE, import\.meta\.url\)\)/);
+    assert.match(src, /WebAssembly\.compile\(bytes\)/);
+    assert.doesNotMatch(src, /method: 'HEAD'/, 'deno must not probe URLs');
+    assert.doesNotMatch(src, /\bfetch\(/, 'deno must not fetch — deno: URLs are unfetchable');
+    assert.match(src, /createMinimalWasi/);
+  });
+
+  it('workers statically imports the wasm as the compiled module — no TLA', () => {
+    const { files } = generateClients(CONFIG, ['workers']);
+    const src = files['workers.ts']!;
+    assert.match(src, /import wasmModule from '\.\/calc\.wasm'/);
+    assert.match(src, /Promise\.resolve\(wasmModule\)/);
+    assert.doesNotMatch(src, /await createClient\(/, 'module scope must stay await-free');
+    assert.match(src, /createMinimalWasi/);
+    const dts = files['wasm-module.d.ts']!;
+    assert.match(dts, /declare module '\*\.wasm'/);
+    assert.match(dts, /WebAssembly\.Module/);
+  });
+});
+
 describe('drop-in clients', () => {
   // A resolved (inferred) profile carries source parameter names + docs.
   const PROFILE = {

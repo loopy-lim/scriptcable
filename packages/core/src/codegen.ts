@@ -4,10 +4,12 @@ import { configToProfile } from './profile.js';
 export type CodegenTarget =
   | 'node'
   | 'bun'
+  | 'deno'
   | 'tauri'
   | 'react-native'
   | 'lynx'
-  | 'browser';
+  | 'browser'
+  | 'workers';
 
 export type CodegenResult = {
   files: Record<string, string>;
@@ -299,13 +301,7 @@ function genBunClient(
 }
 
 function genBrowserClient(profile: ScriptcableProfile, wasmRelPath: string): string {
-  const methods = profile.exports
-    .map((e) => {
-      const params = e.params.map((_, i) => `arg${i}`).join(', ');
-      const args = e.params.length ? `, ${params}` : '';
-      return `  ${e.export}(${e.params.map((p, i) => `arg${i}: ${tsType(p)}`).join(', ')}): ${tsType(e.returns)} {\n    return mod.call('${e.export}'${args}) as ${tsType(e.returns)};\n  },`;
-    })
-    .join('\n');
+  const methods = wasmMethods(profile);
 
   return `${header('browser')}
 import { loadWasmModule, type LoadedModule } from '@scriptcable/core/wasm';
@@ -397,6 +393,118 @@ ${methods}
 
 export { PROFILE };
 export type { ScriptcableClient } from './types.js';
+`;
+}
+
+/** Method block for the direct-wasm flavors (calls through `mod`, like browser). */
+function wasmMethods(profile: ScriptcableProfile): string {
+  return profile.exports
+    .map((e) => {
+      const params = e.params.map((_, i) => `arg${i}`).join(', ');
+      const args = e.params.length ? `, ${params}` : '';
+      return `  ${e.export}(${e.params.map((p, i) => `arg${i}: ${tsType(p)}`).join(', ')}): ${tsType(e.returns)} {\n    return mod.call('${e.export}'${args}) as ${tsType(e.returns)};\n  },`;
+    })
+    .join('\n');
+}
+
+/**
+ * Shared tail for the fetch-free WASM flavors (deno, workers): options type,
+ * async createClient, and exports. Each flavor defines `resolveModule()`
+ * and the `mod.call` methods in its prelude.
+ */
+function wasmFlavorTail(methods: string): string {
+  return `export type CreateClientOptions = {
+  callbacks?: Record<string, (...args: unknown[]) => unknown>;
+  /** Optional WASI adapter — defaults to the built-in minimal polyfill. */
+  wasi?: {
+    getImportObject(): WebAssembly.Imports;
+    initialize(instance: WebAssembly.Instance): void;
+  };
+};
+
+export async function createClient(options: CreateClientOptions = {}): Promise<ScriptcableClient> {
+  const module = await resolveModule();
+  const mod: LoadedModule = await loadWasmModule(new Uint8Array(), {
+    profile: PROFILE,
+    module,
+    wasi: options.wasi ?? createMinimalWasi(),
+    callbacks: options.callbacks ?? {},
+  });
+  return {
+${methods}
+  dispose() { mod.dispose(); },
+  };
+}
+
+export { PROFILE };
+export type { ScriptcableClient } from './types.js';
+`;
+}
+
+/**
+ * Deno flavor: same WASM reactor as the browser, but the module is read
+ * directly from disk next to this file — deno: URLs aren't fetchable and
+ * probing a dev origin makes no sense in a CLI runtime. The build emits this
+ * flavor as compiled .js (Deno doesn't strip types under node_modules), so
+ * `import { createClient } from '@scriptcable/client'` runs as-is.
+ */
+function genDenoClient(profile: ScriptcableProfile, wasmRelPath: string): string {
+  return `${header('deno')}
+import { loadWasmModule, type LoadedModule } from '@scriptcable/core/wasm';
+import { createMinimalWasi } from '@scriptcable/core/wasi';
+import type { ScriptcableProfile } from '@scriptcable/types';
+import type { ScriptcableClient } from './types.js';
+
+const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
+const WASM_FILE = '${wasmRelPath}';
+
+async function resolveModule(): Promise<WebAssembly.Module> {
+  const bytes = await Deno.readFile(new URL(WASM_FILE, import.meta.url));
+  return WebAssembly.compile(bytes);
+}
+
+${wasmFlavorTail(wasmMethods(profile))}
+`;
+}
+
+/**
+ * Cloudflare Workers flavor (workerd condition): the wasm is a static import
+ * — wrangler's default CompiledWasm rule turns it into the compiled module,
+ * so there is no fetch and no top-level await. `wasm-module.d.ts` types the
+ * import for TS programs.
+ */
+function genWorkersClient(profile: ScriptcableProfile, wasmRelPath: string): string {
+  return `${header('workers (Cloudflare workerd)')}
+import { loadWasmModule, type LoadedModule } from '@scriptcable/core/wasm';
+import { createMinimalWasi } from '@scriptcable/core/wasi';
+import type { ScriptcableProfile } from '@scriptcable/types';
+import type { ScriptcableClient } from './types.js';
+// Bundled as CompiledWasm by wrangler's default rule — the import IS the
+// compiled module.
+import wasmModule from './${wasmRelPath}';
+
+const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
+
+function resolveModule(): Promise<WebAssembly.Module> {
+  return Promise.resolve(wasmModule);
+}
+
+${wasmFlavorTail(wasmMethods(profile))}
+`;
+}
+
+/** Stub translation unit for non-arm64 ABIs (see the CMake guard). */
+function genAndroidDummyAbi(): string {
+  return `${header('android native host (non-arm64 stub)')}void scriptcable_dummy_abi(void) {}
+`;
+}
+
+/** Ambient type for the workers flavor's static wasm import. */
+function genWasmModuleDts(): string {
+  return `${header('workers wasm import types')}declare module '*.wasm' {
+  const module: WebAssembly.Module;
+  export default module;
+}
 `;
 }
 
@@ -498,6 +606,541 @@ function genCableCodegenConfig(profile: ScriptcableProfile): string {
     null,
     2,
   ) + '\n';
+}
+
+/** C signature for one export — must match napi-addon's cSignature exactly
+ * (strings/bytes are ONE JS arg riding TWO C slots; string/bytes returns use
+ * two out-slots). Kept in sync by construction from the same profile. */
+function androidCDecl(e: ScriptcableProfile['exports'][number]): string {
+  const cType = (cls: string): string => {
+    switch (cls) {
+      case 'f64': return 'double';
+      case 'f32': return 'float';
+      case 'u8': return 'uint8_t';
+      case 'u16': return 'uint16_t';
+      case 'u32': return 'uint32_t';
+      case 'i8': return 'int8_t';
+      case 'i16': return 'int16_t';
+      case 'i32': return 'int32_t';
+      case 'i64': return 'int64_t';
+      case 'u64': return 'uint64_t';
+      case 'bool': return 'bool';
+      case 'cstring': return 'const char*';
+      case 'void': return 'void';
+      default: return 'void*';
+    }
+  };
+  const params: string[] = [];
+  for (const p of e.params) {
+    if (p === 'string' || p === 'bytes') params.push('const uint8_t*', 'int64_t');
+    else params.push(cType(p));
+  }
+  let ret = cType(e.returns);
+  if (e.returns === 'string' || e.returns === 'bytes') {
+    params.push('const uint8_t**', 'int64_t*');
+    ret = 'void';
+  }
+  return `  extern "C" ${ret} ${e.symbol}(${params.join(', ')});`;
+}
+
+/**
+ * Android native host scaffold for `--hosts react-native`: the dispatch core
+ * that a hand-written native module used to be. cable_host.{h,cpp} is pure
+ * C++ (no JNI) so it compiles in host tests too; cable_jni.cpp wraps it;
+ * CableModule.kt exposes the classic RN module (name = profile name, so
+ * TurboModuleRegistry.getEnforcing / NativeModules resolve it); CMake links
+ * the scriptc archive statically.
+ */
+function genAndroidCableHeader(profile: ScriptcableProfile): string {
+  return `${header('android native host')}
+#ifndef SCRIPTCABLE_CABLE_HOST_H
+#define SCRIPTCABLE_CABLE_HOST_H
+
+#include <string>
+
+namespace scriptcable {
+
+// JSON bridge protocol: argsJson is a JSON array of JS-level arguments
+// (a string/bytes param is ONE array element), the result is
+// {"ok":true,"value":<result>} or {"ok":false,"error":"<message>"}.
+std::string callJson(const std::string& exportName, const std::string& argsJson);
+bool hasExport(const std::string& exportName);
+
+} // namespace scriptcable
+
+#endif
+`;
+}
+
+function genAndroidCableHost(profile: ScriptcableProfile): string {
+  const decls = profile.exports.map(androidCDecl).join('\n');
+  const get = (i: number) => `argAt(list, ${i})`;
+  const dispatch = profile.exports
+    .map((e) => {
+      const calls: string[] = [];
+      const pre: string[] = [];
+      const post: string[] = [];
+      e.params.forEach((p, i) => {
+        switch (p) {
+          case 'f64':
+            calls.push(`(double)${get(i)}.num`);
+            break;
+          case 'f32':
+            calls.push(`(float)${get(i)}.num`);
+            break;
+          case 'u8':
+          case 'u16':
+          case 'u32':
+            calls.push(`(uint32_t)${get(i)}.num`);
+            break;
+          case 'i8':
+          case 'i16':
+          case 'i32':
+            calls.push(`(int32_t)${get(i)}.num`);
+            break;
+          case 'i64':
+            calls.push(`(int64_t)${get(i)}.num`);
+            break;
+          case 'u64':
+            calls.push(`(uint64_t)${get(i)}.num`);
+            break;
+          case 'bool':
+            calls.push(`${get(i)}.b`);
+            break;
+          case 'string':
+            pre.push(`  std::string hold${i} = ${get(i)}.kind == JVal::Str ? ${get(i)}.s : std::string();`);
+            calls.push(`(const uint8_t*)hold${i}.data()`, `(int64_t)hold${i}.size()`);
+            break;
+          case 'bytes':
+            pre.push(`  std::vector<uint8_t> bv${i} = bytesOf(${get(i)});`);
+            calls.push(`bv${i}.data()`, `(int64_t)bv${i}.size()`);
+            break;
+          case 'cstring':
+            pre.push(`  std::string cs${i} = ${get(i)}.kind == JVal::Str ? ${get(i)}.s : std::string();`);
+            calls.push(`cs${i}.c_str()`);
+            break;
+          default:
+            pre.push(`  // unsupported param class ${p}`);
+            calls.push(`0`);
+        }
+      });
+      let callExpr: string;
+      if (e.returns === 'string' || e.returns === 'bytes') {
+        pre.push('  const uint8_t* out_ptr = nullptr;');
+        pre.push('  int64_t out_len = 0;');
+        callExpr = `  ${e.symbol}(${[...calls, '&out_ptr', '&out_len'].join(', ')});`;
+        if (e.returns === 'string') {
+          post.push(
+            '  std::string out(reinterpret_cast<const char*>(out_ptr), out_ptr ? (size_t)out_len : 0);',
+          );
+          post.push('  return ok(jsonString(out));');
+        } else {
+          post.push('  std::vector<uint8_t> out(out_ptr, out_ptr ? out_ptr + out_len : out_ptr);');
+          post.push('  return ok(jsonBytes(out));');
+        }
+      } else if (e.returns === 'cstring') {
+        callExpr = `  const char* r = ${e.symbol}(${calls.join(', ')});`;
+        post.push('  return ok(jsonString(r == nullptr ? std::string() : std::string(r)));');
+      } else if (e.returns === 'void') {
+        callExpr = `  ${e.symbol}(${calls.join(', ')});`;
+        post.push('  return ok("null");');
+      } else if (e.returns === 'bool') {
+        callExpr = `  bool r = ${e.symbol}(${calls.join(', ')});`;
+        post.push('  return ok(r ? "true" : "false");');
+      } else {
+        // f64/f32/int classes: the C return widens into a double (i64/u64 ride
+        // float64 exactly within the ±(2^53−1) contract scriptc proves).
+        callExpr = `  double r = (double)${e.symbol}(${calls.join(', ')});`;
+        post.push('  return ok(jsonNumber(r));');
+      }
+      return `  if (name == ${JSON.stringify(e.export)}) {
+${[...pre, callExpr, ...post].join('\n')}
+  }`;
+    })
+    .join('\n');
+
+  return `${header('android native host')}
+// Pure dispatch core — no JNI here, so host tests compile it verbatim.
+#include "cable_host.h"
+
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace scriptcable {
+
+namespace {
+
+${decls}
+
+// — minimal JSON: enough for the bridge (array of scalars at the top level) —
+
+struct JVal {
+  enum Kind { Num, Str, Bool, Null, Raw } kind = Null;
+  double num = 0;
+  bool b = false;
+  std::string s;
+};
+typedef std::vector<JVal> JList;
+
+struct Parser {
+  const char* p;
+  const char* end;
+  void ws() {
+    while (p < end && (*p == ' ' || *p == '\\t' || *p == '\\n' || *p == '\\r')) ++p;
+  }
+  bool eat(char c) {
+    ws();
+    if (p < end && *p == c) { ++p; return true; }
+    return false;
+  }
+  std::string stringLit() {
+    eat('"');
+    std::string out;
+    int unicode = 0;
+    unsigned long code = 0;
+    while (p < end) {
+      char c = *p++;
+      if (unicode == 1) {
+        // collecting \\uXXXX hex digits
+        code <<= 4;
+        code |= (c >= '0' && c <= '9') ? (unsigned long)(c - '0')
+              : (c >= 'a' && c <= 'f') ? (unsigned long)(c - 'a' + 10)
+              : (unsigned long)(c - 'A' + 10);
+        if (++unicode == 6) {
+          unsigned int cp = (unsigned int)code;
+          // UTF-8 encode (BMP; surrogate pairs fold to the replacement rune)
+          if (cp >= 0xD800 && cp <= 0xDFFF) cp = 0xFFFD;
+          if (cp < 0x80) out += (char)cp;
+          else if (cp < 0x800) {
+            out += (char)(0xC0 | (cp >> 6));
+            out += (char)(0x80 | (cp & 0x3F));
+          } else {
+            out += (char)(0xE0 | (cp >> 12));
+            out += (char)(0x80 | ((cp >> 6) & 0x3F));
+            out += (char)(0x80 | (cp & 0x3F));
+          }
+          unicode = 0;
+          code = 0;
+        }
+        continue;
+      }
+      if (c == '"') return out;
+      if (c == '\\\\') {
+        if (p >= end) break;
+        char e = *p++;
+        switch (e) {
+          case '"': out += '"'; break;
+          case '\\\\': out += '\\\\'; break;
+          case '/': out += '/'; break;
+          case 'b': out += '\\b'; break;
+          case 'f': out += '\\f'; break;
+          case 'n': out += '\\n'; break;
+          case 'r': out += '\\r'; break;
+          case 't': out += '\\t'; break;
+          case 'u': unicode = 1; code = 0; break;
+          default: out += e; break;
+        }
+        continue;
+      }
+      out += c;
+    }
+    throw std::runtime_error("unterminated string");
+  }
+  JVal value() {
+    ws();
+    JVal v;
+    if (p >= end) throw std::runtime_error("unexpected end of args");
+    char c = *p;
+    if (c == '"') { v.kind = JVal::Str; v.s = stringLit(); return v; }
+    // Nested arrays are only meaningful for bytes params — keep the raw
+    // slice so bytesOf() can re-parse it as numbers.
+    if (c == '[') {
+      const char* start = p;
+      int depth = 0;
+      while (p < end) {
+        char d = *p;
+        if (d == '"') { stringLit(); continue; }
+        if (d == '[') ++depth;
+        if (d == ']') { --depth; if (depth == 0) { ++p; break; } }
+        ++p;
+      }
+      if (depth != 0) throw std::runtime_error("unterminated array");
+      v.kind = JVal::Raw;
+      v.s.assign(start, (size_t)(p - start));
+      return v;
+    }
+    if (c == 't' && end - p >= 4 && std::string(p, 4) == "true") { p += 4; v.kind = JVal::Bool; v.b = true; return v; }
+    if (c == 'f' && end - p >= 5 && std::string(p, 5) == "false") { p += 5; v.kind = JVal::Bool; v.b = false; return v; }
+    if (c == 'n' && end - p >= 4 && std::string(p, 4) == "null") { p += 4; v.kind = JVal::Null; return v; }
+    char* stop = nullptr;
+    double num = std::strtod(p, &stop);
+    if (stop == p) throw std::runtime_error(std::string("unsupported arg token: ") + c);
+    p = stop;
+    v.kind = JVal::Num;
+    v.num = num;
+    return v;
+  }
+};
+
+JList parseArgs(const std::string& json) {
+  Parser ps{json.data(), json.data() + json.size()};
+  if (!ps.eat('[')) throw std::runtime_error("args must be a JSON array");
+  JList out;
+  if (ps.eat(']')) return out;
+  while (true) {
+    out.push_back(ps.value());
+    if (ps.eat(']')) return out;
+    if (!ps.eat(',')) throw std::runtime_error("expected ',' in args");
+  }
+}
+
+const JVal& argAt(const JList& list, size_t i) {
+  if (i >= list.size()) throw std::runtime_error("missing argument");
+  return list[i];
+}
+
+std::vector<uint8_t> bytesOf(const JVal& v) {
+  if (v.kind != JVal::Raw) throw std::runtime_error("bytes args must be arrays of numbers");
+  std::vector<uint8_t> out;
+  Parser ps{v.s.data(), v.s.data() + v.s.size()};
+  if (!ps.eat('[')) throw std::runtime_error("bytes args must be arrays of numbers");
+  if (ps.eat(']')) return out;
+  while (true) {
+    JVal n = ps.value();
+    if (n.kind != JVal::Num) throw std::runtime_error("bytes args must be arrays of numbers");
+    out.push_back((uint8_t)(int64_t)n.num);
+    if (ps.eat(']')) return out;
+    if (!ps.eat(',')) throw std::runtime_error("expected ',' in bytes arg");
+  }
+}
+
+std::string jsonString(const std::string& s) {
+  std::string out = "\\"";
+  for (unsigned char c : s) {
+    switch (c) {
+      case '"': out += "\\\\\\""; break;
+      case '\\\\': out += "\\\\\\\\"; break;
+      case '\\b': out += "\\\\b"; break;
+      case '\\f': out += "\\\\f"; break;
+      case '\\n': out += "\\\\n"; break;
+      case '\\r': out += "\\\\r"; break;
+      case '\\t': out += "\\\\t"; break;
+      default:
+        if (c < 0x20) {
+          char buf[8];
+          std::snprintf(buf, sizeof(buf), "\\\\u%04x", c);
+          out += buf;
+        } else {
+          out += (char)c;
+        }
+    }
+  }
+  out += "\\"";
+  return out;
+}
+
+std::string jsonNumber(double n) {
+  if (std::isnan(n) || std::isinf(n)) return "null";
+  // Range check BEFORE the cast — (long long) of a huge double is UB.
+  if (std::fabs(n) < 9.0e15 && n == (long long)n) {
+    long long i = (long long)n;
+    return std::to_string(i);
+  }
+  std::ostringstream os;
+  os.precision(17);
+  os << n;
+  return os.str();
+}
+
+template <typename T>
+std::string jsonBytes(const T& bytes) {
+  std::string out = "[";
+  bool first = true;
+  for (uint8_t b : bytes) {
+    if (!first) out += ",";
+    first = false;
+    out += std::to_string((int)b);
+  }
+  return out + "]";
+}
+
+std::string ok(const std::string& valueJson) {
+  return "{\\"ok\\":true,\\"value\\":" + valueJson + "}";
+}
+
+std::string fail(const std::string& message) {
+  return "{\\"ok\\":false,\\"error\\":" + jsonString(message) + "}";
+}
+
+} // namespace
+
+bool hasExport(const std::string& name) {
+  return ${profile.exports.map((e) => `name == ${JSON.stringify(e.export)}`).join(' || ') || 'false'};
+}
+
+std::string callJson(const std::string& name, const std::string& argsJson) {
+  try {
+    if (!hasExport(name)) return fail("unknown export: " + name);
+    JList list = parseArgs(argsJson);
+${dispatch}
+    return fail("unreachable");
+  } catch (const std::exception& e) {
+    return fail(e.what());
+  } catch (...) {
+    return fail("unknown native error");
+  }
+}
+
+} // namespace scriptcable
+`;
+}
+
+function genAndroidCableJni(profile: ScriptcableProfile): string {
+  // Class path must match CableModule.kt: com.scriptcable.cable.CableModule
+  return `${header('android native host (JNI wrapper)')}
+#include <jni.h>
+#include <string>
+
+#include "cable_host.h"
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_scriptcable_cable_CableModule_nativeCall(JNIEnv* env, jobject /*thiz*/, jstring jName, jstring jArgs) {
+  if (jName == nullptr || jArgs == nullptr) {
+    return env->NewStringUTF("{\\"ok\\":false,\\"error\\":\\"null argument\\"}");
+  }
+  const char* name = env->GetStringUTFChars(jName, nullptr);
+  const char* args = env->GetStringUTFChars(jArgs, nullptr);
+  std::string result = scriptcable::callJson(name != nullptr ? name : "", args != nullptr ? args : "");
+  if (name != nullptr) env->ReleaseStringUTFChars(jName, name);
+  if (args != nullptr) env->ReleaseStringUTFChars(jArgs, args);
+  return env->NewStringUTF(result.c_str());
+}
+`;
+}
+
+function genAndroidCableKotlin(profile: ScriptcableProfile): string {
+  return `${header('android native host (RN module)')}
+package com.scriptcable.cable
+
+import android.content.Context
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import java.io.File
+
+/**
+ * Classic RN module exposing the scriptcable bridge contract:
+ * call(exportName, argsJson) resolves a JSON string
+ * ({"ok":true,"value":...} | {"ok":false,"error":"..."}).
+ * New-arch interop resolves this for TurboModuleRegistry/NativeModules.
+ *
+ * Loading: System.loadLibrary on arm64 devices; on x86_64 devices with ARM
+ * translation (where the RN runtime must stay x86_64 but the scriptc archive
+ * is arm64-only) the module .so ships in assets/ and is extracted to
+ * filesDir, then loaded by absolute path so the native bridge translates it.
+ */
+class CableModule(private val reactContext: ReactApplicationContext) :
+    ReactContextBaseJavaModule(reactContext) {
+
+  init {
+    loadNativeLibrary(reactContext)
+  }
+
+  private fun loadNativeLibrary(ctx: Context) {
+    try {
+      System.loadLibrary(${JSON.stringify(`${profile.name}_cable`)})
+      return
+    } catch (_: UnsatisfiedLinkError) {
+      // fall through to the translation-device path
+    }
+    val so = File(ctx.filesDir, ${JSON.stringify(`lib${profile.name}_cable.so`)})
+    if (!so.exists() || so.length() == 0L) {
+      ctx.assets.open(${JSON.stringify(`lib${profile.name}_cable.so`)}).use { input ->
+        so.outputStream().use { output -> input.copyTo(output) }
+      }
+    }
+    System.load(so.absolutePath)
+  }
+
+  override fun getName(): String = ${JSON.stringify(profile.name)}
+
+  @ReactMethod
+  fun call(name: String, argsJson: String, promise: Promise) {
+    try {
+      promise.resolve(nativeCall(name, argsJson))
+    } catch (e: Throwable) {
+      promise.reject("NATIVE_ERROR", e.message, e)
+    }
+  }
+
+  private external fun nativeCall(name: String, argsJson: String): String
+}
+`;
+}
+
+function genAndroidCablePackage(profile: ScriptcableProfile): string {
+  void profile;
+  return `${header('android native host (RN package)')}
+package com.scriptcable.cable
+
+import android.view.View
+import com.facebook.react.ReactPackage
+import com.facebook.react.bridge.NativeModule
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.uimanager.ReactShadowNode
+import com.facebook.react.uimanager.ViewManager
+
+class CablePackage : ReactPackage {
+  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> =
+      listOf(CableModule(reactContext))
+
+  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<View, ReactShadowNode<*>>> =
+      emptyList()
+}
+`;
+}
+
+function genAndroidCMake(profile: ScriptcableProfile): string {
+  // CMake has no /* */ comments — a plain # header.
+  return `# Generated by scriptcable — do not edit by hand. Target: android native host (build)
+# Static-links the scriptc archive (${profile.name}) into one loadable
+# module library. Override the archive with:
+#   -DCABLE_ARCHIVE=/path/to/${profile.name}.lib.a
+cmake_minimum_required(VERSION 3.22)
+project(scriptcable_${profile.name})
+
+set(CABLE_ARCHIVE "\${CMAKE_CURRENT_SOURCE_DIR}/../../android-arm64/${profile.name}.lib.a"
+    CACHE STRING "scriptc static archive for this core")
+
+if(ANDROID_ABI STREQUAL "arm64-v8a")
+  add_library(${profile.name}_cable SHARED cable_host.cpp cable_jni.cpp)
+
+  add_library(scriptc_core STATIC IMPORTED)
+  set_target_properties(scriptc_core PROPERTIES IMPORTED_LOCATION "\${CABLE_ARCHIVE}")
+
+  find_library(log-lib log)
+  target_link_libraries(${profile.name}_cable PRIVATE scriptc_core \${log-lib})
+  # The archive objects reference symbols with direct PC-relative relocs —
+  # legal in a .so only against locally-bound symbols. Export the JNI entry
+  # points, localize the rest (mirrors link-shared's android link).
+  target_link_options(${profile.name}_cable PRIVATE
+      "-Wl,--version-script=\${CMAKE_CURRENT_SOURCE_DIR}/cable-version.map")
+  target_include_directories(${profile.name}_cable PRIVATE "\${CMAKE_CURRENT_SOURCE_DIR}")
+else()
+  # scriptc archives exist for android-arm64 only. Other ABIs ship a stub so
+  # the app packages; CableModule detects the missing bridge at runtime and
+  # loads the real arm64 .so from assets (ARM-translation devices) or fails
+  # with a clear UnsatisfiedLinkError.
+  add_library(${profile.name}_cable SHARED dummy_abi.cpp)
+endif()
+`;
 }
 
 function genLynxClient(profile: ScriptcableProfile, wasmRelPath: string): string {
@@ -632,6 +1275,13 @@ export function generateClients(
       case 'browser':
         files['browser.ts'] = genBrowserClient(profile, wasmRel);
         break;
+      case 'deno':
+        files['deno.ts'] = genDenoClient(profile, wasmRel);
+        break;
+      case 'workers':
+        files['workers.ts'] = genWorkersClient(profile, wasmRel);
+        files['wasm-module.d.ts'] = genWasmModuleDts();
+        break;
       case 'tauri':
         files['tauri.ts'] = genTauriClient(profile, wasmRel);
         break;
@@ -639,6 +1289,16 @@ export function generateClients(
         files['react-native.ts'] = genReactNativeClient(profile);
         files['NativeCable.ts'] = genTurboModuleSpec(profile);
         files['cable.json'] = genCableCodegenConfig(profile);
+        // Native host scaffold — the Android bridge that used to be a
+        // hand-written module per app (C++ dispatch + JNI + Kotlin module).
+        files['android/cable_host.h'] = genAndroidCableHeader(profile);
+        files['android/cable_host.cpp'] = genAndroidCableHost(profile);
+        files['android/cable_jni.cpp'] = genAndroidCableJni(profile);
+        files['android/cable-version.map'] = '{\n  global:\n    Java_*;\n  local:\n    *;\n};\n';
+        files['android/dummy_abi.cpp'] = genAndroidDummyAbi();
+        files['android/CableModule.kt'] = genAndroidCableKotlin(profile);
+        files['android/CablePackage.kt'] = genAndroidCablePackage(profile);
+        files['android/CMakeLists.txt'] = genAndroidCMake(profile);
         break;
       case 'lynx':
         files['lynx.ts'] = genLynxClient(profile, wasmRel);
@@ -655,7 +1315,7 @@ export function generateClients(
 
   files['index.ts'] = `${header('index')}
 export type { ScriptcableClient } from './types.js';
-${targets.includes('node') ? "export { createClient as createNodeClient, PROFILE } from './node.js';\n" : ''}${targets.includes('bun') ? "export { createClient as createBunClient } from './bun.js';\n" : ''}${targets.includes('browser') ? "export { createClient as createBrowserClient } from './browser.js';\n" : ''}${targets.includes('tauri') ? "export { createClient as createTauriClient, createSidecarClient } from './tauri.js';\n" : ''}${targets.includes('react-native') ? "export { createClient as createReactNativeClient } from './react-native.js';\n" : ''}${targets.includes('lynx') ? "export { createClient as createLynxClient } from './lynx.js';\n" : ''}`;
+${targets.includes('node') ? "export { createClient as createNodeClient, PROFILE } from './node.js';\n" : ''}${targets.includes('bun') ? "export { createClient as createBunClient } from './bun.js';\n" : ''}${targets.includes('browser') ? "export { createClient as createBrowserClient } from './browser.js';\n" : ''}${targets.includes('deno') ? "export { createClient as createDenoClient, PROFILE } from './deno.js';\n" : ''}${targets.includes('workers') ? "export { createClient as createWorkersClient, PROFILE } from './workers.js';\n" : ''}${targets.includes('tauri') ? "export { createClient as createTauriClient, createSidecarClient } from './tauri.js';\n" : ''}${targets.includes('react-native') ? "export { createClient as createReactNativeClient } from './react-native.js';\n" : ''}${targets.includes('lynx') ? "export { createClient as createLynxClient } from './lynx.js';\n" : ''}`;
 
   return { files };
 }

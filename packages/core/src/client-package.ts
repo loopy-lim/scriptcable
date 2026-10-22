@@ -28,11 +28,13 @@ const PACKAGE_NAME = '@scriptcable/client';
 /** Export condition and file for each generated flavor. */
 const CONDITION_BY_TARGET: Record<CodegenTarget, { condition: string; file: string }> = {
   bun: { condition: 'bun', file: 'bun.ts' },
+  deno: { condition: 'deno', file: 'deno.ts' },
   node: { condition: 'node', file: 'node.ts' },
   browser: { condition: 'browser', file: 'browser.ts' },
   lynx: { condition: 'lynx', file: 'lynx.ts' },
   'react-native': { condition: 'react-native', file: 'react-native.ts' },
   tauri: { condition: 'tauri', file: 'tauri.ts' },
+  workers: { condition: 'workerd', file: 'workers.ts' },
 };
 
 /**
@@ -40,10 +42,12 @@ const CONDITION_BY_TARGET: Record<CodegenTarget, { condition: string; file: stri
  * transpile TypeScript. These get compiled .js siblings and the manifest
  * points at the .js — Electron's Node 20 and any Node without native type
  * stripping can't import .ts at all, while Bun/Node 24 happily run the same
- * compiled output. (Bundler-resolved flavors — browser/react-native/lynx/
- * tauri, and the drop-in modules — stay .ts.)
+ * compiled output. Deno is in the same boat: it refuses to strip types under
+ * node_modules (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING).
+ * (Bundler-resolved flavors — browser/react-native/lynx/tauri/workers, and
+ * the drop-in modules — stay .ts.)
  */
-const RUNTIME_FLAVORS: CodegenTarget[] = ['bun', 'node'];
+const RUNTIME_FLAVORS: CodegenTarget[] = ['bun', 'node', 'deno'];
 
 /** The .js sibling name for a generated .ts file. */
 function jsSibling(file: string): string {
@@ -58,13 +62,34 @@ function manifestFile(target: CodegenTarget): string {
 
 /**
  * `.` entry in first-match order: runtime flavors first (bun wins under Bun,
- * node under Node), then browser for web graphs. Environments with no
- * matching condition (editor TS) fall through to `default`.
+ * node under Node), then browser for web graphs. `deno` precedes `node`
+ * because Deno turns the `node` condition on itself; `workerd` precedes
+ * `browser` because wrangler resolves bundles with both on.
+ * Environments with no matching condition (editor TS) fall through to
+ * `default`.
  */
-const DOT_CONDITION_ORDER: CodegenTarget[] = ['bun', 'node', 'browser', 'react-native', 'lynx', 'tauri'];
+const DOT_CONDITION_ORDER: CodegenTarget[] = [
+  'bun',
+  'deno',
+  'node',
+  'workers',
+  'browser',
+  'react-native',
+  'lynx',
+  'tauri',
+];
 
 /** Flavor used for `default` when no condition matches — browser first. */
-const DEFAULT_FALLBACK_ORDER: CodegenTarget[] = ['browser', 'node', 'bun', 'react-native', 'lynx', 'tauri'];
+const DEFAULT_FALLBACK_ORDER: CodegenTarget[] = [
+  'browser',
+  'node',
+  'bun',
+  'deno',
+  'workers',
+  'react-native',
+  'lynx',
+  'tauri',
+];
 
 /** package.json for the generated client package — conditions only for flavors that were generated. */
 export function clientPackageManifest(targets: CodegenTarget[]): Record<string, unknown> {

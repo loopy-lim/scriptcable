@@ -10,6 +10,7 @@
  * `dropin: false`.
  */
 import { resolve, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import type { ResolvedConfig } from '@scriptcable/types';
 import {
   buildCore,
@@ -55,6 +56,9 @@ type VitePlugin = {
         handler: (this: { resolve: ViteResolve }, id: string, importer?: string) => Promise<string | null> | string | null;
       };
   load?: (id: string) => Promise<string | null> | string | null;
+  generateBundle?: (this: {
+    emitFile: (file: { type: 'asset'; fileName: string; source: Uint8Array }) => void;
+  }) => Promise<void>;
   handleHotUpdate?: (ctx: {
     file: string;
     server: { ws: { send: (msg: unknown) => void }; restart: () => Promise<void> };
@@ -183,9 +187,14 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
   const configPath = options.configPath;
   const dropinOpt = options.dropin !== false;
   const virtualId = options.virtualId ?? 'virtual:scriptcable';
+  // Nuxt (4+) points vite's root at its srcDir (app/) — an explicit root
+  // option must survive configResolved so config discovery stays at the
+  // project root.
+  const rootExplicit = options.root !== undefined;
   let root = options.root ?? process.cwd();
   let publicDir = '';
   let genDir = '';
+  let wasmName = '';
   const dropin: DropinState = { enabled: false, entryAbs: '', path: '' };
   const buildGate: { command: string; target: unknown } = { command: 'serve', target: undefined };
   // Cached resolved entry — lets handleHotUpdate skip config resolution
@@ -195,7 +204,7 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
   return {
     name: 'vite-plugin-scriptcable',
     configResolved(config) {
-      root = config.root;
+      if (!rootExplicit) root = config.root;
       // publicDir: false is explicit — the user wants no static dir; don't
       // fabricate one for the wasm copy.
       publicDir =
@@ -210,6 +219,21 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
     async buildStart() {
       const r = await rebuild(root, configPath, publicDir, dropin, dropinOpt, buildGate);
       genDir = r.genDir;
+      wasmName = `${r.config.name}.wasm`;
+    },
+    // Emit the wasm straight into the build output too. Some hosts snapshot
+    // public/ before the client build runs (Nuxt), so the buildStart copy
+    // alone only lands on the second build — a bundle asset makes the FIRST
+    // build ship it. Identical bytes to the public copy, same stable
+    // (unhashed) file name the browser client probes.
+    async generateBundle() {
+      if (!genDir || !wasmName) return;
+      try {
+        const source = await readFile(join(genDir, wasmName));
+        this.emitFile({ type: 'asset', fileName: wasmName, source: new Uint8Array(source) });
+      } catch {
+        /* no wasm yet — the publicDir copy path may still serve it */
+      }
     },
     resolveId: {
       // order 'pre': vite's builtin vite:resolve otherwise answers relative
