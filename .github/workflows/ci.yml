@@ -54,6 +54,18 @@ jobs:
           bun run --filter @scriptcable/example-vite-app test:dropin
           bun run --filter @scriptcable/example-vite-app build
           bun run --filter @scriptcable/example-next-app test
+      # Desktop / mobile-framework / web-framework host smokes — the Electron
+      # binary downloads via its (trusted) postinstall; ubuntu runners ship
+      # libnss3 and xvfb-run.
+      - name: Electron (main native + renderer drop-in)
+        if: runner.os == 'Linux'
+        run: bun run --filter @scriptcable/example-electron-app test
+      - name: Astro
+        run: bun run --filter @scriptcable/example-astro-app test
+      - name: SvelteKit
+        run: bun run --filter @scriptcable/example-sveltekit-app test
+      - name: Expo metro bundle
+        run: bun run --filter @scriptcable/example-react-native-app test:expo
       - run: bun run --filter @scriptcable/example-calculator-core contract:check
       - run: bun run --filter @scriptcable/example-calculator-core build:wasm
       # Non-blocking while runner numbers accumulate — the ×2.5 tolerance
