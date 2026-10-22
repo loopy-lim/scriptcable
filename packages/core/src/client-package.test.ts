@@ -47,13 +47,15 @@ describe('clientPackageManifest', () => {
   it('maps runtime flavors first and defaults to browser for condition-less resolvers', () => {
     const m = clientPackageManifest([...ALL_TARGETS]);
     const dot = (m.exports as Record<string, unknown>)['.'] as Record<string, string>;
-    assert.equal(dot.bun, './bun.ts');
-    assert.equal(dot.node, './node.ts');
+    // Runtime flavors point at compiled .js — Electron's Node 20 and any
+    // pre-type-strip Node can't import .ts; Bun/Node 24 run the same output.
+    assert.equal(dot.bun, './bun.js');
+    assert.equal(dot.node, './node.js');
     assert.equal(dot.browser, './browser.ts');
     assert.equal(dot.default, './browser.ts');
     const exports = m.exports as Record<string, unknown>;
-    assert.equal(exports['./node'], './node.ts');
-    assert.equal(exports['./bun'], './bun.ts');
+    assert.equal(exports['./node'], './node.js');
+    assert.equal(exports['./bun'], './bun.js');
     assert.equal(exports['./browser'], './browser.ts');
     assert.equal(exports['./*'], './*.ts');
     assert.equal((m as { name: string }).name, '@scriptcable/client');
@@ -141,6 +143,12 @@ describe('writeGeneratedClients', () => {
       for (const f of ['types.ts', 'index.ts', 'node.ts', 'bun.ts', 'browser.ts', 'package.json']) {
         assert.equal(await readFile(join(genDir, f), 'utf8').then(Boolean), true, f);
       }
+      // Compiled .js siblings for the runtime flavors — the manifest's
+      // node/bun conditions point at these (Electron's Node can't load .ts).
+      const nodeJs = await readFile(join(genDir, 'node.js'), 'utf8');
+      assert.doesNotMatch(nodeJs, /:\s*(number|string|boolean)\b|import type/, 'types stripped');
+      assert.match(nodeJs, /export function createClient|export const createClient/);
+      assert.equal(await readFile(join(genDir, 'bun.js'), 'utf8').then(Boolean), true, 'bun.js');
       assert.equal(join(dir, '.scriptcable', 'generated'), genDir);
       assert.equal(clientLink, 'linked');
       // node client carries the project-relative fallback dir

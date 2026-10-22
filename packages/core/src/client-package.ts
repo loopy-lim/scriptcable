@@ -20,6 +20,7 @@ import {
 } from 'node:fs/promises';
 import { dirname, join, basename, relative, resolve } from 'node:path';
 import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
+import { transpileModule, ScriptTarget, ModuleKind } from 'typescript';
 import { generateClients, type CodegenTarget } from './codegen.js';
 
 const PACKAGE_NAME = '@scriptcable/client';
@@ -35,6 +36,27 @@ const CONDITION_BY_TARGET: Record<CodegenTarget, { condition: string; file: stri
 };
 
 /**
+ * Flavors the RUNTIME imports directly, with no bundler in between to
+ * transpile TypeScript. These get compiled .js siblings and the manifest
+ * points at the .js — Electron's Node 20 and any Node without native type
+ * stripping can't import .ts at all, while Bun/Node 24 happily run the same
+ * compiled output. (Bundler-resolved flavors — browser/react-native/lynx/
+ * tauri, and the drop-in modules — stay .ts.)
+ */
+const RUNTIME_FLAVORS: CodegenTarget[] = ['bun', 'node'];
+
+/** The .js sibling name for a generated .ts file. */
+function jsSibling(file: string): string {
+  return file.slice(0, -3) + '.js';
+}
+
+/** Manifest-facing file for a flavor — runtime flavors point at their .js. */
+function manifestFile(target: CodegenTarget): string {
+  const file = CONDITION_BY_TARGET[target].file;
+  return RUNTIME_FLAVORS.includes(target) ? jsSibling(file) : file;
+}
+
+/**
  * `.` entry in first-match order: runtime flavors first (bun wins under Bun,
  * node under Node), then browser for web graphs. Environments with no
  * matching condition (editor TS) fall through to `default`.
@@ -48,14 +70,14 @@ const DEFAULT_FALLBACK_ORDER: CodegenTarget[] = ['browser', 'node', 'bun', 'reac
 export function clientPackageManifest(targets: CodegenTarget[]): Record<string, unknown> {
   const dot: Record<string, string> = {};
   for (const t of DOT_CONDITION_ORDER) {
-    if (targets.includes(t)) dot[CONDITION_BY_TARGET[t].condition] = `./${CONDITION_BY_TARGET[t].file}`;
+    if (targets.includes(t)) dot[CONDITION_BY_TARGET[t].condition] = `./${manifestFile(t)}`;
   }
   const fallback = DEFAULT_FALLBACK_ORDER.find((t) => targets.includes(t));
-  if (fallback) dot.default = `./${CONDITION_BY_TARGET[fallback].file}`;
+  if (fallback) dot.default = `./${manifestFile(fallback)}`;
 
   const exports: Record<string, unknown> = { '.': dot };
   for (const t of targets) {
-    exports[`./${CONDITION_BY_TARGET[t].condition}`] = `./${CONDITION_BY_TARGET[t].file}`;
+    exports[`./${CONDITION_BY_TARGET[t].condition}`] = `./${manifestFile(t)}`;
   }
   exports['./*'] = './*.ts';
 
@@ -209,6 +231,23 @@ export async function writeGeneratedClients(opts: {
     // may leave it uncreated on a fresh dir.
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, body);
+  }
+  // Compiled .js siblings for the runtime flavors (see RUNTIME_FLAVORS).
+  for (const target of RUNTIME_FLAVORS) {
+    const tsName = CONDITION_BY_TARGET[target].file;
+    const tsBody = generated.files[tsName];
+    if (!tsBody) continue;
+    const jsName = jsSibling(tsName);
+    const jsBody = transpileModule(tsBody, {
+      compilerOptions: { target: ScriptTarget.ES2022, module: ModuleKind.ESNext },
+    }).outputText;
+    const path = join(genDir, jsName);
+    try {
+      if ((await readFile(path, 'utf8')) === jsBody) continue;
+    } catch {
+      /* not written yet */
+    }
+    await writeFile(path, jsBody);
   }
   if (opts.copy?.sharedPath) {
     await copyIfChanged(opts.copy.sharedPath, join(genDir, basename(opts.copy.sharedPath)));
