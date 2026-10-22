@@ -19,8 +19,11 @@ export type ToolchainInfo = {
   bunVersion?: string;
   hasZig: boolean;
   hasClang: boolean;
+  /** gcc's `cc` — linkSharedLibrary accepts it on Linux exactly like clang. */
+  hasCc: boolean;
   zigPath?: string;
   clangPath?: string;
+  ccPath?: string;
   /** State of the `node_modules/@scriptcable/client` link — absent when nothing was generated yet. */
   clientLink?: 'current' | 'linked' | 'repaired' | 'blocked';
 };
@@ -156,6 +159,7 @@ export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: bool
   const version = await scriptcVersion(scriptcBin);
   const zigPath = (await which('zig')) ?? undefined;
   const clangPath = (await which('clang')) ?? undefined;
+  const ccPath = (await which('cc')) ?? undefined;
 
   // Doctor doubles as the link repairer: if a previous build generated
   // clients, make sure `@scriptcable/client` resolves (no-op when current).
@@ -176,8 +180,10 @@ export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: bool
     bunVersion,
     hasZig: Boolean(zigPath),
     hasClang: Boolean(clangPath),
+    hasCc: Boolean(ccPath),
     zigPath,
     clangPath,
+    ccPath,
     clientLink,
   };
 }
@@ -330,10 +336,10 @@ export async function buildCore(
         );
       }
       await ensureRuntimePack(cwd, 'wasm');
-    } else if (!info.hasClang && process.platform === 'linux') {
+    } else if (!info.hasClang && !info.hasCc && process.platform === 'linux') {
       throw new ScriptcableToolchainError(
-        'clang is required for native library builds on Linux.',
-        'Install clang (e.g. `sudo apt install clang`) or use target: "wasm".',
+        'clang (or cc) is required for native library builds on Linux.',
+        'Install clang (e.g. `sudo apt install clang`) — gcc\'s cc also works — or use target: "wasm".',
       );
     }
 

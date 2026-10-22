@@ -14,11 +14,18 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
     }
     console.log(`  scriptc:  ${info.version} (${info.scriptcBin})`);
     console.log(`  platform: ${process.platform}/${process.arch}`);
-    console.log(`  clang:    ${info.hasClang ? `${info.clangPath} ✓` : 'MISSING (required for native default)'}`);
+    // Match the native-link gate: clang OR gcc's cc links the shared library.
+    const linkerOk = info.hasClang || info.hasCc;
+    const linker = info.hasClang
+      ? `${info.clangPath} ✓`
+      : info.hasCc
+        ? `${info.ccPath} ✓ (gcc cc)`
+        : 'MISSING (required for native default)';
+    console.log(`  linker:   ${linker}`);
     console.log(`  zig:      ${info.hasZig ? `${info.zigPath} ✓` : 'missing (only for --target wasm / cross)'}`);
-    if (!info.hasClang) {
-      console.log('\nFix clang:');
-      console.log('  Linux:  sudo apt install clang');
+    if (!linkerOk) {
+      console.log('\nFix the linker:');
+      console.log('  Linux:  sudo apt install clang    # gcc (cc) alone is enough too');
       console.log('  macOS:  xcode-select --install');
       return 1;
     }
