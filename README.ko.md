@@ -9,7 +9,7 @@
 
 ## 5분 퀵스타트
 
-**필요:** Bun ≥ 1.2와 `clang`(네이티브 공유 라이브러리 링크). WASM(`--target wasm`)을 쓸 때만 [zig 0.13.x](https://ziglang.org/download/).
+**필요:** Bun ≥ 1.2와 `clang`(또는 gcc의 `cc` — 네이티브 공유 라이브러리 링크). WASM(`--target wasm`)을 쓸 때만 [zig 0.13.x](https://ziglang.org/download/).
 
 **아래 명령은 끝까지 실행해 검증됐습니다 — 각 단계에서 나와야 할 출력까지 [docs/getting-started.md](./docs/getting-started.md)에 정리**되어 있습니다. 막히면 [docs/troubleshooting.md](./docs/troubleshooting.md)에서 실제 에러와 해결법을 찾으세요.
 
@@ -115,7 +115,10 @@ add(20, 22); // 42, 네이티브 애드온 속도
 | **Next.js (Turbopack)** | 엔트리 drop-in 불가 — Turbopack에는 그래프별 resolve 훅이 없고, `resolveAlias`는 해석된 경로가 아니라 요청 specifier를 매칭합니다(절대경로 키는 아무 일도 안 함 — 검증). `@scriptcable/client`를 쓰거나(`transpilePackages`로 export conditions 동작), `next dev/build --webpack`으로 drop-in import | Next 16.4.2 turbopack 빌드 |
 | **Rspack / Rspeedy (Lynx)** | Rspack의 Rust 리졸버에는 JS resolve 플러그인 훅이 없습니다(`resolve.plugins`가 설정 스키마에 없음 — 넣어도 조용히 무시). 플러그인은 빌드·패키지 링크를 계속 하고, import는 `@scriptcable/client` export conditions으로 해석 | Rspeedy 0.18.2 빌드 (번들에 browser 클라이언트 포함) |
 | **React Native (Metro)** | `metro.config.js`에서 `@scriptcable/react-native/metro`의 `withScriptcableMetro()` | Metro 0.87 / RN 0.88 실번들 (2026-10-21) |
-| **Electron** | main: `import { createClient } from '@scriptcable/client'` (node conditions), renderer: 기존처럼 Vite/Webpack 플러그인 | — |
+| **Expo** | 동일한 `withScriptcableMetro()` — Expo의 번들러는 Metro 그 자체입니다. `@expo/metro-config` 기본 설정 위에 등록하세요 (`metro.config.js`) | Expo 58 실제 metro 설정(`getDefaultConfig`) 번들 — drop-in 브리지 포함, 엔트리 소스 배제 (2026-10-22) |
+| **Electron** | main: `import { createClient } from '@scriptcable/client'` (node conditions — 생성 패키지는 런타임 플레이버의 **컴파일된 `.js`를 함께 내보냅니다**. Electron의 Node는 `.ts`를 로드하지 못함), renderer: 기존처럼 Vite/Webpack 플러그인 | Electron 33 실런타임: main은 네이티브 코어 호출, vite 빌드 renderer는 커스텀 프로토콜로 WASM drop-in 호출 (2026-10-22) |
+| **Astro / SvelteKit / Nuxt / Remix / SolidStart** | 전부 Vite 내장 — `@scriptcable/vite`를 각자의 `vite.plugins`에 등록 (Astro → `astro.config.mjs`의 `vite.plugins`; Nuxt → module 또는 `vite.plugins`; SvelteKit/Remix/SolidStart → `vite.config`) | Astro 5.18 실제 `astro build`와 SvelteKit 2 실제 `vite build`(client-only 페이지) — client 번들에 drop-in 포함, WASM 정적 산출 (2026-10-22); Nuxt/Remix/SolidStart는 같은 Vite 훅 경로 |
+| **Rollup** | 동일 플러그인 (`root` 옵션) — `resolveId`는 rollup 표준 훅 형태. TS 변환과 `.js`→`.ts` 형제 해석은 호스트 몫(ts/esbuild 플러그인과 짝) | rollup 4 실빌드 — 엔트리 import가 drop-in으로 리다이렉트 (2026-10-22) |
 
 drop-in 플레이버: 브라우저 그래프는 모듈 로드 시 top-level await로 WASM을 1회 초기화합니다(빌드 타깃 **ES2022+** 필요, 예: vite `build.target: 'es2022'`). 서버 그래프는 **await이 전혀 없습니다**(`createClientSync()` — CommonJS 출력 서버 번들에도 안전). Metro는 첫 호출 때 브리지 클라이언트를 lazy 생성합니다.
 
@@ -199,7 +202,7 @@ Tauri Rust 셸에서 `scriptcable build`의 `lib{name}.a`를 링크(build script
 
 ### Electron
 
-새 패키지가 필요 없습니다 — Electron은 scriptcable 호스트 둘입니다:
+새 패키지가 필요 없습니다 — Electron은 scriptcable 호스트 둘입니다 (`examples/electron-app`이 검증된 엔드투엔드 샘플):
 
 ```ts
 // main 프로세스 (Node 런타임) — import 하나, export conditions가 네이티브
@@ -211,6 +214,8 @@ client.add(20, 22); // 42
 // renderer (vite/webpack로 빌드) — 평소처럼 플러그인 등록, ./core import가
 // 브라우저 drop-in으로 해석됨
 ```
+
+Electron 관련 참고 두 가지: 생성 패키지의 `bun`/`node` conditions은 **컴파일된 `.js`**를 가리킵니다(Electron의 Node 20은 `.ts`를 로드할 수 없어 빌드가 둘 다 내보냅니다). 그리고 `dist/`를 서빙하는 renderer는 커스텀 프로토콜이 필요합니다 — ready 전에 `protocol.registerSchemesAsPrivileged([{ scheme: 'scriptcable', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }])`, 이후 `protocol.handle('scriptcable', …)`로 dist를 서빙하면 WASM `fetch()`가 동작합니다.
 
 ### React Native / Lynx
 
@@ -224,6 +229,15 @@ export default withScriptcableMetro(getDefaultConfig(__dirname));
 ```
 
 기기에서 TurboModule drop-in 호출은 Promise로 귀결됩니다 — 위 브리지 클라이언트와 동일한 시맨틱입니다.
+
+**Expo**: 번들러는 여전히 Metro입니다 — Expo 자체 기본 설정을 감싸면 drop-in이 그대로 적용됩니다(`examples/react-native-app/scripts/expo-bundle.mjs`가 Expo 58의 실제 `getDefaultConfig` 위에서 검증된 스모크):
+
+```js
+// metro.config.js (Expo)
+const { getDefaultConfig } = require('expo/metro-config');
+const { withScriptcableMetro } = require('@scriptcable/react-native/metro');
+module.exports = withScriptcableMetro(getDefaultConfig(__dirname));
+```
 
 ## 워치 모드
 

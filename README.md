@@ -10,7 +10,7 @@ Inspired by [rustra](https://github.com/loopy-lim/rustra) (Rust core → multi-h
 
 ## 5-minute quickstart
 
-**Requirements:** Bun ≥ 1.2 and `clang` (links the native shared library). Optional: [zig 0.13.x](https://ziglang.org/download/) only if you build `--target wasm`.
+**Requirements:** Bun ≥ 1.2 and `clang` (or gcc's `cc`) to link the native shared library. Optional: [zig 0.13.x](https://ziglang.org/download/) only if you build `--target wasm`.
 
 **Every command below is verified end-to-end — with the output you should see at each step — in [docs/getting-started.md](./docs/getting-started.md).** Stuck? [docs/troubleshooting.md](./docs/troubleshooting.md) lists real errors and their fixes.
 
@@ -106,7 +106,10 @@ add(20, 22); // 42, native-addon speed
 | **Next.js (Turbopack)** | entry drop-in unavailable — Turbopack has no per-graph resolve hook, and `resolveAlias` matches request specifiers, not resolved paths (an absolute-path key does nothing — verified). Use `@scriptcable/client` (export conditions work via `transpilePackages`), or run `next dev/build --webpack` for drop-in imports | Next 16.4.2 turbopack build |
 | **Rspack / Rspeedy (Lynx)** | Rspack's Rust resolver has no JS resolve-plugin hooks (`resolve.plugins` is not in its config schema — a pushed plugin is silently ignored). The plugin still runs the build and links the package; imports resolve through `@scriptcable/client` export conditions | Rspeedy 0.18.2 build (browser client in the bundle) |
 | **React Native (Metro)** | `withScriptcableMetro()` from `@scriptcable/react-native/metro` in `metro.config.js` | Metro 0.87 / RN 0.88 real bundle (2026-10-21) |
-| **Electron** | main process: `import { createClient } from '@scriptcable/client'` (node conditions); renderer: the Vite/Webpack plugin as usual | — |
+| **Expo** | same `withScriptcableMetro()` — Expo's bundler IS Metro; register it over `@expo/metro-config`'s default config (`app.json`/`metro.config.js`) | Expo 58 real metro config (`getDefaultConfig`) bundle — drop-in bridge in, entry source out (2026-10-22) |
+| **Electron** | main process: `import { createClient } from '@scriptcable/client'` (node conditions — the generated package ships compiled `.js` for the runtime flavors, since Electron's Node can't load `.ts`); renderer: the Vite/Webpack plugin as usual | Electron 33 real runtime: main calls the native core, the vite-built renderer calls the WASM drop-in over a custom protocol (2026-10-22) |
+| **Astro / SvelteKit / Nuxt / Remix / SolidStart** | all embed Vite — register `@scriptcable/vite` in their `vite.plugins` (`astro.config.mjs` → `vite.plugins`; Nuxt → module or `vite.plugins`; SvelteKit/Remix/SolidStart → `vite.config`) | Astro 5.18 real `astro build` and SvelteKit 2 real `vite build` (client-only page) — drop-in in the client bundle, WASM shipped as a static asset (2026-10-22); Nuxt/Remix/SolidStart follow the same Vite hook |
+| **Rollup** | same plugin (`root` option) — `resolveId` is standard rollup hook shape; TypeScript transforms + `.js`→`.ts` sibling resolution are the host's job (pair with your ts/esbuild plugins) | rollup 4 real build — entry import redirected onto the drop-in (2026-10-22) |
 
 Drop-in flavors: browser graphs initialize WASM once at module load (top-level await — build for **ES2022+**, e.g. vite `build.target: 'es2022'`); server graphs are **await-free** (`createClientSync()` — safe in CommonJS-output server bundles); Metro creates the bridge client lazily on first call.
 
@@ -239,6 +242,23 @@ import { withScriptcableAsync } from '@scriptcable/next';
 export default await withScriptcableAsync({}); // builds artifacts + links @scriptcable/client
 ```
 
+### Astro (and other Vite-based frameworks)
+
+Astro embeds Vite — register the plugin through its vite options (`examples/astro-app` is a verified `astro build` sample):
+
+```js
+// astro.config.mjs
+import scriptcable from '@scriptcable/vite';
+export default {
+  vite: {
+    plugins: [scriptcable()],
+    build: { target: 'es2022' }, // the drop-in browser init uses top-level await
+  },
+};
+```
+
+SvelteKit, Nuxt, Remix (React Router v7) and SolidStart embed Vite too — the same plugin goes into their `vite.config` (Nuxt: a module or `vite.plugins`). The plugin copies the `.wasm` into `public/` automatically, so `astro build` / `nuxt build` ship it as a static asset. SvelteKit is verified the same way (`examples/sveltekit-app` — adapter-static + `export const ssr = false`, the client graph is the one the drop-in serves).
+
 ### Tauri
 
 ```ts
@@ -250,7 +270,7 @@ In the Tauri Rust shell, link `scriptcable build`'s `lib{name}.a` (build script 
 
 ### Electron
 
-No new package needed — Electron is two scriptcable hosts:
+No new package needed — Electron is two scriptcable hosts (`examples/electron-app` is a verified end-to-end sample):
 
 ```ts
 // main process (Node runtime) — one import, export conditions pick the
@@ -262,6 +282,8 @@ client.add(20, 22); // 42
 // renderer (built with vite or webpack) — register the plugin as usual and
 // imports of ./core resolve to the browser drop-in, same as any web app
 ```
+
+Two Electron-specific notes: the generated package's `bun`/`node` conditions point at **compiled `.js`** (Electron's Node 20 cannot load `.ts`, so the build emits both), and a renderer served from `dist/` needs a custom protocol — `protocol.registerSchemesAsPrivileged([{ scheme: 'scriptcable', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }])` before ready, then `protocol.handle('scriptcable', …)` serving dist — so the WASM `fetch()` works.
 
 ### React Native
 
@@ -285,6 +307,15 @@ export default withScriptcableMetro(getDefaultConfig(__dirname));
 On device, TurboModule drop-in calls resolve as Promises — same semantics as the bridge client above.
 
 `scriptcable build --hosts react-native` also emits `NativeCable.ts` (TurboModule spec) and `cable.json` (RN CLI codegen config). Link the iOS/Android archives in your Expo module (Xcode / NDK CMake) — see `packages/react-native/README.md` for the full recipe and `examples/react-native-app` for the `useCable` hook pattern with automatic mock fallback.
+
+**Expo**: the bundler is still Metro — wrap Expo's own default config and the drop-in applies unchanged (`examples/react-native-app/scripts/expo-bundle.mjs` is a verified smoke over Expo 58's real `getDefaultConfig`):
+
+```js
+// metro.config.js (Expo)
+const { getDefaultConfig } = require('expo/metro-config');
+const { withScriptcableMetro } = require('@scriptcable/react-native/metro');
+module.exports = withScriptcableMetro(getDefaultConfig(__dirname));
+```
 
 ### Lynx
 
@@ -331,11 +362,12 @@ Note: `scriptc` must be a trusted dependency so Bun runs its install script (alr
 - Core TypeScript must stay within [scriptc's supported subset](https://scriptc.dev/docs/limitations) (library mode is static-only).
 - Hosts call **into** your library exports (C ABI); outbound FFI is for scriptc executables, not libraries.
 - String/bytes use `(ptr, len)` in / `(out_ptr, out_len)` out on the native boundary.
-- **clang** is required for the default native shared-library link.
+- **clang (or gcc's `cc`)** is required for the default native shared-library link.
 - WASM (`--target wasm`) needs zig **0.13.x** (verified with scriptc 0.4.0), plus a WASI polyfill in browsers.
 - The **browser drop-in** initializes WASM with top-level await — build for **ES2022+** (Chrome 89+, Safari 15+, Firefox 89+). On stricter targets use `dropin: false` and the async `createClient()`.
 - **Drop-in interception** applies only when the entry's entire runtime export surface is ABI-mappable (named functions); anything else disables it with a printed reason.
-- **Drop-in host matrix** (verified 2026-10-21): Vite 6, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Rspeedy 0.18 (conditions path) — end-to-end. Turbopack: entry drop-in unavailable (no resolve hook; see the host table). Lynx/TurboModule **on-device** call semantics remain unverified — no device in the loop.
+- **Drop-in host matrix** (verified 2026-10-22): Vite 6, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Expo 58 metro config, Electron 33 (main native + renderer WASM drop-in), Astro 5.18 build, rollup 4 (resolve redirect; TS transform is the host's) — end-to-end. Turbopack: entry drop-in unavailable (no resolve hook; see the host table). Rspeedy 0.18 stays on the conditions path. Lynx/TurboModule **on-device** call semantics remain unverified — no device in the loop.
+- **Not supported**: Deno and Cloudflare Workers as core clients — the CLI and native link assume Bun/Node hosts; a Workers client would need a bundled WASM loader that doesn't go through Node APIs.
 - Bundler plugins compile inside the host's build process, so any Node version is accepted there (`doctorRuntimeGate: 'skip'`); the Node ≥ 24 floor applies to running the CLI / generated clients directly.
 
 ## License

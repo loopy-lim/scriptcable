@@ -32,14 +32,37 @@ then `bun install` again.
 
 ### `clang (or cc) is required to link the native shared library.`
 
-Native builds link with clang:
+Native builds link with clang — **gcc's `cc` works too**:
 
 ```bash
 # macOS
 xcode-select --install
 # Debian/Ubuntu
-sudo apt install clang
+sudo apt install clang    # or: gcc (cc) alone is enough
 ```
+
+### `Cannot find module '@scriptcable/core'` (or any `@scriptcable/*`) right after install
+
+The packages' exports point at `./dist/*.js` — nothing is compiled until the first build, and Bun reports a missing exports target as "Cannot find module". Run the build first, then the tests:
+
+```bash
+bun install && bun run build && bun run test
+```
+
+### After upgrading Bun (1.4+), every workspace import fails to resolve
+
+Bun 1.4 defaulted its installer to the **isolated linker**, which this monorepo's workspace-package resolution can't read. The repo pins the classic layout in `bunfig.toml`:
+
+```toml
+[install]
+linker = "hoisted"
+```
+
+If you copied the repo without that file (or flipped it), reinstall after restoring it: `rm -rf node_modules packages/*/node_modules examples/*/node_modules && bun install`.
+
+### Electron main fails with `ERR_UNKNOWN_FILE_EXTENSION ".ts"` when importing `@scriptcable/client`
+
+Electron's embedded Node (20.x) cannot import `.ts` at all. The generated package ships **compiled `.js`** for the `bun`/`node` conditions and the manifest points there — re-run `scriptcable build` (or the bundler plugin) on a checkout older than 2026-10-22 to regenerate `package.json` + `node.js`/`bun.js` in `.scriptcable/generated/`.
 
 ### `error SC4003: … has IR type 'bigint', which does not fit the declared marshalling class 'i64'`
 
