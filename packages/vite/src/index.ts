@@ -27,6 +27,9 @@ export type ScriptcableViteOptions = {
   virtualId?: string;
   /** Redirect entry imports onto the compiled client (default: true) */
   dropin?: boolean;
+  /** Project root — vite fills this from configResolved; rollup has no
+   * configResolved hook, so pass it there explicitly (default: cwd). */
+  root?: string;
 };
 
 type ViteResolve = (
@@ -180,7 +183,7 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
   const configPath = options.configPath;
   const dropinOpt = options.dropin !== false;
   const virtualId = options.virtualId ?? 'virtual:scriptcable';
-  let root = process.cwd();
+  let root = options.root ?? process.cwd();
   let publicDir = '';
   let genDir = '';
   const dropin: DropinState = { enabled: false, entryAbs: '', path: '' };
