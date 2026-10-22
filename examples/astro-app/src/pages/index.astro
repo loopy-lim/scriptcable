@@ -1,0 +1,22 @@
+---
+// Server frontmatter deliberately does NOT import the core — the client
+// script below is the only core consumer, so the browser graph is the one
+// the drop-in must serve.
+---
+
+<html>
+  <head><meta charset="utf-8" /><title>scriptcable astro</title></head>
+  <body>
+    <h1>scriptcable astro</h1>
+    <div id="out">loading…</div>
+    <script>
+      // Plain entry import — the vite plugin redirects it onto the compiled
+      // browser drop-in (WASM) at bundle time.
+      import { add, greet } from '../../../calculator-core/src/core';
+      const out = document.getElementById('out');
+      const sum = add(20, 22);
+      out!.textContent = `add(20, 22) = ${sum} · greet = ${greet('astro')}`;
+      (window as { __scriptcableResult?: number }).__scriptcableResult = sum;
+    </script>
+  </body>
+</html>
