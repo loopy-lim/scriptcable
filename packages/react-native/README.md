@@ -29,11 +29,20 @@ client.add(20, 22); // fully typed
 | `NativeCable.ts` | TurboModule spec — single `call(exportName, argsJson)` entry + optional typed shortcuts |
 | `cable.json` | RN CLI codegen config (cpp) so the native side stays in sync |
 
+With `--platform android` the build also emits the **Android native host** into `generated/android/` (artifacts in `<outDir>/android-arm64/`):
+
+| File | Purpose |
+|------|---------|
+| `cable_host.{h,cpp}` | Pure C++ dispatch core — JSON bridge protocol over the native C ABI. No JNI, so host tests compile it verbatim |
+| `cable_jni.cpp` | JNI wrapper (`CableModule.nativeCall`) |
+| `CableModule.kt` / `CablePackage.kt` | Classic RN module named after the core (TurboModuleRegistry/NativeModules resolve it via new-arch interop) |
+| `cable-version.map` | Exports only `Java_*` from the module `.so` (the archive objects need locally-bound symbols) |
+| `CMakeLists.txt` | Static-links the scriptc archive into `lib{name}_cable.so` |
+
 ## Linking the native library
 
-- iOS: drop `.scriptcable/lib{name}.a` (or an XCFramework from `SCRIPTC_TARGET=aarch64-apple-ios`) into your module's Xcode project.
-- Android: add the archive to your module's CMake (`add_library(name STATIC IMPORTED)` + `target_link_libraries`).
-- Implement `call(exportName, argsJson)` dispatching to the C ABI (`{prefix}{export}` symbols).
+- Android: **generated** — `scriptcable build --platform android` cross-compiles the archive (android-arm64) and emits the whole bridge module; wire it into your prebuilt project (copy `generated/android/*`, register `CablePackage`, add one `externalNativeBuild` cmake block). `examples/react-native-app/scripts/wire-android.mjs` is the reference wiring, and `.github/workflows/android-emulator.yml` runs the real bridge on an arm64 emulator in CI.
+- iOS: drop `.scriptcable/lib{name}.a` (or an XCFramework from `SCRIPTC_TARGET=aarch64-apple-ios`) into your module's Xcode project, and implement `call(exportName, argsJson)` dispatching to the C ABI (`{prefix}{export}` symbols) — the Android `cable_host.cpp` is the reference implementation of that dispatch.
 
 The example app (`examples/react-native-app`) shows the `useCable` hook pattern with automatic mock fallback — the same code runs in tests, Storybook, and on device.
 

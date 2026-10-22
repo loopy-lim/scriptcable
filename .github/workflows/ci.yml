@@ -66,6 +66,22 @@ jobs:
         run: bun run --filter @scriptcable/example-sveltekit-app test
       - name: Expo metro bundle
         run: bun run --filter @scriptcable/example-react-native-app test:expo
+      - name: Android native host (cross-build + dispatch smoke)
+        run: bun run --filter @scriptcable/example-react-native-app test:android
+      - name: Nuxt
+        run: bun run --filter @scriptcable/example-nuxt-app test
+      - name: React Router
+        run: bun run --filter @scriptcable/example-remix-app test
+      - name: SolidStart
+        run: bun run --filter @scriptcable/example-solidstart-app test
+      - name: Cloudflare Workers (dry-run + wrangler dev)
+        run: bun run --filter @scriptcable/example-workers-app test
+      - name: Install deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Deno runtime
+        run: bun run --filter @scriptcable/example-deno-app test
       - run: bun run --filter @scriptcable/example-calculator-core contract:check
       - run: bun run --filter @scriptcable/example-calculator-core build:wasm
       # Non-blocking while runner numbers accumulate — the ×2.5 tolerance

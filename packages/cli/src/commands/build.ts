@@ -15,6 +15,9 @@ export type BuildCliOptions = {
   cwd?: string;
   target?: 'wasm' | 'native' | 'both';
   hosts?: CodegenTarget[];
+  /** Native build platform — 'android' cross-compiles (android-arm64) and
+   * puts artifacts under <outDir>/android-arm64/ */
+  platform?: 'host' | 'android-arm64';
   /** Explicit config path (.ts or .json) — defaults to scriptcable.config.ts, scriptcable.json, or zero-config inference */
   configPath?: string;
   /** Bypass the build cache */
@@ -48,6 +51,7 @@ async function buildAndEmit(opts: BuildCliOptions, announce: boolean): Promise<v
   const result = await buildCore(config, {
     cwd,
     target,
+    platform: opts.platform,
     outDir,
     force: opts.force,
   });
@@ -65,7 +69,13 @@ async function buildAndEmit(opts: BuildCliOptions, announce: boolean): Promise<v
     cwd,
     profile: result.profile,
     wasmFileName: wasmName,
-    copy: { wasmPath: result.wasmPath, sharedPath: result.sharedPath, addonPath: result.addonPath },
+    // The android .so must not shadow the host one in the generated dir —
+    // node/bun runtime flavors resolve that exact name.
+    copy: {
+      wasmPath: result.wasmPath,
+      sharedPath: opts.platform === 'android-arm64' ? undefined : result.sharedPath,
+      addonPath: result.addonPath,
+    },
   });
 
   const snap = snapshotFromProfile(result.profile);

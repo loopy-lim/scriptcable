@@ -1,0 +1,84 @@
+name: android-emulator
+
+# On-device bridge verification: an arm64 emulator on a KVM-capable ARM64
+# runner runs the real TurboModule bridge (generated Kotlin + JNI + the
+# android-arm64 scriptc archive) and asserts add(20,22) === 42 through logcat.
+# x86 CI runners can't run scriptc's android-arm64 artifacts, and this repo's
+# WSL2 host has no KVM — ARM64 runners are the one place all three line up.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      # ARM64 runners ship no Android SDK — bootstrap cmdline-tools (the zip
+      # is arch-independent Java), then pull the emulator + arm64 image.
+      - name: Android SDK (bootstrap + emulator arm64)
+        run: |
+          ANDROID_HOME="$HOME/android-sdk"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          curl -fsSL -o /tmp/tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q /tmp/tools.zip -d "$ANDROID_HOME/cmdline-tools"
+          mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platform-tools" "emulator" "platforms;android-35" "build-tools;35.0.0" "system-images;android-31;google_apis;arm64-v8a"
+      - uses: oven-sh/setup-bun@v2
+      - name: zig 0.13 (wasm + android cross-link)
+        run: |
+          case "$(uname -m)" in
+            x86_64) Z=zig-linux-x86_64-0.13.0.tar.xz ;;
+            aarch64|arm64) Z=zig-linux-aarch64-0.13.0.tar.xz ;;
+            *) echo "unsupported arch: $(uname -m)"; exit 1 ;;
+          esac
+          curl -fsSL "https://ziglang.org/download/0.13.0/$Z" | tar -xJ
+          echo "$PWD/${Z%.tar.xz}" >> "$GITHUB_PATH"
+      - run: bun install
+      - run: bun run build
+      - name: Build core + android artifacts + dispatch smoke
+        run: bun run --filter @scriptcable/example-react-native-app test:android
+      - name: App bundle smoke (launchability — real metro graph)
+        run: bun run --filter @scriptcable/example-react-native-app test:app-bundle
+      - name: Assemble APK (arm64, debug)
+        working-directory: examples/react-native-app
+        run: |
+          bunx expo prebuild -p android --no-install
+          cd android && ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
+      - name: Boot emulator
+        run: |
+          echo no | avdmanager create avd -n cable -k "system-images;android-31;google_apis;arm64-v8a" -d pixel_5
+          "$ANDROID_HOME/emulator/emulator" -avd cable -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot &
+          "$ANDROID_HOME/platform-tools/adb" wait-for-device
+          until [ "$("$ANDROID_HOME/platform-tools/adb" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 5; done
+      - name: Install + run bridge call
+        working-directory: examples/react-native-app
+        run: |
+          ADB="$ANDROID_HOME/platform-tools/adb"
+          # Debug APK loads JS from metro — serve it and hand the port over.
+          bunx react-native start --port 8081 &
+          sleep 20
+          "$ADB" reverse tcp:8081 tcp:8081
+          "$ADB" install -r android/app/build/outputs/apk/debug/app-debug.apk
+          "$ADB" logcat -c
+          "$ADB" shell monkey -p com.scriptcable.rnexample 1
+          HIT=""
+          for i in $(seq 1 90); do
+            HIT=$("$ADB" logcat -d -s ReactNativeJS:* 2>/dev/null | grep "CABLE_RESULT" | tail -1)
+            [ -n "$HIT" ] && break
+            sleep 5
+          done
+          echo "$HIT"
+          echo "$HIT" | grep -q 'CABLE_RESULT:{"sum":42}' \
+            && echo "on-device bridge OK" \
+            || { echo "bridge result never appeared"; exit 1; }

@@ -10,7 +10,7 @@ function usage(): void {
 
 Usage:
   scriptcable init <name> [--host bun|node|vite|next|tauri|react-native|lynx]
-  scriptcable build [--target wasm|native|both] [--hosts bun,node,browser,...] [--force] [--watch]
+  scriptcable build [--target wasm|native|both] [--hosts bun,node,browser,...] [--platform host|android] [--force] [--watch]
   scriptcable diff [--snapshot path]   compare scriptcable.json to committed contract
   scriptcable doctor                   check Bun / scriptc / zig / clang
   scriptcable --help
@@ -46,6 +46,7 @@ async function main(argv: string[]): Promise<number> {
     case 'build': {
       let target: 'wasm' | 'native' | 'both' | undefined;
       let hosts: CodegenTarget[] | undefined;
+      let platform: 'host' | 'android-arm64' | undefined;
       let force = false;
       let watch = false;
       for (let i = 0; i < rest.length; i++) {
@@ -53,10 +54,18 @@ async function main(argv: string[]): Promise<number> {
         if (rest[i] === '--hosts') {
           hosts = rest[++i]!.split(',') as CodegenTarget[];
         }
+        if (rest[i] === '--platform') {
+          const v = rest[++i]!;
+          platform = v === 'android' ? 'android-arm64' : v === 'host' ? 'host' : undefined;
+          if (platform === undefined) {
+            console.error(`Unknown --platform "${v}" (supported: host, android)`);
+            return 1;
+          }
+        }
         if (rest[i] === '--force') force = true;
         if (rest[i] === '--watch') watch = true;
       }
-      return runBuild({ target, hosts, force, watch });
+      return runBuild({ target, hosts, platform, force, watch });
     }
     case 'diff': {
       let snapshot: string | undefined;

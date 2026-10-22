@@ -192,6 +192,9 @@ export type BuildOptions = {
   cwd?: string;
   /** wasm | native | both */
   target?: 'wasm' | 'native' | 'both';
+  /** Host platform for native builds — android-arm64 cross-compiles
+   * (SCRIPTC_TARGET + zig cc) and puts artifacts under outDir/android-arm64/ */
+  platform?: 'host' | 'android-arm64';
   outDir?: string;
   env?: NodeJS.ProcessEnv;
   /** Bypass the build cache (default: false — cached hits skip scriptc + link) */
@@ -218,25 +221,24 @@ export type BuildResult = {
   cached?: boolean;
 };
 
-async function ensureRuntimePack(cwd: string, target: 'wasm' | 'native'): Promise<void> {
-  if (target !== 'wasm') return;
+async function ensureRuntimePack(cwd: string, target: 'wasm' | 'android-arm64'): Promise<void> {
+  const pack =
+    target === 'wasm' ? '@scriptc/runtime-wasm32-wasi' : '@scriptc/runtime-android-arm64';
   const require = createRequire(join(cwd, 'package.json'));
   try {
-    require.resolve('@scriptc/runtime-wasm32-wasi/package.json');
+    require.resolve(`${pack}/package.json`);
     return;
   } catch {
     const info = await doctor(cwd);
     const ver = info.version.replace(/^v/, '');
-    const r = await run(
-      'bun',
-      ['add', '--dev', `@scriptc/runtime-wasm32-wasi@${ver}`],
-      { cwd },
-    );
+    const r = await run('bun', ['add', '--dev', `${pack}@${ver}`], { cwd });
     if (r.code !== 0) {
       throw new ScriptcableToolchainError(
-        'Failed to install @scriptc/runtime-wasm32-wasi (required for WASM builds).',
+        `Failed to install ${pack} (required for ${target} builds).`,
         r.stderr.slice(0, 500) +
-          '\nAlso install zig 0.13.x on PATH: https://ziglang.org/download/',
+          (target === 'wasm'
+            ? '\nAlso install zig 0.13.x on PATH: https://ziglang.org/download/'
+            : ''),
       );
     }
   }
@@ -260,6 +262,10 @@ export async function buildCore(
   const cwd = options.cwd ?? process.cwd();
   const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptcable');
   const target = options.target ?? config.target ?? 'native';
+  const androidArm64 = options.platform === 'android-arm64';
+  // Android artifacts live under outDir/android-arm64/ so a host .so and the
+  // android one never overwrite each other.
+  const nativeDir = androidArm64 ? join(outDir, 'android-arm64') : outDir;
   await mkdir(outDir, { recursive: true });
 
   const info = await doctor(cwd, { skipRuntimeGate: options.doctorRuntimeGate === 'skip' });
@@ -290,7 +296,7 @@ export async function buildCore(
   const configInputs = [join(cwd, 'scriptcable.config.ts'), join(cwd, 'scriptcable.json')]
     .filter((p) => p.startsWith(outDir) === false);
   const buildHash = await computeBuildHash({ cwd, config, profile, target, extraInputs: configInputs });
-  const addonEligible = target !== 'wasm' && canBuildNodeAddon(profile);
+  const addonEligible = target !== 'wasm' && !androidArm64 && canBuildNodeAddon(profile);
   // A previous soft-failed addon attempt is recorded in a marker — keep the
   // cache valid without demanding the artifact until a build succeeds again
   // (any successful build clears the marker; --force bypasses everything).
@@ -304,8 +310,8 @@ export async function buildCore(
     target === 'wasm'
       ? [join(outDir, `${config.name}.wasm`)]
       : target === 'both'
-        ? [join(outDir, `${config.name}.wasm`), join(outDir, sharedLibraryFileName(config.name))]
-        : [join(outDir, sharedLibraryFileName(config.name))];
+        ? [join(outDir, `${config.name}.wasm`), join(nativeDir, sharedLibraryFileName(config.name))]
+        : [join(nativeDir, sharedLibraryFileName(config.name))];
   const addonDemanded = addonEligible && !addonFailedBefore;
   if (addonDemanded) wantedArtifacts.push(join(outDir, napiAddonFileName(config.name)));
   const cacheHit =
@@ -317,8 +323,8 @@ export async function buildCore(
       result.wasmPath = join(outDir, `${config.name}.wasm`);
     }
     if (target === 'native' || target === 'both') {
-      result.nativePath = join(outDir, `${config.name}.lib.a`);
-      result.sharedPath = join(outDir, sharedLibraryFileName(config.name));
+      result.nativePath = join(nativeDir, `${config.name}.lib.a`);
+      result.sharedPath = join(nativeDir, sharedLibraryFileName(config.name));
       if (addonDemanded) result.addonPath = join(outDir, napiAddonFileName(config.name));
     }
     result.cached = true;
@@ -336,6 +342,15 @@ export async function buildCore(
         );
       }
       await ensureRuntimePack(cwd, 'wasm');
+    } else if (androidArm64) {
+      if (!info.hasZig) {
+        throw new ScriptcableToolchainError(
+          'zig is required for android-arm64 cross builds (SCRIPTC_TARGET + zig cc link).',
+          'Install zig 0.13.x and put it on PATH.\n' +
+            '  curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ',
+        );
+      }
+      await ensureRuntimePack(cwd, 'android-arm64');
     } else if (!info.hasClang && !info.hasCc && process.platform === 'linux') {
       throw new ScriptcableToolchainError(
         'clang (or cc) is required for native library builds on Linux.',
@@ -344,13 +359,14 @@ export async function buildCore(
     }
 
     const outName = kind === 'wasm' ? `${config.name}.wasm` : `${config.name}.lib.a`;
-    const outPath = join(outDir, outName);
+    const outPath = join(kind === 'native' ? nativeDir : outDir, outName);
     const args = ['build', '--lib', '--profile', profilePath, '-o', outPath];
     const inv = scriptcInvoke(info.scriptcBin, args);
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       ...options.env,
       ...(kind === 'wasm' ? { SCRIPTC_TARGET: 'wasm32-wasi' } : {}),
+      ...(kind === 'native' && androidArm64 ? { SCRIPTC_TARGET: 'aarch64-linux-android' } : {}),
     };
     const r = await run(inv.cmd, inv.args, { cwd, env });
     if (r.code !== 0) {
@@ -369,7 +385,8 @@ export async function buildCore(
     result.nativePath = await runBuild('native');
     result.sharedPath = await linkSharedLibrary({
       archivePath: result.nativePath!,
-      outPath: join(outDir, sharedLibraryFileName(config.name)),
+      outPath: join(nativeDir, sharedLibraryFileName(config.name)),
+      target: androidArm64 ? 'aarch64-linux-android' : undefined,
       cwd,
     });
     // Typed N-API direct binding — soft failure: generic FFI remains the fallback.

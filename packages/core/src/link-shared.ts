@@ -37,6 +37,10 @@ export type LinkSharedOptions = {
   /** Output shared library path */
   outPath: string;
   cwd?: string;
+  /** Cross-compile target triple (e.g. 'aarch64-linux-android') — forces
+   * `zig cc -target`, the only multi-target driver we rely on. Android
+   * (bionic) keeps pthread/dl in libc, so those libs are skipped. */
+  target?: string;
 };
 
 export function sharedLibraryExt(platform = process.platform): string {
@@ -60,21 +64,28 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
   // Windows: link with `zig cc` when available — clang there drives
   // lld-link (MSVC), which cannot read the GNU-ar archive scriptc emits
   // (LNK1143). zig cc is the GNU-family driver scriptc itself uses on
-  // Windows; clang stays the fallback.
-  const zig = process.platform === 'win32' ? await which('zig') : undefined;
-  const clang = (await which('clang')) ?? (await which('cc'));
+  // Windows; clang stays the fallback. Cross targets (e.g. android) always
+  // go through zig cc — clang alone has no android sysroot here.
+  const cross = options.target !== undefined;
+  const zig = cross || process.platform === 'win32' ? await which('zig') : undefined;
+  const clang = cross ? undefined : ((await which('clang')) ?? (await which('cc')));
   if (!zig && !clang) {
     throw new ScriptcableToolchainError(
-      'clang (or cc) is required to link the native shared library.',
-      'Install a C toolchain:\n' +
-        '  Linux:  sudo apt install clang\n' +
-        '  macOS:  xcode-select --install\n' +
-        '  Windows: zig (ziglang.org) — zig cc drives the linker\n' +
-        'Or build with --target wasm for the WASI fallback.',
+      cross
+        ? `zig cc is required to cross-link ${options.target}.`
+        : 'clang (or cc) is required to link the native shared library.',
+      cross
+        ? 'Install zig 0.13.x and put it on PATH — zig cc is the cross linker:\n' +
+            '  curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ'
+        : 'Install a C toolchain:\n' +
+            '  Linux:  sudo apt install clang\n' +
+            '  macOS:  xcode-select --install\n' +
+            '  Windows: zig (ziglang.org) — zig cc drives the linker\n' +
+            'Or build with --target wasm for the WASI fallback.',
     );
   }
   const linker = zig ? zig : clang!;
-  const linkerArgs = zig ? ['cc'] : [];
+  const linkerArgs = zig ? ['cc', ...(cross ? ['-target', options.target!] : [])] : [];
 
   await mkdir(dirname(outPath), { recursive: true });
   const stubC = join(dirname(outPath), 'scriptcable-stubs.c');
@@ -89,7 +100,23 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
   }
 
   const args: string[] = ['-shared', '-o', outPath];
-  if (process.platform === 'darwin') {
+  const isAndroid = cross && options.target!.includes('-android');
+  if (isAndroid) {
+    // The archive objects use direct PC-relative references, which a shared
+    // library may only keep if the referenced symbols bind locally — a
+    // version script exports just the JNI entry points and localizes the
+    // rest (also the right visibility for a dlopen'd module anyway).
+    const mapPath = join(dirname(outPath), 'cable-version.map');
+    await writeFile(mapPath, '{\n  global:\n    Java_*;\n  local:\n    *;\n};\n');
+    // lld binds the value to --version-script directly — as a separate arg it
+    // would swallow the next flag.
+    args.push(`-Wl,--version-script=${mapPath}`);
+    // zig has no bionic to resolve (error: libc not available) and a dlopen'd
+    // module doesn't want one — libc symbols stay undefined here and the
+    // Android runtime binds them.
+    args.push('-nostdlib');
+  }
+  if (process.platform === 'darwin' && !cross) {
     args.push('-Wl,-force_load,' + archivePath);
   } else if (process.platform === 'win32') {
     // zig cc speaks GNU ld: whole-archive keeps every object of the archive
@@ -101,8 +128,13 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
     args.push('-Wl,--allow-shlib-undefined');
   }
   args.push(stubO);
-  if (process.platform !== 'win32') args.push('-lm', '-lpthread');
-  if (process.platform === 'linux') args.push('-ldl');
+  if (isAndroid) {
+    // Bionic folds math/pthread/dl into libc — zig's android sysroot ships
+    // no separate libm/pthread stubs, so link with nothing extra.
+  } else {
+    if (process.platform !== 'win32') args.push('-lm', '-lpthread');
+    if (process.platform === 'linux') args.push('-ldl');
+  }
 
   const link = await run(linker, [...linkerArgs, ...args]);
   if (link.code !== 0) {

@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "scriptcable-rn",
+    "slug": "scriptcable-rn",
+    "version": "1.0.0",
+    "android": {
+      "package": "com.scriptcable.rnexample"
+    }
+  }
+}

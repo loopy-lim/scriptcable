@@ -81,10 +81,12 @@ Export conditions resolve the right flavor per environment — no branching in y
 | Node runtime — Next server components, route handlers, server actions | `node.ts` (native shared lib, WASM fallback) |
 | Browser bundles served from project files (e.g. `vite dev`) | `browser.ts` (WASM — a minimal WASI polyfill is built in, so no-arg works) |
 | Metro (React Native) | `react-native.ts` (bridge-based) |
+| Deno runtime | `deno.ts` (compiled `.js` — Deno won't strip types under `node_modules`; the WASM is read from the generated directory) |
+| Cloudflare Workers | `workers.ts` (`workerd` condition — the wasm rides a static CompiledWasm import through wrangler) |
 
 The `browser` flavor resolves its WASM automatically: it probes the module-relative location first (works wherever the bundler serves project files, e.g. `vite dev`), then the origin root — the Vite / Next.js / Webpack plugins copy `<name>.wasm` into your static directory (`public/`) on every build, so `createClient()` works in client graphs with no manual copy step. An explicit `createClient({ wasmUrl })` always wins (e.g. behind a base path or on a CDN). Server code needs nothing — the node flavor loads the shared library automatically.
 
-Explicit subpaths pin a flavor: `@scriptcable/client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`. Editors resolve the same package, so TypeScript works with no `paths` config. The bundler plugins run the same emit: `withScriptcable` (which also adds `transpilePackages` for you) and the Webpack/Rspack plugin link the package during `next dev` / `next build`; on Turbopack, the predev `scriptcableBuild()` call does it.
+Explicit subpaths pin a flavor: `@scriptcable/client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`, `/deno`, `/workerd`. Editors resolve the same package, so TypeScript works with no `paths` config. The bundler plugins run the same emit: `withScriptcable` (which also adds `transpilePackages` for you) and the Webpack/Rspack plugin link the package during `next dev` / `next build`; on Turbopack, the predev `scriptcableBuild()` call does it.
 
 If the link is missing — a fresh checkout before the first build — `scriptcable doctor` reports and repairs it. `scriptcable init` scaffolds CI durability out of the box: it records `"@scriptcable/client": "file:.scriptcable/generated"` in your dependencies together with a placeholder manifest and the gitignore negations that keep `bun install` working before the first build. For projects not created by `init`, `doctor` prints the exact snippet.
 
@@ -108,8 +110,10 @@ add(20, 22); // 42, native-addon speed
 | **React Native (Metro)** | `withScriptcableMetro()` from `@scriptcable/react-native/metro` in `metro.config.js` | Metro 0.87 / RN 0.88 real bundle (2026-10-21) |
 | **Expo** | same `withScriptcableMetro()` — Expo's bundler IS Metro; register it over `@expo/metro-config`'s default config (`app.json`/`metro.config.js`) | Expo 58 real metro config (`getDefaultConfig`) bundle — drop-in bridge in, entry source out (2026-10-22) |
 | **Electron** | main process: `import { createClient } from '@scriptcable/client'` (node conditions — the generated package ships compiled `.js` for the runtime flavors, since Electron's Node can't load `.ts`); renderer: the Vite/Webpack plugin as usual | Electron 33 real runtime: main calls the native core, the vite-built renderer calls the WASM drop-in over a custom protocol (2026-10-22) |
-| **Astro / SvelteKit / Nuxt / Remix / SolidStart** | all embed Vite — register `@scriptcable/vite` in their `vite.plugins` (`astro.config.mjs` → `vite.plugins`; Nuxt → module or `vite.plugins`; SvelteKit/Remix/SolidStart → `vite.config`) | Astro 5.18 real `astro build` and SvelteKit 2 real `vite build` (client-only page) — drop-in in the client bundle, WASM shipped as a static asset (2026-10-22); Nuxt/Remix/SolidStart follow the same Vite hook |
+| **Astro / SvelteKit / Nuxt / Remix (React Router) / SolidStart** | all embed Vite — register `@scriptcable/vite` in their `vite.plugins`. Nuxt 4 moves vite's root to its `srcDir`, so pass the project root explicitly: `scriptcable({ root: import.meta.dirname })` | Astro 5.18, SvelteKit 2, Nuxt 4.6, React Router 8.5 (SPA mode), SolidStart 2.0 (`@solidjs/start` + vite 8) — real builds: drop-in in the client bundle, WASM shipped as a static asset (2026-10-22) |
 | **Rollup** | same plugin (`root` option) — `resolveId` is standard rollup hook shape; TypeScript transforms + `.js`→`.ts` sibling resolution are the host's job (pair with your ts/esbuild plugins) | rollup 4 real build — entry import redirected onto the drop-in (2026-10-22) |
+| **Deno** | no plugin — export conditions resolve the `deno` flavor (emitted as compiled `.js`, placed **ahead of `node`** in the manifest because Deno turns the `node` condition on itself); `scriptcable build --target wasm --hosts deno` first (the codegen CLI runs on Bun) | Deno 2.9 real runtime — bare `@scriptcable/client` import + `deno run -A`, no flags or config (2026-10-22) |
+| **Cloudflare Workers** | no plugin — wrangler resolves bundles with the `workerd` condition; the workers flavor statically imports the wasm (wrangler's default CompiledWasm rule), so no fetch and no top-level await | wrangler 4.151 — dry-run bundle + a real `wrangler dev` (workerd) HTTP call returning 42 (2026-10-22) |
 
 Drop-in flavors: browser graphs initialize WASM once at module load (top-level await — build for **ES2022+**, e.g. vite `build.target: 'es2022'`); server graphs are **await-free** (`createClientSync()` — safe in CommonJS-output server bundles); Metro creates the bridge client lazily on first call.
 
@@ -257,7 +261,33 @@ export default {
 };
 ```
 
-SvelteKit, Nuxt, Remix (React Router v7) and SolidStart embed Vite too — the same plugin goes into their `vite.config` (Nuxt: a module or `vite.plugins`). The plugin copies the `.wasm` into `public/` automatically, so `astro build` / `nuxt build` ship it as a static asset. SvelteKit is verified the same way (`examples/sveltekit-app` — adapter-static + `export const ssr = false`, the client graph is the one the drop-in serves).
+SvelteKit, Nuxt, Remix (React Router v7+) and SolidStart 2 embed Vite too — the same plugin goes beside their own vite plugin. All four are verified with real builds (`examples/sveltekit-app` — adapter-static + `ssr = false`; `examples/remix-app` — `ssr: false` SPA in `react-router.config.ts`; `examples/solidstart-app` — `solidStart()` from `@solidjs/start/config` + **vite 8+**, which SolidStart 2's peer range requires). Nuxt 4 is the one special case: it points vite's root at its `srcDir` (`app/`), so give the plugin the project root explicitly — everything else stays zero-config:
+
+```ts
+// nuxt.config.ts
+import scriptcable from '@scriptcable/vite';
+export default defineNuxtConfig({
+  ssr: false,
+  vite: {
+    plugins: [scriptcable({ root: import.meta.dirname })],
+    build: { target: 'es2022' },
+  },
+});
+```
+
+### Deno and Cloudflare Workers
+
+Both run the generated client with **no bundler plugin** — export conditions pick the flavor, the same one-import DX as every other runtime:
+
+```bash
+scriptcable build --target wasm --hosts deno    # or --hosts workers
+deno run -A src/main.ts                          # bare import of @scriptcable/client inside
+```
+
+- **Deno** (`examples/deno-app`): the `deno` flavor is emitted as **compiled `.js`** — Deno refuses to strip types under `node_modules` — and the manifest lists the `deno` condition ahead of `node` (which Deno enables itself). The wasm is read directly from the generated directory, so there is no URL probing. Plain `deno run -A` — no flags, no `deno.json`.
+- **Cloudflare Workers** (`examples/workers-app`): the `workerd` flavor statically imports the wasm — wrangler's default CompiledWasm rule hands the bundle the compiled module, so `createClient()` needs no fetch and no top-level await. Verified against a real `wrangler dev` (workerd) call.
+
+One prerequisite for both: the codegen CLI itself runs on **Bun** (same as every host today) — run `scriptcable build` in CI or your dev machine, then the generated client runs on Deno/workerd.
 
 ### Tauri
 
@@ -306,7 +336,7 @@ export default withScriptcableMetro(getDefaultConfig(__dirname));
 
 On device, TurboModule drop-in calls resolve as Promises — same semantics as the bridge client above.
 
-`scriptcable build --hosts react-native` also emits `NativeCable.ts` (TurboModule spec) and `cable.json` (RN CLI codegen config). Link the iOS/Android archives in your Expo module (Xcode / NDK CMake) — see `packages/react-native/README.md` for the full recipe and `examples/react-native-app` for the `useCable` hook pattern with automatic mock fallback.
+`scriptcable build --hosts react-native` also emits `NativeCable.ts` (TurboModule spec) and `cable.json` (RN CLI codegen config). **On Android the native side is generated too**: `scriptcable build --platform android` cross-compiles the archive for android-arm64 (scriptc's `@scriptc/runtime-android-arm64` + `zig cc`) and emits the bridge module under `.scriptcable/generated/android/` — the C++ `call(exportName, argsJson)` dispatch, the JNI wrapper, a ready `CableModule.kt` + package, and a CMakeLists that static-links the archive. Wire it into your prebuilt project (copy + register the package + one `externalNativeBuild` block — `examples/react-native-app/scripts/wire-android.mjs` does exactly that) and the native module you used to write by hand is done. Verified without a device: the generated dispatch compiles and passes the JSON bridge contract on the host (`test:android`), and the wired app assembles into an arm64 APK that ships the bridge `.so`. The emulator run itself executes in CI — `.github/workflows/android-emulator.yml` boots an arm64 emulator on a KVM ARM64 runner and asserts the 42 through logcat (runs on push). iOS still links the archive in your Expo module (Xcode) — see `packages/react-native/README.md` for the full recipe and `examples/react-native-app` for the `useCable` hook pattern with automatic mock fallback.
 
 **Expo**: the bundler is still Metro — wrap Expo's own default config and the drop-in applies unchanged (`examples/react-native-app/scripts/expo-bundle.mjs` is a verified smoke over Expo 58's real `getDefaultConfig`):
 
@@ -366,8 +396,8 @@ Note: `scriptc` must be a trusted dependency so Bun runs its install script (alr
 - WASM (`--target wasm`) needs zig **0.13.x** (verified with scriptc 0.4.0), plus a WASI polyfill in browsers.
 - The **browser drop-in** initializes WASM with top-level await — build for **ES2022+** (Chrome 89+, Safari 15+, Firefox 89+). On stricter targets use `dropin: false` and the async `createClient()`.
 - **Drop-in interception** applies only when the entry's entire runtime export surface is ABI-mappable (named functions); anything else disables it with a printed reason.
-- **Drop-in host matrix** (verified 2026-10-22): Vite 6, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Expo 58 metro config, Electron 33 (main native + renderer WASM drop-in), Astro 5.18 build, rollup 4 (resolve redirect; TS transform is the host's) — end-to-end. Turbopack: entry drop-in unavailable (no resolve hook; see the host table). Rspeedy 0.18 stays on the conditions path. Lynx/TurboModule **on-device** call semantics remain unverified — no device in the loop.
-- **Not supported**: Deno and Cloudflare Workers as core clients — the CLI and native link assume Bun/Node hosts; a Workers client would need a bundled WASM loader that doesn't go through Node APIs.
+- **Drop-in host matrix** (verified 2026-10-22): Vite 6, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Expo 58 metro config, Electron 33 (main native + renderer WASM drop-in), Astro 5.18, SvelteKit 2, Nuxt 4.6, React Router 8.5, SolidStart 2.0 builds, rollup 4 (resolve redirect; TS transform is the host's) — end-to-end. **Deno 2.9 and Cloudflare Workers (workerd, wrangler 4.151) run the generated clients end-to-end** on the conditions path. Turbopack: entry drop-in unavailable (no resolve hook; see the host table). Rspeedy 0.18 stays on the conditions path. Lynx/TurboModule **on-device** call semantics remain unverified — no device in the loop.
+- The codegen **CLI runs on Bun**; Deno/workerd hosts run the *generated client* (conditions path) after a build made on Bun — no Bun is needed at their runtime.
 - Bundler plugins compile inside the host's build process, so any Node version is accepted there (`doctorRuntimeGate: 'skip'`); the Node ≥ 24 floor applies to running the CLI / generated clients directly.
 
 ## License

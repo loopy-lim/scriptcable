@@ -90,10 +90,12 @@ export conditions가 환경별로 알맞은 플레이버를 골라 줍니다 —
 | Node 런타임 — Next 서버 컴포넌트, 라우트 핸들러, 서버 액션 | `node.ts` (네이티브 공유 라이브러리, WASM 폴백) |
 | 프로젝트 파일을 서빙하는 브라우저 번들 (예: `vite dev`) | `browser.ts` (WASM — 최소 WASI 폴리필 내장, 인자 없이 동작) |
 | Metro (React Native) | `react-native.ts` (브리지 기반) |
+| Deno 런타임 | `deno.ts` (컴파일된 `.js` — Deno는 `node_modules` 하위 타입 제거를 거부함; WASM은 생성 디렉터리에서 직접 읽음) |
+| Cloudflare Workers | `workers.ts` (`workerd` 조건 — wasm은 wrangler의 정적 CompiledWasm import로 실림) |
 
 `browser` 플레이버는 WASM 위치를 자동으로 찾습니다: 모듈 상대 위치를 먼저 프로브하고(번들러가 프로젝트 파일을 서빙하는 곳 — `vite dev` — 에서 동작), 다음으로 오리진 루트를 확인합니다. Vite / Next.js / Webpack 플러그인이 빌드마다 `<name>.wasm`을 정적 디렉터리(`public/`)에 복사하므로, 클라이언트 그래프에서도 `createClient()`가 수동 복사 없이 동작합니다. `createClient({ wasmUrl })`을 명시하면 항상 우선합니다(베이스 경로 뒤 배포, CDN 등). 서버 코드는 아무 것도 필요 없습니다 — node 플레이버가 공유 라이브러리를 자동 로드합니다.
 
-플레이버를 고정하려면 서브패스를 씁니다: `@scriptcable/client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`. 에디터도 같은 패키지를 해석하므로 `paths` 설정 없이 TypeScript가 동작합니다. 번들러 플러그인도 같은 emit을 씁니다. `withScriptcable`(자동 `transpilePackages` 포함)과 Webpack/Rspack 플러그인은 `next dev` / `next build` 중에 링크를 만들고, Turbopack은 predev의 `scriptcableBuild()`가 처리합니다.
+플레이버를 고정하려면 서브패스를 씁니다: `@scriptcable/client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`, `/deno`, `/workerd`. 에디터도 같은 패키지를 해석하므로 `paths` 설정 없이 TypeScript가 동작합니다. 번들러 플러그인도 같은 emit을 씁니다. `withScriptcable`(자동 `transpilePackages` 포함)과 Webpack/Rspack 플러그인은 `next dev` / `next build` 중에 링크를 만들고, Turbopack은 predev의 `scriptcableBuild()`가 처리합니다.
 
 링크가 없으면(첫 빌드 전 새 체크아웃) `scriptcable doctor`가 상태를 보고하고 복구합니다. `scriptcable init`은 CI 내구성을 기본으로 스캐폴드합니다: 의존성에 `"@scriptcable/client": "file:.scriptcable/generated"`을 기록하고, 첫 빌드 전에도 `bun install`이 깨지지 않도록 플레이스홀더 매니페스트와 gitignore 부정 패턴을 함께 만듭니다. `init` 외 경로로 만든 프로젝트는 `doctor`가 정확한 스니펫을 안내합니다.
 
@@ -117,8 +119,10 @@ add(20, 22); // 42, 네이티브 애드온 속도
 | **React Native (Metro)** | `metro.config.js`에서 `@scriptcable/react-native/metro`의 `withScriptcableMetro()` | Metro 0.87 / RN 0.88 실번들 (2026-10-21) |
 | **Expo** | 동일한 `withScriptcableMetro()` — Expo의 번들러는 Metro 그 자체입니다. `@expo/metro-config` 기본 설정 위에 등록하세요 (`metro.config.js`) | Expo 58 실제 metro 설정(`getDefaultConfig`) 번들 — drop-in 브리지 포함, 엔트리 소스 배제 (2026-10-22) |
 | **Electron** | main: `import { createClient } from '@scriptcable/client'` (node conditions — 생성 패키지는 런타임 플레이버의 **컴파일된 `.js`를 함께 내보냅니다**. Electron의 Node는 `.ts`를 로드하지 못함), renderer: 기존처럼 Vite/Webpack 플러그인 | Electron 33 실런타임: main은 네이티브 코어 호출, vite 빌드 renderer는 커스텀 프로토콜로 WASM drop-in 호출 (2026-10-22) |
-| **Astro / SvelteKit / Nuxt / Remix / SolidStart** | 전부 Vite 내장 — `@scriptcable/vite`를 각자의 `vite.plugins`에 등록 (Astro → `astro.config.mjs`의 `vite.plugins`; Nuxt → module 또는 `vite.plugins`; SvelteKit/Remix/SolidStart → `vite.config`) | Astro 5.18 실제 `astro build`와 SvelteKit 2 실제 `vite build`(client-only 페이지) — client 번들에 drop-in 포함, WASM 정적 산출 (2026-10-22); Nuxt/Remix/SolidStart는 같은 Vite 훅 경로 |
+| **Astro / SvelteKit / Nuxt / Remix (React Router) / SolidStart** | 전부 Vite 내장 — `@scriptcable/vite`를 각자의 `vite.plugins`에 등록. Nuxt 4는 vite root를 `srcDir`(`app/`)로 옮기므로 프로젝트 루트를 명시하세요: `scriptcable({ root: import.meta.dirname })` | Astro 5.18, SvelteKit 2, Nuxt 4.6, React Router 8.5 (SPA 모드), SolidStart 2.0 (`@solidjs/start` + vite 8) — 실빌드: client 번들에 drop-in 포함, WASM 정적 산출 (2026-10-22) |
 | **Rollup** | 동일 플러그인 (`root` 옵션) — `resolveId`는 rollup 표준 훅 형태. TS 변환과 `.js`→`.ts` 형제 해석은 호스트 몫(ts/esbuild 플러그인과 짝) | rollup 4 실빌드 — 엔트리 import가 drop-in으로 리다이렉트 (2026-10-22) |
+| **Deno** | 플러그인 불필요 — export conditions가 `deno` 플레이버를 고릅니다(컴파일된 `.js`로 emit되고, Deno가 스스로 켜는 `node` 조건보다 **앞서** 매니페스트에 배치). 먼저 `scriptcable build --target wasm --hosts deno` (코드젠 CLI는 Bun에서 실행) | Deno 2.9 실런타임 — bare `@scriptcable/client` import + `deno run -A`, 플래그·설정 0 (2026-10-22) |
+| **Cloudflare Workers** | 플러그인 불필요 — wrangler는 `workerd` 조건으로 번들을 해석하고, workers 플레이버는 wasm을 정적 import(wrangler 기본 CompiledWasm 규칙)하므로 fetch도 TLA도 없음 | wrangler 4.151 — dry-run 번들 + 실제 `wrangler dev`(workerd) HTTP 호출 42 (2026-10-22) |
 
 drop-in 플레이버: 브라우저 그래프는 모듈 로드 시 top-level await로 WASM을 1회 초기화합니다(빌드 타깃 **ES2022+** 필요, 예: vite `build.target: 'es2022'`). 서버 그래프는 **await이 전혀 없습니다**(`createClientSync()` — CommonJS 출력 서버 번들에도 안전). Metro는 첫 호출 때 브리지 클라이언트를 lazy 생성합니다.
 
@@ -221,6 +225,8 @@ Electron 관련 참고 두 가지: 생성 패키지의 `bun`/`node` conditions�
 
 scriptc iOS/Android 아카이브를 네이티브 모듈(Xcode / NDK CMake)에 링크하고 `createReactNativeEngine` / `createLynxEngine`으로 브리지하세요. Lynx 번들링은 `@scriptcable/webpack`의 `ScriptcaRspackPlugin` 사용 — Rspack도 enhanced-resolve drop-in이 자동 연결됩니다.
 
+**Android는 네이티브 쪽도 생성됩니다**: `scriptcable build --platform android`가 android-arm64용 아카이브를 크로스컴파일(scriptc의 `@scriptc/runtime-android-arm64` + `zig cc`)하고 `.scriptcable/generated/android/`에 브리지 모듈을 내보냅니다 — C++ `call(exportName, argsJson)` dispatch, JNI 래퍼, 바로 쓰는 `CableModule.kt` + 패키지, 아카이브를 정적 링크하는 CMakeLists. prebuild 프로젝트에 연결하면(복사 + 패키지 등록 + `externalNativeBuild` 한 블록 — `examples/react-native-app/scripts/wire-android.mjs`가 정확히 이 작업) 손으로 작성하던 네이티브 모듈이 끝납니다. 생성된 dispatch가 호스트에서 컴파일되며 JSON 브리지 계약을 통과하는 것이 `test:android`로, 와이어링된 앱이 브리지 `.so`를 싣는 arm64 APK로 조립되는 것이 gradle 빌드로 검증됩니다. 에뮬레이터 실행 자체는 푸시 시 CI가 수행합니다 — `.github/workflows/android-emulator.yml`가 KVM ARM64 러너에서 arm64 에뮬레이터를 띄우고 logcat으로 42를 단언합니다.
+
 Metro drop-in (`metro.config.js`, `scriptcable build --watch`를 Metro와 함께 실행):
 
 ```js
@@ -238,6 +244,20 @@ const { getDefaultConfig } = require('expo/metro-config');
 const { withScriptcableMetro } = require('@scriptcable/react-native/metro');
 module.exports = withScriptcableMetro(getDefaultConfig(__dirname));
 ```
+
+### Deno / Cloudflare Workers
+
+둘 다 번들러 플러그인 없이 생성 클라이언트를 실행합니다 — export conditions가 플레이버를 고르는, 다른 런타임과 같은 한 줄 import DX입니다:
+
+```bash
+scriptcable build --target wasm --hosts deno    # workers도 동일 (--hosts workers)
+deno run -A src/main.ts                          # 안에서 @scriptcable/client를 bare import
+```
+
+- **Deno** (`examples/deno-app`): `deno` 플레이버는 **컴파일된 `.js`**로 emit됩니다(Deno는 `node_modules` 하위 타입 제거를 거부함) — 그리고 매니페스트는 `deno` 조건을 `node`보다 앞에 둡니다(Deno가 `node`를 스스로 켜므로). wasm은 생성 디렉터리에서 직접 읽어 URL 프로브가 없습니다. 일반 `deno run -A` — 플래그도 `deno.json`도 없습니다.
+- **Cloudflare Workers** (`examples/workers-app`): `workerd` 플레이버는 wasm을 정적 import합니다 — wrangler의 기본 CompiledWasm 규칙이 컴파일된 모듈을 번들에 넣어주므로 `createClient()`에 fetch도 top-level await도 필요 없습니다. 실제 `wrangler dev`(workerd) 호출로 검증됐습니다.
+
+공통 전제: 코드젠 CLI 자체는 **Bun**에서 실행됩니다(오늘날 모든 호스트와 동일) — CI나 개발 머신에서 `scriptcable build`를 실행하면, 생성된 클라이언트가 Deno/workerd에서 실행됩니다. 런타임에는 Bun이 필요 없습니다.
 
 ## 워치 모드
 
