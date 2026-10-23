@@ -225,7 +225,23 @@ Electron 관련 참고 두 가지: 생성 패키지의 `bun`/`node` conditions�
 
 scriptc iOS/Android 아카이브를 네이티브 모듈(Xcode / NDK CMake)에 링크하고 `createReactNativeEngine` / `createLynxEngine`으로 브리지하세요. Lynx 번들링은 `@scriptcable/webpack`의 `ScriptcaRspackPlugin` 사용 — Rspack도 enhanced-resolve drop-in이 자동 연결됩니다.
 
-**Android는 네이티브 쪽도 생성됩니다**: `scriptcable build --platform android`가 android-arm64용 아카이브를 크로스컴파일(scriptc의 `@scriptc/runtime-android-arm64` + `zig cc`)하고 `.scriptcable/generated/android/`에 브리지 모듈을 내보냅니다 — C++ `call(exportName, argsJson)` dispatch, JNI 래퍼, 바로 쓰는 `CableModule.kt` + 패키지, 아카이브를 정적 링크하는 CMakeLists. prebuild 프로젝트에 연결하면(복사 + 패키지 등록 + `externalNativeBuild` 한 블록 — `examples/react-native-app/scripts/wire-android.mjs`가 정확히 이 작업) 손으로 작성하던 네이티브 모듈이 끝납니다. 생성된 dispatch가 호스트에서 컴파일되며 JSON 브리지 계약을 통과하는 것이 `test:android`로, 와이어링된 앱이 브리지 `.so`를 싣는 arm64 APK로 조립되는 것이 gradle 빌드로 검증됩니다. 에뮬레이터 실행 자체는 푸시 시 CI가 수행합니다 — `.github/workflows/android-emulator.yml`가 KVM ARM64 러너에서 arm64 에뮬레이터를 띄우고 logcat으로 42를 단언합니다.
+**Android는 네이티브 쪽도 생성·완성됩니다**: `scriptcable build --platform android`가 android-arm64용 아카이브를 크로스컴파일(scriptc의 `@scriptc/runtime-android-arm64`)하고 생성된 JNI dispatch와 함께 하나의 `lib{name}_cable.so`로 링크합니다 — Kotlin 모듈(`CableModule.kt` + 패키지)이 함께 나옵니다. Expo 프로젝트는 `@scriptcable/expo` config plugin이 `expo prebuild` 때 전부 연결합니다 — 손으로 쓰는 네이티브 모듈도 CMake도 없습니다:
+
+```json
+// app.json
+{ "expo": { "plugins": ["@scriptcable/expo"] } }
+```
+
+```bash
+scriptcable build --hosts react-native
+scriptcable build --platform android
+bunx expo prebuild -p android
+cd android && ./gradlew assembleDebug
+```
+
+기기 실측: Android 14 에뮬레이터에서 전체 체인 — RN JS → TurboModule interop → 생성 Kotlin 모듈 → JNI → C++ dispatch → 컴파일된 코어 — 이 `CABLE_RESULT:{"sum":42}`(logcat)로 동작합니다(`examples/react-native-app`, RN 없는 변형은 `device-jni-probe`). 생성 dispatch의 호스트 컴파일·JSON 브리지 계약은 `test:android`로 검증됩니다.
+
+⚠️ 앱 gradle에 `externalNativeBuild` 블록을 절대 추가하지 마세요 — RN 0.88 gradle 플러그인이 자체 cmake(libappmodules.so = 코어 TurboModule 바인딩)를 주입하는데, 두 번째 블록이 그 경로를 덮어써 앱이 기동 시 "'PlatformConstants' could not be found"로 죽습니다. 플러그인 없이 쓰려면 `examples/react-native-app/scripts/wire-android.mjs`(완성 .so를 jniLib로 복사 — CMake 없음). ARM 번역 에뮬레이터에서는 앱을 arm64로 빌드하세요(`-PreactNativeArchitectures=arm64-v8a` — 프로세스 전체가 번역으로 실행).
 
 Metro drop-in (`metro.config.js`, `scriptcable build --watch`를 Metro와 함께 실행):
 

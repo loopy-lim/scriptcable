@@ -18,7 +18,8 @@
     "@scriptcable/react-native": "workspace:*",
     "expo": "~58.0.16",
     "react": "19.3.0",
-    "react-native": "0.88.0"
+    "react-native": "0.88.0",
+    "@scriptcable/expo": "workspace:*"
   },
   "devDependencies": {
     "@babel/runtime": "^8.0.7",

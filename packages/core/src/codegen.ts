@@ -78,14 +78,22 @@ function tsType(cls: string): string {
   }
 }
 
+/** Methods calling the loader's pre-bound per-export functions (`fns`). */
 function methodBlock(profile: ScriptcableProfile): string {
   return profile.exports
     .map((e) => {
-      const args = e.params.length ? `, ${argList(e)}` : '';
+      const args = e.params.length ? argList(e) : '';
       return `${docComment(e)}  ${e.export}(${paramList(e)}): ${tsType(e.returns)} {
-    return mod.call('${e.export}'${args}) as ${tsType(e.returns)};
+    return fns['${e.export}'](${args}) as ${tsType(e.returns)};
   },`;
     })
+    .join('\n');
+}
+
+/** Per-call consts binding the typed N-API addon's functions once per client. */
+function addonConsts(profile: ScriptcableProfile): string {
+  return profile.exports
+    .map((e) => `      const __addon_${e.export} = addonFns['${e.export}'];`)
     .join('\n');
 }
 
@@ -98,7 +106,7 @@ function methodBlockDirect(profile: ScriptcableProfile): string {
         p === 'bytes' ? `Buffer.from(${paramName(e, i)} as Uint8Array)` : paramName(e, i),
       );
       return `${docComment(e)}  ${e.export}(${params}): ${tsType(e.returns)} {
-    return addonFns['${e.export}'](${argNames.join(', ')}) as ${tsType(e.returns)};
+    return __addon_${e.export}(${argNames.join(', ')}) as ${tsType(e.returns)};
   },`;
     })
     .join('\n');
@@ -113,6 +121,7 @@ function genNodeClient(
 ): string {
   const methods = methodBlock(profile);
   const directMethods = methodBlockDirect(profile);
+  const directConsts = addonConsts(profile);
   return `${header('node')}
 import { access, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -138,6 +147,10 @@ const SHARED_NAME = '${sharedRelPath}';
 const WASM_NAME = '${wasmRelPath}';
 const ADDON_NAME = '${profile.name}.node';
 const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
+// Bun: the pre-bound bun:ffi shared-library path is the fastest boundary
+// (~8-15 ns/call, direct symbols) — prefer it over the N-API addon (~22-30
+// ns). Node keeps the addon first; koffi stays an optional fallback.
+const IS_BUN = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined';
 
 async function exists(path: string): Promise<boolean> {
   try { await access(path); return true; } catch { return false; }
@@ -152,8 +165,10 @@ async function firstExisting(name: string): Promise<string | null> {
 }
 
 /**
- * Typed N-API direct binding — the fast path (~22-30 ns/call). Falls back
- * to the generic-FFI shared library when the addon is absent or unloadable.
+ * Typed N-API direct binding — the fast path on Node (~22-30 ns/call); on
+ * Bun the shared library's pre-bound bun:ffi functions are faster, so the
+ * client tiers this below them. Falls back to the generic-FFI shared
+ * library when the addon is absent or unloadable.
  */
 async function loadAddon(): Promise<Record<string, (...args: unknown[]) => unknown> | null> {
   try {
@@ -205,16 +220,19 @@ export type CreateClientSyncOptions = {
 
 /**
  * Synchronous client — no await anywhere, so it is safe in CommonJS-output
- * server bundles (where top-level await is unavailable). Prefers the typed
- * N-API addon (~24 ns/call), then the shared library via bun:ffi / koffi.
+ * server bundles (where top-level await is unavailable). Tiering: on Bun
+ * the shared library's pre-bound bun:ffi functions first (fastest boundary;
+ * the addon is a fallback when the shared library is absent), on Node the
+ * typed N-API addon first, then the shared library via bun:ffi / koffi.
  * WASM cannot load synchronously: when no native artifact exists this
  * throws with the fix — run 'scriptcable build' first, or use the async
  * createClient() for the WASM fallback.
  */
 export function createClientSync(options: CreateClientSyncOptions = {}): ScriptcableClient {
-  if (options.addon !== false && !options.sharedPath) {
+  if (!IS_BUN && options.addon !== false && !options.sharedPath) {
     const addonFns = loadAddonSync();
     if (addonFns) {
+${directConsts}
       return {
 ${directMethods}
   dispose() {},
@@ -224,10 +242,23 @@ ${directMethods}
   const shared = options.sharedPath ?? findSharedSync();
   if (shared) {
     const mod = loadNativeLibrarySync(shared, PROFILE);
+    const fns = mod.fns;
     return {
 ${methods}
   dispose() { mod.dispose(); },
     };
+  }
+  if (IS_BUN && options.addon !== false && !options.sharedPath) {
+    // Bun reaches the addon only when the shared library is absent — keep
+    // it as a working fallback instead of throwing.
+    const addonFns = loadAddonSync();
+    if (addonFns) {
+${directConsts}
+      return {
+${directMethods}
+  dispose() {},
+      };
+    }
   }
   throw new Error(
     "No native artifacts found for '" + PROFILE.name + "' (searched: " + SEARCH_DIRS.join(', ') + '). ' +
@@ -246,9 +277,10 @@ export type CreateClientOptions = {
 };
 
 export async function createClient(options: CreateClientOptions = {}): Promise<ScriptcableClient> {
-  if (!options.preferWasm && options.addon !== false && !options.sharedPath) {
+  if (!options.preferWasm && !IS_BUN && options.addon !== false && !options.sharedPath) {
     const addonFns = await loadAddon();
     if (addonFns) {
+${directConsts}
       return {
 ${directMethods}
   dispose() {},
@@ -259,9 +291,22 @@ ${directMethods}
     const shared = options.sharedPath ?? (await firstExisting(SHARED_NAME));
     if (shared) {
       const mod = await loadNativeLibrary(shared, PROFILE);
+      const fns = mod.fns;
       return {
 ${methods}
   dispose() { mod.dispose(); },
+      };
+    }
+  }
+  if (IS_BUN && !options.preferWasm && options.addon !== false && !options.sharedPath) {
+    // Bun reaches the addon only when the shared library is absent — keep
+    // it as a working fallback instead of going straight to wasm.
+    const addonFns = await loadAddon();
+    if (addonFns) {
+${directConsts}
+      return {
+${directMethods}
+  dispose() {},
       };
     }
   }
@@ -277,6 +322,7 @@ ${methods}
     wasi,
     callbacks: options.callbacks ?? {},
   });
+  const fns = mod.fns;
   return {
 ${methods}
   dispose() { mod.dispose(); },
@@ -385,6 +431,7 @@ export async function createClient(options: CreateClientOptions = {}): Promise<S
     wasi: options.wasi ?? createMinimalWasi(),
     callbacks: options.callbacks ?? {},
   });
+  const fns = mod.fns;
   return {
 ${methods}
   dispose() { mod.dispose(); },
@@ -401,8 +448,8 @@ function wasmMethods(profile: ScriptcableProfile): string {
   return profile.exports
     .map((e) => {
       const params = e.params.map((_, i) => `arg${i}`).join(', ');
-      const args = e.params.length ? `, ${params}` : '';
-      return `  ${e.export}(${e.params.map((p, i) => `arg${i}: ${tsType(p)}`).join(', ')}): ${tsType(e.returns)} {\n    return mod.call('${e.export}'${args}) as ${tsType(e.returns)};\n  },`;
+      const args = e.params.length ? params : '';
+      return `  ${e.export}(${e.params.map((p, i) => `arg${i}: ${tsType(p)}`).join(', ')}): ${tsType(e.returns)} {\n    return fns['${e.export}'](${args}) as ${tsType(e.returns)};\n  },`;
     })
     .join('\n');
 }
@@ -410,7 +457,7 @@ function wasmMethods(profile: ScriptcableProfile): string {
 /**
  * Shared tail for the fetch-free WASM flavors (deno, workers): options type,
  * async createClient, and exports. Each flavor defines `resolveModule()`
- * and the `mod.call` methods in its prelude.
+ * and the `fns` methods in its prelude.
  */
 function wasmFlavorTail(methods: string): string {
   return `export type CreateClientOptions = {
@@ -430,6 +477,7 @@ export async function createClient(options: CreateClientOptions = {}): Promise<S
     wasi: options.wasi ?? createMinimalWasi(),
     callbacks: options.callbacks ?? {},
   });
+  const fns = mod.fns;
   return {
 ${methods}
   dispose() { mod.dispose(); },
@@ -1045,12 +1093,16 @@ import java.io.File
  * translation (where the RN runtime must stay x86_64 but the scriptc archive
  * is arm64-only) the module .so ships in assets/ and is extracted to
  * filesDir, then loaded by absolute path so the native bridge translates it.
+ * A failed load never crashes the app — calls reject with a clear error.
  */
 class CableModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-  init {
+  private val loadError: Throwable? = try {
     loadNativeLibrary(reactContext)
+    null
+  } catch (t: Throwable) {
+    t
   }
 
   private fun loadNativeLibrary(ctx: Context) {
@@ -1074,6 +1126,7 @@ class CableModule(private val reactContext: ReactApplicationContext) :
   @ReactMethod
   fun call(name: String, argsJson: String, promise: Promise) {
     try {
+      loadError?.let { throw it }
       promise.resolve(nativeCall(name, argsJson))
     } catch (e: Throwable) {
       promise.reject("NATIVE_ERROR", e.message, e)
@@ -1203,8 +1256,9 @@ import type { ScriptcableClient } from '../types.js';
 
 /**
  * Drop-in client (server graphs). No await anywhere — safe in
- * CommonJS-output server bundles. Loads the typed N-API addon, falling
- * back to the shared library; throws with the fix when no native artifact
+ * CommonJS-output server bundles. Tiering follows the runtime (see the
+ * generated client): Bun prefers the shared library's pre-bound functions,
+ * Node the typed N-API addon; throws with the fix when no native artifact
  * has been built yet.
  */
 const client: ScriptcableClient = createClientSync();

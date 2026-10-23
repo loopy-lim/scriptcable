@@ -136,4 +136,31 @@ console.log(JSON.stringify({
     assert.equal(out.greet, 'hello, direct', 'string param+return must survive the addon path (double-free guard)');
     assert.deepEqual(out.bytes, [1, 2, 3], 'bytes round-trip through (ptr,len) ABI with a custom param name');
   }, 120_000);
+
+  it('builds the wasm target — the generated pre-bound fns keep bool parity there', async () => {
+    const project = await makeProject();
+    const code = await runBuild({ cwd: project, target: 'wasm' });
+    assert.equal(code, 0);
+    const probe = Bun.spawnSync({
+      cmd: [
+        'bun',
+        '-e',
+        `const m = await import('@scriptcable/client');
+const c = await m.createClient({ preferWasm: true });
+console.log(JSON.stringify({
+  add: c.add(20, 22),
+  yes: c.isPositive(3),
+  no: c.isPositive(-1),
+}));`,
+      ],
+      cwd: project,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    assert.equal(probe.exitCode, 0, `wasm client import failed: ${String(probe.stderr)}`);
+    const out = JSON.parse(String(probe.stdout));
+    assert.equal(out.add, 42);
+    assert.equal(out.yes, true, 'wasm fns must shape bool returns to real booleans, not 1/0');
+    assert.equal(out.no, false, 'wasm fns must shape bool returns to real booleans, not 1/0');
+  }, 120_000);
 });

@@ -5,6 +5,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ScriptcableToolchainError } from '@scriptcable/types';
 import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
+import { generateClients } from './codegen.js';
 import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
 import { ensureClientPackageLink } from './client-package.js';
 import { buildNodeAddon, canBuildNodeAddon, napiAddonFileName } from './napi-addon.js';
@@ -383,11 +384,34 @@ export async function buildCore(
   }
   if (target === 'native' || target === 'both') {
     result.nativePath = await runBuild('native');
+    if (androidArm64) {
+      // Materialize the JNI dispatch sources so the bridge .so ships
+      // COMPLETE (JNI + dispatch + statically-linked archive in one DSO).
+      // The RN codegen writes the same files afterwards — skip-identical.
+      const androidGen = join(outDir, 'generated', 'android');
+      const { files: rnFiles } = generateClients(config, ['react-native'], {
+        wasmFileName: `${config.name}.wasm`,
+      });
+      await mkdir(androidGen, { recursive: true });
+      for (const [name, body] of Object.entries(rnFiles)) {
+        if (!name.startsWith('android/')) continue;
+        const p = join(outDir, 'generated', name);
+        await mkdir(dirname(p), { recursive: true });
+        await writeFile(p, body);
+      }
+    }
     result.sharedPath = await linkSharedLibrary({
       archivePath: result.nativePath!,
       outPath: join(nativeDir, sharedLibraryFileName(config.name)),
       target: androidArm64 ? 'aarch64-linux-android' : undefined,
       cwd,
+      extraSources: androidArm64
+        ? [
+            join(outDir, 'generated', 'android', 'cable_host.cpp'),
+            join(outDir, 'generated', 'android', 'cable_jni.cpp'),
+          ]
+        : undefined,
+      includeDirs: androidArm64 ? [join(outDir, 'generated', 'android')] : undefined,
     });
     // Typed N-API direct binding — soft failure: generic FFI remains the fallback.
     if (addonEligible) {

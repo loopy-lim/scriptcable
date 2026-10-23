@@ -336,7 +336,23 @@ export default withScriptcableMetro(getDefaultConfig(__dirname));
 
 On device, TurboModule drop-in calls resolve as Promises — same semantics as the bridge client above.
 
-`scriptcable build --hosts react-native` also emits `NativeCable.ts` (TurboModule spec) and `cable.json` (RN CLI codegen config). **On Android the native side is generated too**: `scriptcable build --platform android` cross-compiles the archive for android-arm64 (scriptc's `@scriptc/runtime-android-arm64` + `zig cc`) and emits the bridge module under `.scriptcable/generated/android/` — the C++ `call(exportName, argsJson)` dispatch, the JNI wrapper, a ready `CableModule.kt` + package, and a CMakeLists that static-links the archive. Wire it into your prebuilt project (copy + register the package + one `externalNativeBuild` block — `examples/react-native-app/scripts/wire-android.mjs` does exactly that) and the native module you used to write by hand is done. Verified without a device: the generated dispatch compiles and passes the JSON bridge contract on the host (`test:android`), and the wired app assembles into an arm64 APK that ships the bridge `.so`. The emulator run itself executes in CI — `.github/workflows/android-emulator.yml` boots an arm64 emulator on a KVM ARM64 runner and asserts the 42 through logcat (runs on push). iOS still links the archive in your Expo module (Xcode) — see `packages/react-native/README.md` for the full recipe and `examples/react-native-app` for the `useCable` hook pattern with automatic mock fallback.
+`scriptcable build --hosts react-native` also emits `NativeCable.ts` (TurboModule spec) and `cable.json` (RN CLI codegen config). **On Android the native side is generated AND shipped complete**: `scriptcable build --platform android` cross-compiles the archive for android-arm64 (scriptc's `@scriptc/runtime-android-arm64`) and links it with the generated JNI dispatch into one ready `lib{name}_cable.so` — the Kotlin module (`CableModule.kt` + package) ships beside it. For Expo projects the `@scriptcable/expo` config plugin wires everything during `expo prebuild` — no hand-written native module, no CMake:
+
+```json
+// app.json
+{ "expo": { "plugins": ["@scriptcable/expo"] } }
+```
+
+```bash
+scriptcable build --hosts react-native
+scriptcable build --platform android
+bunx expo prebuild -p android
+cd android && ./gradlew assembleDebug
+```
+
+Verified on-device: an Android 14 emulator runs the full chain — RN JS → TurboModule interop → the generated Kotlin module → JNI → C++ dispatch → the compiled core (`CABLE_RESULT:{"sum":42}` in logcat; `examples/react-native-app`, and `examples/react-native-app/device-jni-probe` for the no-RN variant). The generated dispatch also passes the JSON bridge contract on the host (`test:android`).
+
+⚠️ Never add an `externalNativeBuild` block to the app gradle — RN 0.88's gradle plugin injects its own cmake that builds `libappmodules.so` (the core TurboModule bindings); a second block replaces the plugin's path and the app dies at launch with "'PlatformConstants' could not be found". The plugin-free path is `examples/react-native-app/scripts/wire-android.mjs` (copies the prebuilt `.so` as a jniLib — no CMake). For ARM-translation emulators build the app as arm64 (`-PreactNativeArchitectures=arm64-v8a`) so the whole process runs translated. iOS still links the archive in your Expo module (Xcode) — see `packages/react-native/README.md` for the full recipe and `examples/react-native-app` for the `useCable` hook pattern with automatic mock fallback.
 
 **Expo**: the bundler is still Metro — wrap Expo's own default config and the drop-in applies unchanged (`examples/react-native-app/scripts/expo-bundle.mjs` is a verified smoke over Expo 58's real `getDefaultConfig`):
 

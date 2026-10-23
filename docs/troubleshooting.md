@@ -186,9 +186,17 @@ scriptc ships runtime packs per target. `scriptcable build --platform android` a
 
 The archive objects use direct PC-relative references; in a shared library every default-visibility symbol is preemptible, so lld refuses them. The build emits a version script (`global: Java_*; local: *;`) that localizes everything but the JNI entry points — if you link the archive yourself, do the same. Also pass `-nostdlib`: zig has no bionic to resolve, and a dlopen'd module gets libc symbols from the Android runtime.
 
+### Expo/RN app dies at launch: `'PlatformConstants' could not be found` → `Global was not installed`
+
+An `externalNativeBuild` block in the app gradle replaces the cmake that RN 0.88's gradle plugin injects — that injected build produces `libappmodules.so`, which registers the core TurboModules (`PlatformConstants` among them). scriptcable's config plugin (`@scriptcable/expo`) does NOT add one: the bridge `.so` is prebuilt by `scriptcable build --platform android` and ships as a plain jniLib. If you wired things by hand, do the same — jniLibs only, never a second cmake. (Verified by isolation: the identical failure occurs with the scriptcable package removed, as long as the foreign cmake block is present.)
+
+### arm64-only APK on an x86_64 ARM-translation emulator: `dlopen failed: ... is for EM_AARCH64` or `cannot locate symbol "stderr"`
+
+Two different layers: (1) SoLoader picks the APK lib dir by the DEVICE's preferred ABI — with `extractNativeLibs=false` an arm64-only APK is never extracted there; fix with `expo.useLegacyPackaging=true` (the config plugin flips it). (2) Whether a foreign-ABI `.so` can be dlopen'd from an x86_64 process depends on the image's translation: Android 16 google_apis images reject it outright (`is for EM_AARCH64 instead of EM_X86_64`), Android 14 resolves functions but fails eager DATA relocations (`stderr`, `environ`). Build the app **arm64-only** (`-PreactNativeArchitectures=arm64-v8a`) so the whole process runs translated — that works on both.
+
 ### Emulator/app-level verification
 
-`bun run --filter @scriptcable/example-react-native-app test:android` proves the generated dispatch (compiles the generated C++ verbatim on the host, asserts the JSON bridge contract). Running the real bridge inside Android needs an arm64 emulator — `.github/workflows/android-emulator.yml` does it on a KVM ARM64 runner (a WSL2/x86 dev box has neither KVM access nor an arm64-hypervisor path).
+`bun run --filter @scriptcable/example-react-native-app test:android` proves the generated dispatch (compiles the generated C++ verbatim on the host, asserts the JSON bridge contract). The full RN app runs on-device too: the config-plugin flow (`expo prebuild` → gradle → install) was verified end-to-end on a local Android 14 emulator — `CABLE_RESULT:{"sum":42}` in logcat (`examples/react-native-app`, `device-jni-probe` for the RN-free variant). CI: `.github/workflows/android-emulator.yml`.
 
 ## Nuxt
 

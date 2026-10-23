@@ -5,6 +5,9 @@
     "version": "1.0.0",
     "android": {
       "package": "com.scriptcable.rnexample"
-    }
+    },
+    "plugins": [
+      "@scriptcable/expo"
+    ]
   }
 }

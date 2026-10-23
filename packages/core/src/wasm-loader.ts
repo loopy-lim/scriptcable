@@ -17,6 +17,12 @@ export type LoadedModule = {
   profile: ScriptcableProfile;
   /** Call a typed export by TypeScript name */
   call: (exportName: string, ...args: unknown[]) => unknown;
+  /**
+   * Per-export pre-bound functions keyed by TypeScript export name — skips
+   * the dispatch of `call`. f64/f32-only signatures bind the wasm export
+   * directly; the rest reuse the same marshaling as `call`.
+   */
+  fns: Record<string, (...args: unknown[]) => unknown>;
   dispose: () => void;
 };
 
@@ -193,6 +199,40 @@ function callExport(
   }
 }
 
+/** f64/f32-only signatures pass straight through the wasm boundary. */
+function hasDirectWasmSignature(def: ExportDef): boolean {
+  return (
+    def.params.every((p) => p === 'f64' || p === 'f32') &&
+    def.returns !== 'string' &&
+    def.returns !== 'bytes' &&
+    def.returns !== 'cstring'
+  );
+}
+
+/** Pre-bound direct wasm export — Number() coercion only, no dispatch. */
+function makeDirectWasmFn(
+  raw: (...a: number[]) => unknown,
+  def: ExportDef,
+): (...args: unknown[]) => unknown {
+  // callExport shapes bool returns to real booleans — the direct path must
+  // keep that parity (0/1 from wasm would leak through the `as boolean` cast).
+  const shape = (v: unknown): unknown => (def.returns === 'bool' ? Boolean(v) : v);
+  switch (def.params.length) {
+    case 0:
+      return () => shape(raw());
+    case 1:
+      return (a) => shape(raw(Number(a)));
+    case 2:
+      return (a, b) => shape(raw(Number(a), Number(b)));
+    case 3:
+      return (a, b, c) => shape(raw(Number(a), Number(b), Number(c)));
+    case 4:
+      return (a, b, c, d) => shape(raw(Number(a), Number(b), Number(c), Number(d)));
+    default:
+      return (...args) => shape(raw(...args.map((v) => Number(v))));
+  }
+}
+
 function buildScriptcImports(
   profile: ScriptcableProfile,
   getApi: () => WasmExports,
@@ -311,6 +351,20 @@ export async function loadWasmModule(
 
   const byName = new Map(profile.exports.map((e) => [e.export, e]));
 
+  const fns: Record<string, (...args: unknown[]) => unknown> = {};
+  for (const e of profile.exports) {
+    const raw = api[e.symbol];
+    if (typeof raw !== 'function') {
+      fns[e.export] = () => {
+        throw new ScriptcableError('MISSING_EXPORT', `Export symbol ${e.symbol} not found in WASM`);
+      };
+    } else if (hasDirectWasmSignature(e)) {
+      fns[e.export] = makeDirectWasmFn(raw as (...a: number[]) => unknown, e);
+    } else {
+      fns[e.export] = (...args: unknown[]) => callExport(api, e, args);
+    }
+  }
+
   return {
     exports: api,
     profile,
@@ -325,6 +379,7 @@ export async function loadWasmModule(
       }
       return callExport(api, def, args);
     },
+    fns,
     dispose() {
       // Wasm memory is GC'd with the instance; nothing to free explicitly.
     },

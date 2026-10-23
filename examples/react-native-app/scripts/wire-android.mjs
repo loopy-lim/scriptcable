@@ -3,7 +3,15 @@
  * Idempotent — safe to re-run after every `expo prebuild` / core rebuild:
  *   bunx expo prebuild -p android --no-install
  *   bun scripts/wire-android.mjs
- *   cd android && ./gradlew assembleDebug -PreactNativeArchitectures=arm64
+ *   cd android && ./gradlew assembleDebug
+ *
+ * The bridge .so is PREBUILT by `scriptcable build --platform android`
+ * (JNI + dispatch + statically-linked scriptc archive) — it ships as a
+ * jniLib, so no app-level CMake is added. IMPORTANT: never add an
+ * `externalNativeBuild` block to app/build.gradle — RN 0.88's gradle
+ * plugin injects its own (it builds libappmodules.so, which registers the
+ * core TurboModules); a second block replaces the plugin's path and the
+ * app dies with "'PlatformConstants' could not be found".
  */
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -11,47 +19,43 @@ import { join, resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const android = join(root, 'android');
 const gen = join(root, '.scriptcable', 'generated', 'android');
+const soSource = join(root, '.scriptcable', 'android-arm64', 'libcalculator.so');
 
 if (!existsSync(android)) throw new Error('android/ missing — run `bunx expo prebuild -p android --no-install` first');
-for (const f of ['cable_host.cpp', 'cable_host.h', 'cable_jni.cpp', 'cable-version.map', 'CableModule.kt', 'CablePackage.kt']) {
-  if (!existsSync(join(gen, f))) {
-    throw new Error(`generated/android/${f} missing — run \`bun run build:hosts\` first`);
-  }
+for (const f of ['CableModule.kt', 'CablePackage.kt']) {
+  if (!existsSync(join(gen, f))) throw new Error(`generated/android/${f} missing — run \`bun run build:hosts\` first`);
 }
+if (!existsSync(soSource)) throw new Error('prebuilt bridge .so missing — run `bun run build:android` first');
 
-// 1) C++ + JNI into the app's jni dir
-const jni = join(android, 'app', 'src', 'main', 'jni');
-mkdirSync(jni, { recursive: true });
-for (const f of ['cable_host.cpp', 'cable_host.h', 'cable_jni.cpp', 'cable-version.map', 'dummy_abi.cpp']) {
-  copyFileSync(join(gen, f), join(jni, f));
-}
-// Hybrid packaging: the RN runtime runs as the device's preferred ABI, the
-// scriptc bridge .so (arm64-only) rides in assets/ and CableModule extracts
-// + loads it by absolute path on ARM-translation devices.
-const assets = join(android, 'app', 'src', 'main', 'assets');
-mkdirSync(assets, { recursive: true });
-copyFileSync(join(root, '.scriptcable', 'android-arm64', 'libcalculator.so'), join(assets, 'libcalculator_cable.so'));
-// The generated CMakeLists expects the archive two levels up (generated dir);
-// from the app jni dir it's five levels up (jni→main→src→app→android→project).
-writeFileSync(
-  join(jni, 'CMakeLists.txt'),
-  readFileSync(join(gen, 'CMakeLists.txt'), 'utf8').replace(
-    'CMAKE_CURRENT_SOURCE_DIR}/../../android-arm64/',
-    'CMAKE_CURRENT_SOURCE_DIR}/../../../../../.scriptcable/android-arm64/',
-  ),
-);
-
-// 2) Kotlin module + package
+// 1) Kotlin module + package
 const cablePkg = join(android, 'app', 'src', 'main', 'java', 'com', 'scriptcable', 'cable');
 mkdirSync(cablePkg, { recursive: true });
 copyFileSync(join(gen, 'CableModule.kt'), join(cablePkg, 'CableModule.kt'));
 copyFileSync(join(gen, 'CablePackage.kt'), join(cablePkg, 'CablePackage.kt'));
 
-// 2b) The JS side imports './NativeCable' from src/ — metro resolves it
+// 2) The prebuilt bridge .so as a jniLib (arm64 devices)…
+const jniLibs = join(android, 'app', 'src', 'main', 'jniLibs', 'arm64-v8a');
+mkdirSync(jniLibs, { recursive: true });
+copyFileSync(soSource, join(jniLibs, 'libcalculator_cable.so'));
+// NOTE: do NOT add an `externalNativeBuild`/`ndk.abiFilters` block to
+// app/build.gradle — RN 0.88's gradle plugin injects its own cmake (it
+// builds libappmodules.so, the core TurboModule bindings); overriding the
+// path kills those bindings ("'PlatformConstants' could not be found").
+// For an ARM-translation emulator build the app instead with:
+//   ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a
+
+// 3) …and in assets for ARM-translation devices (x86_64 emulator/image):
+// the RN runtime stays x86_64, CableModule extracts this and System.loads
+// it by absolute path so the native bridge translates the arm64 code.
+const assets = join(android, 'app', 'src', 'main', 'assets');
+mkdirSync(assets, { recursive: true });
+copyFileSync(soSource, join(assets, 'libcalculator_cable.so'));
+
+// 4) The JS side imports './NativeCable' from src/ — metro resolves it
 // statically, so the generated spec must sit where the app imports it.
 copyFileSync(join(gen, '..', 'NativeCable.ts'), join(root, 'src', 'NativeCable.ts'));
 
-// 3) register the package in MainApplication (idempotent)
+// 5) Register the package in MainApplication (idempotent)
 const appKt = join(android, 'app', 'src', 'main', 'java', 'com', 'scriptcable', 'rnexample', 'MainApplication.kt');
 let app = readFileSync(appKt, 'utf8');
 if (!app.includes('CablePackage')) {
@@ -65,34 +69,15 @@ if (!app.includes('CablePackage')) {
   writeFileSync(appKt, app);
 }
 
-// 4) build the JNI library with the app (idempotent)
-const gradle = join(android, 'app', 'build.gradle');
-let g = readFileSync(gradle, 'utf8');
-if (!g.includes('externalNativeBuild')) {
-  if (!g.includes('defaultConfig {') || !g.includes('buildTypes {')) {
-    throw new Error('app/build.gradle: unexpected shape');
-  }
-  g = g.replace(
-    'defaultConfig {',
-    'defaultConfig {\n        ndk {\n            // x86_64: the RN runtime natively; arm64-v8a: the scriptc bridge\n            // (scriptc archives are arm64-only) — translation devices load it\n            // from assets (see CableModule).\n            abiFilters "arm64-v8a", "x86_64"\n        }',
-  );
-  // externalNativeBuild lives INSIDE the android block — anchor on buildTypes.
-  g = g.replace(
-    '    buildTypes {',
-    '    externalNativeBuild {\n        cmake {\n            path file(\'src/main/jni/CMakeLists.txt\')\n            version \'3.22.1\'\n        }\n    }\n\n    buildTypes {',
-  );
-  writeFileSync(gradle, g);
-  // arm64-only APKs on x86_64 translation devices: SoLoader picks the APK's
-  // dir by the DEVICE's preferred ABI (x86_64) — with extractNativeLibs=false
-  // nothing is extracted and the arm64 DSO is never found. The expo template
-  // ships this property as `false` — flip it.
-  const props = join(android, 'gradle.properties');
-  const p = readFileSync(props, 'utf8');
-  if (!p.includes('expo.useLegacyPackaging=true')) {
-    if (!/expo\.useLegacyPackaging\s*=/.test(p)) throw new Error('gradle.properties: expo.useLegacyPackaging missing');
-    writeFileSync(props, p.replace(/expo\.useLegacyPackaging=false/, 'expo.useLegacyPackaging=true'));
-  }
-  writeFileSync(gradle, g);
+// 6) arm64-only APKs on x86_64 translation devices: SoLoader picks the APK's
+// dir by the DEVICE's preferred ABI (x86_64) — with extractNativeLibs=false
+// nothing is extracted and the arm64 DSO is never found. The expo template
+// ships this property as `false` — flip it.
+const props = join(android, 'gradle.properties');
+const p = readFileSync(props, 'utf8');
+if (!p.includes('expo.useLegacyPackaging=true')) {
+  if (!/expo\.useLegacyPackaging\s*=/.test(p)) throw new Error('gradle.properties: expo.useLegacyPackaging missing');
+  writeFileSync(props, p.replace(/expo\.useLegacyPackaging=false/, 'expo.useLegacyPackaging=true'));
 }
 
-console.log('wire-android OK — cable module wired into android/');
+console.log('wire-android OK — bridge .so (jniLibs + assets) and CablePackage wired');

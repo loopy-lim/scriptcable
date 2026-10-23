@@ -119,6 +119,25 @@
 
 평가자가 검증 못 한 것(기록 유지): 워크플로의 실제 실행(푸시 필요), arm64 에뮬레이터 바이너리의 sdkmanager 가용성(Google 이슈 이력상 불확실 — F-1~3 수정 후에도 CI 첫 실행에서 관찰 필요), gradle 재실행(본 세션에서 수정 후 재실행으로 보완 — BUILD SUCCESSFUL, APK의 .so 갱신 확인).
 
+## G2 후속 — 사용자 요청 "기기를 만들어서 진행" + "RN zeroconfig" (2026-10-23)
+
+**기기 생성·실측**: 이 환경에 Android 14 x86_64 에뮬레이터 생성(KVM, 32.5초 부팅) — arm64 이미지는 에뮬레이터가 크로스 아키텍처 자체를 거부("System image must match the host architecture") 실측. 사용자 환경의 Android 16 에뮬레이터도 병행 사용.
+
+**RN 런타임 실패의 진짜 원인 규명(이전 세그먼트 판정 정정)**: 바이세트(순수 create-expo-app 정상 기동 vs 우리 앱 실패 → 순수 APK가 우리 번들을 정상 실행)로 좁혀 결과 — **원인은 wire-android가 앱 gradle에 추가한 `externalNativeBuild` 블록이 RN 0.88 플러그인이 주입하는 cmake(libappmodules.so = 코어 TM 바인딩)를 덮어쓴 것**. scriptcable 무관의 "상위 문제"로 잘못 판정했던 것을 정정(격리 실험이 externalNativeBuild 잔존 상태에서 진행된 맹점).
+
+**구현 변경**:
+- link-shared: android 링크 **NDK 드라이버 우선**(ANDROID_NDK_HOME/ANDROID_HOME/ndk 탐색, `aarch64-linux-android24-clang++`) — 실 DT_NEEDED(libc.so/libm.so/libdl.so/libc++_shared.so)를 만들어 번역 기기가 해결; zig 폴백은 데이터 시밤(stderr/stdout/environ null 정의) 유지. `extraSources`/`includeDirs` 옵션으로 생성 JNI·dispatch 소스를 .so에 직접 링크 — **생성 .so가 완성된 브리지**(JNI+dispatch+archive 통합).
+- 생성 CableModule.kt: 로딩 실패가 앱을 죽이지 않도록 방어(loadError 보관 → 호출 시 reject).
+- **`@scriptcable/expo` config plugin** 신설(packages/expo): expo prebuild 때 브리지 .so(jniLibs+assets)·Kotlin 모듈·MainApplication 등록·useLegacyPackaging·src/NativeCable.ts 복사를 자동 수행 — wire-android 수동 단계 제거(스크립트는 플러그인 없이 쓰는 폴백으로 유지). ⚠️ 앱 gradle에 externalNativeBuild 추가 금지를 문서화.
+- 앱 gradle에 externalNativeBuild/cmake 제거 → **RN이 에뮬레이터에서 정상 기동** + 플러그인 경로 end-to-end 실측.
+
+**기기 실측 결과(2026-10-23)**:
+- `CABLE_RESULT:{"sum":42}` — Android 14 에뮬레이터에서 **RN JS → TurboModule interop → 생성 Kotlin → JNI → C++ dispatch → scriptc arm64 archive** 전체 체인 실측.
+- `device-jni-probe`(RN 없는 JNI 프로브): add=42·mul=42·greet round-trip — "on-device bridge OK".
+- JNI 심볼 export 검증: libappmodules.so 재빌드 + `Java_..._nativeCall` 단일 export(버전 스크립트) 실측.
+
+**교훈(프로세스)**: 실패의 원인을 "상위 문제"로 묶기 전에, 성공하는 대조군(순수 템플릿)과의 **델타를 단계별로 제거**하는 바이세트가 필요했다. 첫 격리 실험은 externalNativeBuild 잔존 상태에서 진행되어 결론이 "상위 호환"으로 기울었다.
+
 ## G4 사용성·디자인: N/A
 
 UI 변경 없음(툴체인·codegen·예제·CI·문서).

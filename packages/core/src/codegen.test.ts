@@ -144,3 +144,44 @@ describe('drop-in clients', () => {
     assert.match(src, /export async function createClient/);
   });
 });
+
+describe('pre-bound per-export fns dispatch', () => {
+  it('node/bun clients call pre-bound fns and tier by runtime', () => {
+    const { files } = generateClients(CONFIG, ['node']);
+    const src = files['node.ts']!;
+    // shared-library + wasm tiers bind per-export functions
+    assert.match(src, /const fns = mod\.fns;/);
+    assert.match(src, /return fns\['add'\]\(/, 'methods go through pre-bound fns');
+    assert.doesNotMatch(src, /mod\.call\(/, 'generic call dispatch must be gone from methods');
+    // bun prefers the shared-library fast path; node keeps the addon first
+    assert.match(src, /const IS_BUN = typeof \(globalThis as \{ Bun\?: unknown \}\)\.Bun !== 'undefined';/);
+    assert.match(src, /if \(!IS_BUN && options\.addon !== false && !options\.sharedPath\) \{/);
+    assert.match(src, /if \(!options\.preferWasm && !IS_BUN && options\.addon !== false && !options\.sharedPath\) \{/);
+    // the addon stays a working fallback when the shared library is absent on Bun
+    assert.match(src, /if \(IS_BUN && options\.addon !== false && !options\.sharedPath\) \{/);
+    assert.match(src, /if \(IS_BUN && !options\.preferWasm && options\.addon !== false && !options\.sharedPath\) \{/);
+  });
+
+  it('addon tier hoists addonFns lookups into per-client consts', () => {
+    const { files } = generateClients(CONFIG, ['node']);
+    const src = files['node.ts']!;
+    assert.match(src, /const __addon_add = addonFns\['add'\];/);
+    assert.match(src, /return __addon_add\(/);
+    assert.doesNotMatch(src, /addonFns\['add'\]\(/, 'no per-call property lookup on the addon tier');
+  });
+
+  it('browser/deno/workers/tauri/lynx wasm methods use pre-bound fns', () => {
+    const browser = browserClient();
+    assert.match(browser, /const fns = mod\.fns;/);
+    assert.match(browser, /return fns\['add'\]\(/);
+    const deno = generateClients(CONFIG, ['deno']).files['deno.ts']!;
+    assert.match(deno, /const fns = mod\.fns;/);
+    const workers = generateClients(CONFIG, ['workers']).files['workers.ts']!;
+    assert.match(workers, /return fns\['add'\]\(/);
+    const { files } = generateClients(CONFIG, ['tauri', 'lynx']);
+    for (const f of ['tauri.ts', 'lynx.ts']) {
+      assert.match(files[f]!, /const fns = mod\.fns;/, `${f} missing the fns hoist`);
+      assert.match(files[f]!, /return fns\['add'\]\(/, `${f} not calling pre-bound fns`);
+    }
+  });
+});

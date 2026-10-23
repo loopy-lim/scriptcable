@@ -11,11 +11,20 @@ import { sharedLibraryFileName } from './link-shared.js';
 export type NativeModule = {
   profile: ScriptcableProfile;
   call: (exportName: string, ...args: unknown[]) => unknown;
+  /**
+   * Per-export pre-bound functions keyed by TypeScript export name —
+   * skips the name lookup + argument-array dispatch of `call`. Number-only
+   * signatures bind the FFI symbol directly; the rest reuse the same
+   * marshaling as `call`.
+   */
+  fns: Record<string, (...args: unknown[]) => unknown>;
   dispose: () => void;
 };
 
 type FfiBinding = {
   call: (symbol: string, args: unknown[]) => unknown;
+  /** Pre-bound per-export functions keyed by export name (see NativeModule.fns). */
+  fns: Record<string, (...args: unknown[]) => unknown>;
   close?: () => void;
 };
 
@@ -75,17 +84,33 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
   const init = sym[profile.abi.init_symbol];
   if (typeof init === 'function') (init as () => void)();
 
+  const helpers: PtrHelpers = {
+    ptr: (buf) => ptr(buf),
+    readBytes: (addr, len) => new Uint8Array(toArrayBuffer(addr, 0, len)),
+  };
+  const fns: Record<string, (...args: unknown[]) => unknown> = {};
+  for (const e of profile.exports) {
+    const fn = sym[e.symbol];
+    if (typeof fn !== 'function') {
+      fns[e.export] = () => {
+        throw new ScriptcableError('MISSING_EXPORT', e.symbol);
+      };
+    } else if (hasDirectFfiSignature(e)) {
+      fns[e.export] = makeDirectFfiFn(fn, e);
+    } else {
+      fns[e.export] = (...args: unknown[]) => invokeNative(fn, e, args, helpers);
+    }
+  }
+
   return {
     call(symbol, args) {
       const def = profile.exports.find((x) => x.symbol === symbol);
       if (!def) throw new ScriptcableError('MISSING_EXPORT', symbol);
       const fn = sym[symbol];
       if (typeof fn !== 'function') throw new ScriptcableError('MISSING_EXPORT', symbol);
-      return invokeNative(fn, def, args, {
-        ptr: (buf) => ptr(buf),
-        readBytes: (addr, len) => new Uint8Array(toArrayBuffer(addr, 0, len)),
-      });
+      return invokeNative(fn, def, args, helpers);
     },
+    fns,
   };
 }
 
@@ -127,6 +152,8 @@ function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffiMod: Ko
       if (!fn) throw new ScriptcableError('MISSING_EXPORT', symbol);
       return fn(...args);
     },
+    // koffi's funcs already marshal per export — re-key them by export name.
+    fns: Object.fromEntries(profile.exports.map((e) => [e.export, funcs[e.symbol]!])),
   };
 }
 
@@ -274,6 +301,51 @@ function invokeNative(
   return fn(...ffiArgs);
 }
 
+/** True when every param/return survives bun:ffi's direct symbol call unchanged. */
+function hasDirectFfiSignature(def: ExportDef): boolean {
+  const marshaled =
+    def.returns === 'string' || def.returns === 'bytes' || def.returns === 'cstring';
+  return (
+    !marshaled && def.params.every((p) => p !== 'string' && p !== 'bytes' && p !== 'cstring')
+  );
+}
+
+/** Return-value shaping shared with invokeNative (void, bool, BigInt i64 slots). */
+function shapeFfiReturn(def: ExportDef, value: unknown): unknown {
+  if (def.returns === 'void') return undefined;
+  if (def.returns === 'bool') return Boolean(value);
+  if (def.returns === 'i64' || def.returns === 'u64') {
+    return typeof value === 'bigint' ? Number(value) : value;
+  }
+  return value;
+}
+
+/**
+ * Per-export pre-bound direct call — no name lookup, no argument array.
+ * Explicit arities keep the fast path free of rest/spread allocation.
+ */
+function makeDirectFfiFn(
+  raw: (...a: never[]) => unknown,
+  def: ExportDef,
+): (...args: unknown[]) => unknown {
+  const params = def.params;
+  const arg = (i: number, v: unknown) => (params[i] === 'bool' ? (v ? 1 : 0) : v) as never;
+  switch (params.length) {
+    case 0:
+      return () => shapeFfiReturn(def, (raw as () => unknown)());
+    case 1:
+      return (a) => shapeFfiReturn(def, raw(arg(0, a)));
+    case 2:
+      return (a, b) => shapeFfiReturn(def, raw(arg(0, a), arg(1, b)));
+    case 3:
+      return (a, b, c) => shapeFfiReturn(def, raw(arg(0, a), arg(1, b), arg(2, c)));
+    case 4:
+      return (a, b, c, d) => shapeFfiReturn(def, raw(arg(0, a), arg(1, b), arg(2, c), arg(3, d)));
+    default:
+      return (...args) => shapeFfiReturn(def, raw(...(args.map((v, i) => arg(i, v)) as never[])));
+  }
+}
+
 function makeNativeModule(profile: ScriptcableProfile, binding: FfiBinding): NativeModule {
   const byName = new Map(profile.exports.map((e) => [e.export, e]));
 
@@ -290,6 +362,7 @@ function makeNativeModule(profile: ScriptcableProfile, binding: FfiBinding): Nat
       }
       return binding.call(def.symbol, args);
     },
+    fns: binding.fns,
     dispose() {
       binding.close?.();
     },
