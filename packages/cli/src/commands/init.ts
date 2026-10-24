@@ -1,5 +1,5 @@
 import { mkdir, writeFile, access } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 
 const CORE_TS = `/**
  * scriptcable core — compiled by scriptc into a native library (default).
@@ -54,8 +54,16 @@ export async function runInit(opts: {
   await mkdir(join(root, 'src'), { recursive: true });
   await writeFile(join(root, 'src', 'core.ts'), CORE_TS);
 
-  const slugName = opts.name.replace(/[^A-Za-z0-9_-]/g, '-');
-  const prefix = `${slug(opts.name)}_`;
+  // F-2: name은 경로 전체가 아니라 디렉터리 basename에서 — `/tmp/sc-perf-demo` → `sc-perf-demo`,
+  // `.`(커런트 디렉터리 init)은 cwd 이름. 소문자+URL 안전 문자로 정규화(npm name 규칙), 비면 'app'.
+  const dirName = basename(root);
+  const slugName =
+    dirName
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-')
+      .replace(/^[-_]+/, '')
+      .replace(/[-_]+$/, '') || 'app';
+  const prefix = `${slug(dirName)}_`;
   // Typed TS config — exports are inferred from src/core.ts, zero duplication.
   await writeFile(
     join(root, 'scriptcable.config.ts'),
@@ -246,7 +254,7 @@ Tests use \`createMockBridge\` — no device needed. See packages/react-native i
     join(root, 'package.json'),
     JSON.stringify(
       {
-        name: opts.name,
+        name: slugName,
         version: '0.1.0',
         private: true,
         type: 'module',

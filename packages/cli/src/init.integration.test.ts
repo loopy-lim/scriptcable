@@ -58,3 +58,35 @@ describe('init CI-durable client dep (integration)', () => {
     assert.equal(String(probe.stdout).trim(), 'function');
   }, 180_000);
 });
+
+describe('init name derivation (F-2 regression)', () => {
+  it('derives package/config name from the directory basename — not the path', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'sc-init-f2-'));
+    tmpRoots.push(parent);
+    const realParent = await realpath(parent);
+    const target = join(realParent, 'sc-PerfDemo');
+    const code = await runInit({ name: target, host: 'bun' });
+    assert.equal(code, 0);
+
+    // 절대경로 인수여도 package.json name에 경로가 유출되지 않는다(소문자·URL 안전).
+    const pkg = JSON.parse(await readFile(join(target, 'package.json'), 'utf8'));
+    assert.equal(pkg.name, 'sc-perfdemo');
+
+    // scriptcable.config.ts의 name·prefix도 basename 기반
+    const cfg = await readFile(join(target, 'scriptcable.config.ts'), 'utf8');
+    assert.match(cfg, /name: 'sc-perfdemo'/);
+    assert.match(cfg, /prefix: 'sc_perfdemo_'/);
+  });
+
+  it('falls back to a valid name when the basename sanitizes to empty', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'sc-init-f2b-'));
+    tmpRoots.push(parent);
+    const realParent = await realpath(parent);
+    // basename이 전부 비-URL 문자 → 'app' 폴백
+    const target = join(realParent, '한글프로젝트');
+    const code = await runInit({ name: target, host: 'bun' });
+    assert.equal(code, 0);
+    const pkg = JSON.parse(await readFile(join(target, 'package.json'), 'utf8'));
+    assert.equal(pkg.name, 'app');
+  });
+});
