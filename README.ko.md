@@ -302,6 +302,24 @@ bun run test
 
 참고: `scriptc`는 설치 스크립트를 실행해야 하므로 루트 `package.json`의 `trustedDependencies`에 이미 등록되어 있습니다.
 
+## 발행 (메인테이너)
+
+릴리스는 태그 기반입니다 — 버전 태그를 푸시하면 CI가 13개 `@scriptcable/*` 패키지를 전부 발행합니다.
+
+```bash
+# 1. 모든 packages/*/package.json의 버전을 같은 값으로(동기 릴리스)
+# 2. 커밋 후 태그 푸시
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+`Release` 워크플로(`.github/workflows/release.yml`)는 먼저 전체 테스트를 통과시키고(CI와 동일 툴체인의 `test` job — clang, zig, `bun run test`; `publish`가 `needs: test`) 이어서 수행합니다:
+
+1. 태그와 모든 패키지 버전 일치 검사(`scripts/check-release-version.ts`),
+2. 빌드 후 **발행 형태 게이트**(`scripts/pack-smoke.ts`): 13개 패키지를 pack해 `workspace:` 프로토콜 잔존과 `files` 산출물 실재를 단언하고, 클린룸에 설치해 모든 공개 엔트리(`@scriptcable/core` 서브패스 export 포함)와 cli bin `--help`까지 임포트,
+3. 의존성 순서 발행(`bun publish --access public` — `types` 먼저, `cli` 마지막).
+
+`NPM_TOKEN` 시크릿(`@scriptcable` 발행 권한 있는 npm Automation 토큰)이 필요합니다. 이미 발행된 버전 재발행은 npm이 거부하므로 버전을 올리고 새 태그를 푸세요. provenance는 `bun publish` 지원 후 과제입니다.
+
 ## 라이선스
 
 MIT

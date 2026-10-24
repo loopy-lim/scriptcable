@@ -403,6 +403,24 @@ bun run --filter @scriptcable/example-node-app start
 
 Note: `scriptc` must be a trusted dependency so Bun runs its install script (already configured in the root `package.json`).
 
+## Publishing (maintainers)
+
+Releases are tag-driven: push a version tag and CI publishes all 13 `@scriptcable/*` packages.
+
+```bash
+# 1. set the same version in every packages/*/package.json (they release in lockstep)
+# 2. commit, then tag and push
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+The `Release` workflow (`.github/workflows/release.yml`) runs the full test suite first (a `test` job with the same toolchain as CI — clang, zig, `bun run test`) and only then:
+
+1. checks the tag matches every package version (`scripts/check-release-version.ts`),
+2. builds and runs the **publish-form gate** (`scripts/pack-smoke.ts`): packs all 13 packages, asserts no `workspace:` protocol survives the rewrite and every `files` artifact is really in the tarball, clean-room-installs them, and imports every public entry (`@scriptcable/core` subpath exports included) plus the CLI bin `--help`,
+3. publishes in dependency order (`bun publish --access public`, `types` first, `cli` last).
+
+Requires the `NPM_TOKEN` secret (an npm Automation token with `@scriptcable` publish rights). Re-publishing an existing version is rejected by npm — bump and re-tag. Provenance is pending `bun publish` support.
+
 ## Limitations (from scriptc)
 
 - Core TypeScript must stay within [scriptc's supported subset](https://scriptc.dev/docs/limitations) (library mode is static-only).
