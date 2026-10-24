@@ -3,7 +3,7 @@
  * (.so / .dylib / .dll) for Bun (bun:ffi) and Node (optional koffi).
  */
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile, access, constants, readdir } from 'node:fs/promises';
+import { mkdir, writeFile, access, constants, readdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { ScriptcableToolchainError } from '@scriptcable/types';
@@ -12,9 +12,10 @@ import { which } from './which.js';
 async function run(
   cmd: string,
   args: string[],
+  cwd?: string,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(cmd, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (d: Buffer) => (stdout += d.toString()));
@@ -88,6 +89,11 @@ export type LinkSharedOptions = {
   extraSources?: string[];
   /** Include directories for extraSources compilation. */
   includeDirs?: string[];
+  /** Explicit zig binary (e.g. from the provision cache) — used wherever
+   * zig cc drives the link: cross targets, Windows, and the host fallback. */
+  zigPath?: string;
+  /** Host builds: drive the link with zig cc even when clang/cc exist. */
+  preferZigLink?: boolean;
 };
 
 export function sharedLibraryExt(platform = process.platform): string {
@@ -114,32 +120,45 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
   // Windows; clang stays the fallback. Android prefers the NDK driver —
   // its DSOs carry real DT_NEEDED libc.so entries, which ARM-translation
   // devices resolve natively (the zig-linked one fails eager stdio-data
-  // relocations at dlopen); zig cc stays the no-NDK fallback.
+  // relocations at dlopen); zig cc stays the no-NDK fallback. On Linux/macOS
+  // hosts, clang/cc link as before, with zig cc as a clang-less fallback —
+  // one zig install then covers wasm, cross, and host linking.
   const cross = options.target !== undefined;
   const isAndroid = cross && options.target!.includes('-android');
   const ndkClang = isAndroid ? await findNdkClangxx(options.target!) : undefined;
-  const zig = !ndkClang && (cross || process.platform === 'win32') ? await which('zig') : undefined;
-  const clang = cross ? undefined : ((await which('clang')) ?? (await which('cc')));
-  if (!zig && !ndkClang && !clang) {
+  const zigWanted = !ndkClang && (cross || process.platform === 'win32' || options.preferZigLink);
+  const zig = zigWanted ? (options.zigPath ?? (await which('zig'))) : undefined;
+  const clang = cross
+    ? undefined
+    : options.preferZigLink
+      ? undefined
+      : ((await which('clang')) ?? (await which('cc')));
+  const hostZig =
+    !cross && !ndkClang && !zig && !clang && process.platform !== 'win32'
+      ? (options.zigPath ?? (await which('zig')))
+      : undefined;
+  if (!zig && !hostZig && !ndkClang && !clang) {
     throw new ScriptcableToolchainError(
       cross
         ? `zig cc or the Android NDK is required to cross-link ${options.target}.`
-        : 'clang (or cc) is required to link the native shared library.',
+        : 'clang (or cc) — or zig — is required to link the native shared library.',
       cross
         ? 'Install the Android NDK (ANDROID_NDK_HOME or ANDROID_HOME/ndk) — the NDK driver links real bionic DT_NEEDED entries, which ARM-translation devices resolve — or zig 0.13.x (ziglang.org).'
         : 'Install a C toolchain:\n' +
             '  Linux:  sudo apt install clang\n' +
             '  macOS:  xcode-select --install\n' +
             '  Windows: zig (ziglang.org) — zig cc drives the linker\n' +
+            'Or: scriptcable auto-provisions zig 0.13.x on the first wasm build (zig cc then links hosts too).\n' +
             'Or build with --target wasm for the WASI fallback.',
     );
   }
-  const linker = ndkClang ?? zig ?? clang!;
-  const linkerArgs = ndkClang
-    ? []
-    : zig
-      ? ['cc', ...(cross ? ['-target', options.target!] : [])]
-      : [];
+  const linker = ndkClang ?? zig ?? hostZig ?? clang!;
+  const linkerArgs =
+    ndkClang
+      ? []
+      : zig || hostZig
+        ? ['cc', ...(cross ? ['-target', options.target!] : [])]
+        : [];
 
   await mkdir(dirname(outPath), { recursive: true });
   const stubC = join(dirname(outPath), 'scriptcable-stubs.c');
@@ -226,32 +245,40 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
 export async function buildCompleteStaticArchive(options: {
   archivePath: string;
   outPath: string;
+  /** Provisioned zig binary — compiles stubs and drives `zig ar` on
+   * clang-less machines. */
+  zigPath?: string;
 }): Promise<string> {
   const archivePath = resolve(options.archivePath);
   const outPath = resolve(options.outPath);
   await access(archivePath, constants.R_OK);
   const clang = (await which('clang')) ?? (await which('cc'));
-  if (!clang) {
+  const zig = clang ? undefined : options.zigPath ?? (await which('zig'));
+  if (!clang && !zig) {
     throw new ScriptcableToolchainError(
-      'clang is required to prepare the static archive for native hosts.',
-      'Install clang, or use the shared library (.so) from Bun/Node.',
+      'clang (or cc) — or zig — is required to prepare the static archive for native hosts.',
+      'Install clang, run a wasm build once to provision zig, or use the shared library (.so) from Bun/Node.',
     );
   }
+  const cc = clang ?? zig!;
+  // argv-form invocations (no shell interpolation of user-influenced paths);
+  // on clang-less machines `zig ar` drives llvm-ar via the zig subcommand.
+  const ar = clang ? 'ar' : zig!;
+  const arArgs = clang ? [] : ['ar'];
   await mkdir(dirname(outPath), { recursive: true });
   const work = join(dirname(outPath), '.scriptcable-static-work');
   await mkdir(work, { recursive: true });
   const stubC = join(work, 'stubs.c');
   const stubO = join(work, 'stubs.o');
   await writeFile(stubC, STUB_SOURCE);
-  const c1 = await run(clang, ['-c', stubC, '-o', stubO]);
+  const c1 = await run(cc, clang ? ['-c', stubC, '-o', stubO] : ['cc', '-c', stubC, '-o', stubO]);
   if (c1.code !== 0) throw new ScriptcableToolchainError(c1.stderr);
   // Extract archive objects into work dir then re-pack with stubs
-  const extract = await run('bash', ['-c', `cd "${work}" && ar x "${archivePath}"`]);
+  const extract = await run(ar, [...arArgs, 'x', archivePath], work);
   if (extract.code !== 0) throw new ScriptcableToolchainError(extract.stderr || extract.stdout);
-  const pack = await run('bash', [
-    '-c',
-    `cd "${work}" && rm -f "${outPath}" && ar rcs "${outPath}" *.o`,
-  ]);
+  const objs = (await readdir(work)).filter((f) => f.endsWith('.o')).map((f) => join(work, f));
+  await rm(outPath, { force: true });
+  const pack = await run(ar, [...arArgs, 'rcs', outPath, ...objs]);
   if (pack.code !== 0) throw new ScriptcableToolchainError(pack.stderr || pack.stdout);
   return outPath;
 }

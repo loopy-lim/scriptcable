@@ -10,7 +10,7 @@ Inspired by [rustra](https://github.com/loopy-lim/rustra) (Rust core → multi-h
 
 ## 5-minute quickstart
 
-**Requirements:** Bun ≥ 1.2 and `clang` (or gcc's `cc`) to link the native shared library. Optional: [zig 0.13.x](https://ziglang.org/download/) only if you build `--target wasm`.
+**Requirements:** Bun ≥ 1.2 and `clang` (or gcc's `cc`) to link the native shared library. Optional: [zig 0.13.x](https://ziglang.org/download/) only if you build `--target wasm` — and if it's not installed, the first wasm/cross build **auto-provisions** it into your user cache (`SCRIPTCABLE_NO_AUTO_TOOLS=1` opts out). The provisioned `zig cc` also links host builds when clang and `cc` are both absent.
 
 **Every command below is verified end-to-end — with the output you should see at each step — in [docs/getting-started.md](./docs/getting-started.md).** Stuck? [docs/troubleshooting.md](./docs/troubleshooting.md) lists real errors and their fixes.
 

@@ -1,7 +1,21 @@
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { doctor } from '@scriptcable/core';
 import { formatError } from '../errors.js';
+
+/** WSL env vars can be stripped (nested shells, CI) — /proc/version is the
+ * reliable signal on Linux. */
+function isWsl(): boolean {
+  if (process.env.WSL_DISTRO_NAME) return true;
+  if (process.platform !== 'linux') return false;
+  try {
+    // WSL1 reports "…-Microsoft" (capital M); WSL2 is lowercase.
+    return readFileSync('/proc/version', 'utf8').toLowerCase().includes('microsoft');
+  } catch {
+    return false;
+  }
+}
 
 export async function runDoctor(cwd = process.cwd()): Promise<number> {
   try {
@@ -14,19 +28,36 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
     }
     console.log(`  scriptc:  ${info.version} (${info.scriptcBin})`);
     console.log(`  platform: ${process.platform}/${process.arch}`);
-    // Match the native-link gate: clang OR gcc's cc links the shared library.
-    const linkerOk = info.hasClang || info.hasCc;
+    // Match the native-link gate: clang OR gcc's cc links the shared library,
+    // with the provisioned zig cc as the clang-less fallback.
+    const linkerOk = info.hasClang || info.hasCc || info.hasZig;
     const linker = info.hasClang
       ? `${info.clangPath} ✓`
       : info.hasCc
         ? `${info.ccPath} ✓ (gcc cc)`
-        : 'MISSING (required for native default)';
+        : info.hasZig
+          ? `${info.zigPath} ✓ (zig cc fallback)`
+          : 'MISSING (required for native default)';
     console.log(`  linker:   ${linker}`);
-    console.log(`  zig:      ${info.hasZig ? `${info.zigPath} ✓` : 'missing (only for --target wasm / cross)'}`);
+    console.log(
+      `  zig:      ${
+        info.hasZig
+          ? `${info.zigPath} ✓`
+          : 'missing — auto-provisions 0.13.x on the first wasm/cross build (SCRIPTCABLE_NO_AUTO_TOOLS=1 disables)'
+      }`,
+    );
+    console.log(
+      `  deno:     ${
+        info.hasDeno
+          ? `${info.denoPath} ✓`
+          : 'missing (only for the generated deno flavor — CI covers deno-app; `bun install -g deno` adds it)'
+      }`,
+    );
     if (!linkerOk) {
       console.log('\nFix the linker:');
       console.log('  Linux:  sudo apt install clang    # gcc (cc) alone is enough too');
       console.log('  macOS:  xcode-select --install');
+      console.log('  or:     run a wasm build once — the auto-provisioned zig cc then links hosts too');
       return 1;
     }
     if (info.clientLink) {
@@ -57,6 +88,12 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
     }
     console.log('\nOK — ready to build native cores.');
     console.log('  repeat builds are cached in .scriptcable/build-cache.json (scriptcable build --force to bypass)');
+    if (isWsl()) {
+      console.log(
+        `WSL (${process.env.WSL_DISTRO_NAME ?? 'detected via /proc'}): GUI hosts (Electron) may need system libs — on sudo-less setups,` +
+          ' `apt-get download` + `dpkg -x` into a user dir and export LD_LIBRARY_PATH; WSLg provides DISPLAY.',
+      );
+    }
     console.log('Apple Silicon (M1/M2/M3): host builds are arm64 by default.');
     console.log('  iOS device lib:   SCRIPTC_TARGET=aarch64-apple-ios scriptcable build --target native');
     console.log('  iOS simulator:    SCRIPTC_TARGET=aarch64-apple-ios-simulator …');

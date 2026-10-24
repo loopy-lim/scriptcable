@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { access, constants, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { basename, dirname, join, relative, resolve } from 'node:path';
+import { basename, delimiter, dirname, join, relative, resolve } from 'node:path';
 import { ScriptcableToolchainError } from '@scriptcable/types';
 import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
@@ -9,6 +9,7 @@ import { generateClients } from './codegen.js';
 import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
 import { ensureClientPackageLink } from './client-package.js';
 import { buildNodeAddon, canBuildNodeAddon, napiAddonFileName } from './napi-addon.js';
+import { ensureZig, findCachedZig } from './zig-tools.js';
 import { which } from './which.js';
 
 export type ToolchainInfo = {
@@ -22,9 +23,12 @@ export type ToolchainInfo = {
   hasClang: boolean;
   /** gcc's `cc` — linkSharedLibrary accepts it on Linux exactly like clang. */
   hasCc: boolean;
+  /** deno on PATH — only needed to run the generated deno flavor locally. */
+  hasDeno: boolean;
   zigPath?: string;
   clangPath?: string;
   ccPath?: string;
+  denoPath?: string;
   /** State of the `node_modules/@scriptcable/client` link — absent when nothing was generated yet. */
   clientLink?: 'current' | 'linked' | 'repaired' | 'blocked';
 };
@@ -158,9 +162,12 @@ export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: bool
   }
 
   const version = await scriptcVersion(scriptcBin);
-  const zigPath = (await which('zig')) ?? undefined;
+  // zig on PATH, else the provision cache (no download here — doctor stays a
+  // fast report; the build provisions on demand).
+  const zigPath = (await which('zig')) ?? (await findCachedZig());
   const clangPath = (await which('clang')) ?? undefined;
   const ccPath = (await which('cc')) ?? undefined;
+  const denoPath = (await which('deno')) ?? undefined;
 
   // Doctor doubles as the link repairer: if a previous build generated
   // clients, make sure `@scriptcable/client` resolves (no-op when current).
@@ -182,9 +189,11 @@ export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: bool
     hasZig: Boolean(zigPath),
     hasClang: Boolean(clangPath),
     hasCc: Boolean(ccPath),
+    hasDeno: Boolean(denoPath),
     zigPath,
     clangPath,
     ccPath,
+    denoPath,
     clientLink,
   };
 }
@@ -270,6 +279,11 @@ export async function buildCore(
   await mkdir(outDir, { recursive: true });
 
   const info = await doctor(cwd, { skipRuntimeGate: options.doctorRuntimeGate === 'skip' });
+  // wasm/cross builds drive zig off PATH — resolve it once per build (the
+  // provision cache auto-populates unless SCRIPTCABLE_NO_AUTO_TOOLS=1), and
+  // ride the resolved binary's directory on the scriptc subprocess PATH.
+  const needsZig = target === 'wasm' || target === 'both' || androidArm64;
+  const buildZig = needsZig ? await ensureZig((m) => console.log(`  ${m}`)) : undefined;
   // Infer exports from the TS entry when not declared in scriptcable.json.
   const { resolveProfile } = await import('./profile.js');
   const { profile, inferred, skipped } = await resolveProfile(config, cwd);
@@ -334,28 +348,30 @@ export async function buildCore(
 
   const runBuild = async (kind: 'wasm' | 'native') => {
     if (kind === 'wasm') {
-      if (!info.hasZig) {
+      if (!buildZig) {
         throw new ScriptcableToolchainError(
           'zig is required for WASM (wasm32-wasi) library builds.',
-          'Install zig 0.13.x and put it on PATH.\n' +
+          'scriptcable provisions zig 0.13.x automatically — that was skipped (download failed, or SCRIPTCABLE_NO_AUTO_TOOLS=1).\n' +
+            'Retry without the env, or install zig 0.13.x and put it on PATH.\n' +
             '  curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ\n' +
             'Note: zig 0.14 currently fails WASI builds with scriptc 0.3.x — use 0.13.',
         );
       }
       await ensureRuntimePack(cwd, 'wasm');
     } else if (androidArm64) {
-      if (!info.hasZig) {
+      if (!buildZig) {
         throw new ScriptcableToolchainError(
           'zig is required for android-arm64 cross builds (SCRIPTC_TARGET + zig cc link).',
-          'Install zig 0.13.x and put it on PATH.\n' +
-            '  curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ',
+          'scriptcable provisions zig 0.13.x automatically — that was skipped (download failed, or SCRIPTCABLE_NO_AUTO_TOOLS=1).\n' +
+            'Retry without the env, or install zig 0.13.x and put it on PATH.',
         );
       }
       await ensureRuntimePack(cwd, 'android-arm64');
-    } else if (!info.hasClang && !info.hasCc && process.platform === 'linux') {
+    } else if (!info.hasClang && !info.hasCc && !info.hasZig && !buildZig && process.platform === 'linux') {
       throw new ScriptcableToolchainError(
-        'clang (or cc) is required for native library builds on Linux.',
-        'Install clang (e.g. `sudo apt install clang`) — gcc\'s cc also works — or use target: "wasm".',
+        'clang (or cc) — or zig — is required for native library builds on Linux.',
+        'Install clang (`sudo apt install clang`; gcc\'s cc also works), or run a wasm build once so the\n' +
+          'provisioned zig cc can link the shared library — or use target: "wasm".',
       );
     }
 
@@ -366,6 +382,9 @@ export async function buildCore(
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       ...options.env,
+      ...(buildZig
+        ? { PATH: `${dirname(buildZig)}${delimiter}${options.env?.PATH ?? process.env.PATH ?? ''}` }
+        : {}),
       ...(kind === 'wasm' ? { SCRIPTC_TARGET: 'wasm32-wasi' } : {}),
       ...(kind === 'native' && androidArm64 ? { SCRIPTC_TARGET: 'aarch64-linux-android' } : {}),
     };
@@ -405,6 +424,8 @@ export async function buildCore(
       outPath: join(nativeDir, sharedLibraryFileName(config.name)),
       target: androidArm64 ? 'aarch64-linux-android' : undefined,
       cwd,
+      zigPath: buildZig ?? info.zigPath,
+      preferZigLink: !info.hasClang && !info.hasCc,
       extraSources: androidArm64
         ? [
             join(outDir, 'generated', 'android', 'cable_host.cpp'),
@@ -437,6 +458,7 @@ export async function buildCore(
     await buildCompleteStaticArchive({
       archivePath: result.nativePath!,
       outPath: join(outDir, `lib${config.name}.a`),
+      zigPath: buildZig ?? info.zigPath,
     });
   }
 

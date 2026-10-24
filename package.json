@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "build": "bun run --filter './packages/*' build",
+    "pretest": "bun run build",
     "test": "bun run --filter './packages/*' test",
     "test:e2e:node": "bun run --filter @scriptcable/example-node-app start",
     "test:e2e:bun": "bun run --filter @scriptcable/example-bun-app start",

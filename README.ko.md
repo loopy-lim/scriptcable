@@ -9,7 +9,7 @@
 
 ## 5분 퀵스타트
 
-**필요:** Bun ≥ 1.2와 `clang`(또는 gcc의 `cc` — 네이티브 공유 라이브러리 링크). WASM(`--target wasm`)을 쓸 때만 [zig 0.13.x](https://ziglang.org/download/).
+**필요:** Bun ≥ 1.2와 `clang`(또는 gcc의 `cc` — 네이티브 공유 라이브러리 링크). [zig 0.13.x](https://ziglang.org/download/)는 `--target wasm` 빌드에만 필요 — 없어도 첫 wasm/크로스 빌드가 사용자 캐시에 **자동 설치**합니다(`SCRIPTCABLE_NO_AUTO_TOOLS=1`로 옵트아웃). 자동 설치된 `zig cc`는 clang과 `cc`가 모두 없을 때 호스트 빌드 링크도 맡습니다.
 
 **아래 명령은 끝까지 실행해 검증됐습니다 — 각 단계에서 나와야 할 출력까지 [docs/getting-started.md](./docs/getting-started.md)에 정리**되어 있습니다. 막히면 [docs/troubleshooting.md](./docs/troubleshooting.md)에서 실제 에러와 해결법을 찾으세요.
 

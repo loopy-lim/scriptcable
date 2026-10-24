@@ -139,6 +139,53 @@ describe('ensureClientPackageLink', () => {
     });
   });
 
+  it('replaces a bun-managed file: dep copy (pre-build placeholder shadowing)', async () => {
+    await withTmpDir(async (dir) => {
+      const genDir = join(dir, '.scriptcable', 'generated');
+      await mkdir(genDir, { recursive: true });
+      // The scaffold declares the dep before the first build — bun then
+      // materializes a real copied dir (here: the placeholder manifest).
+      await writeFile(
+        join(dir, 'package.json'),
+        JSON.stringify({
+          name: 'demo',
+          dependencies: { '@scriptcable/client': 'file:.scriptcable/generated' },
+        }),
+      );
+      const managed = join(dir, 'node_modules', '@scriptcable', 'client');
+      await mkdir(managed, { recursive: true });
+      await writeFile(
+        join(managed, 'package.json'),
+        JSON.stringify({ name: '@scriptcable/client', exports: { '.': './placeholder.ts' } }),
+      );
+      await writeFile(join(managed, 'placeholder.ts'), 'export const stub = true;\n');
+      assert.equal(await ensureClientPackageLink(dir, genDir), 'repaired');
+      const linkPath = join(dir, 'node_modules', '@scriptcable', 'client');
+      assert.equal((await lstat(linkPath)).isSymbolicLink(), true);
+      assert.equal(resolve(dirname(linkPath), await readlink(linkPath)), resolve(genDir));
+    });
+  });
+
+  it('still leaves a real directory alone when no file: dep declares it', async () => {
+    await withTmpDir(async (dir) => {
+      const genDir = join(dir, '.scriptcable', 'generated');
+      await mkdir(genDir, { recursive: true });
+      // Dep declared but pointing elsewhere — not this project's managed copy.
+      await writeFile(
+        join(dir, 'package.json'),
+        JSON.stringify({
+          name: 'demo',
+          dependencies: { '@scriptcable/client': 'file:../other/generated' },
+        }),
+      );
+      const real = join(dir, 'node_modules', '@scriptcable', 'client');
+      await mkdir(real, { recursive: true });
+      await writeFile(join(real, 'keep.txt'), 'mine');
+      assert.equal(await ensureClientPackageLink(dir, genDir), 'blocked');
+      assert.equal(await readFile(join(real, 'keep.txt'), 'utf8'), 'mine');
+    });
+  });
+
   it('is blocked when nothing was generated yet', async () => {
     await withTmpDir(async (dir) => {
       assert.equal(await ensureClientPackageLink(dir, join(dir, 'missing')), 'blocked');

@@ -41,6 +41,14 @@ xcode-select --install
 sudo apt install clang    # or: gcc (cc) alone is enough
 ```
 
+### No zig? The first wasm/cross build auto-provisions zig 0.13.x
+
+`--target wasm` and `--platform android` need zig (scriptc drives it off PATH). Since 2026-10-23 scriptcable downloads the pinned zig 0.13.0 **once** into the user cache and puts it on the build's PATH — nothing to install by hand:
+
+- cache location: `~/.cache/scriptcable/zig-0.13.0` (Linux) · `~/Library/Caches/scriptcable` (macOS) · `%LOCALAPPDATA%\scriptcable\cache` (Windows) — override the root with `SCRIPTCABLE_CACHE_DIR`
+- opt out (CI determinism, air-gapped machines): `SCRIPTCABLE_NO_AUTO_TOOLS=1` — builds then fail with the manual-install hint
+- bonus: when clang **and** `cc` are both missing, the provisioned `zig cc` links host shared libraries and the static archive too — one zig install covers wasm, cross, and host builds
+
 ### `Cannot find module '@scriptcable/core'` (or any `@scriptcable/*`) right after install
 
 The packages' exports point at `./dist/*.js` — nothing is compiled until the first build, and Bun reports a missing exports target as "Cannot find module". Run the build first, then the tests:
@@ -91,6 +99,12 @@ The client package is created by a build. Run it (or `scriptcable doctor`, which
 ```bash
 scriptcable build     # or: bun run build
 ```
+
+One stale-copy case is also auto-healed since 2026-10-23: if `bun install` ran **before** the first build, bun materializes the declared `file:.scriptcable/generated` dep as a real copied directory (the placeholder) that shadows the generated flavors. `scriptcable build` now replaces that managed copy with the link — no reinstall needed. A `@scriptcable/client` directory that package.json does **not** declare as a `file:` dep is treated as your own package and left untouched.
+
+### Electron fails to launch on WSL: `error while loading shared libraries: libnss3`
+
+WSL distros ship without the GUI system libraries Electron links. On machines where sudo is available: `sudo apt install libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2`. On sudo-less setups: `apt-get download` the packages and `dpkg -x` them into a user dir, then `export LD_LIBRARY_PATH=<dir>/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH` (the recipe `examples/electron-app` runs with). WSLg provides `DISPLAY=:0`, so no xvfb is needed. `scriptcable doctor` prints this hint when it detects WSL.
 
 ### `koffi is an optional fallback for running scriptcable native libraries under plain Node.js.`
 
@@ -167,6 +181,10 @@ The generated client imports `@scriptcable/core/wasm` + `/wasi` by bare specifie
 ### The worker bundle fetches `<name>.wasm` and fails at runtime (or the browser flavor got bundled)
 
 Wrangler resolves bundles with **both** `workerd` and `browser` conditions on; the generated manifest lists `workerd` first, so the workers flavor — which statically imports the wasm via wrangler's default CompiledWasm rule — wins. If you see fetch-based probing in your bundle, the manifest is stale: rebuild with `--hosts workers`.
+
+### Under Bun 1.4.4, `wrangler dev` answers 503 to every request (external `curl` included)
+
+Known Bun defect: Bun's `fetch()` ignores the undici `dispatcher` Miniflare routes through ([bun#39247](https://github.com/oven-sh/bun/issues/39247)) — the bundle and `deploy --dry-run` work, but the dev server can't forward anything. Workarounds: run the smoke under Node (`node scripts/smoke.mjs`), or let CI cover the workers runtime (the repo's matrix does). The smoke script detects the condition and prints this exact explanation instead of a timeout.
 
 ### SolidStart 2 build fails: `rollupOptions.input should not be an html file when building for SSR`
 

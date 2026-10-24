@@ -14,6 +14,7 @@ import {
   mkdir,
   readFile,
   readlink,
+  rm,
   symlink,
   unlink,
   writeFile,
@@ -131,13 +132,42 @@ export async function writeClientPackage(genDir: string, targets: CodegenTarget[
 export type ClientLinkResult =
   | 'current' // symlink already points at genDir
   | 'linked' // created
-  | 'repaired' // stale/dangling symlink replaced
+  | 'repaired' // stale/dangling symlink or package-manager copy replaced
   | 'blocked'; // a real file/dir occupies the path, or symlink unsupported
 
 /**
+ * True when this project's package.json declares `@scriptcable/client` as a
+ * `file:` dep resolving to genDir. Such a node_modules entry is managed by
+ * the package manager (bun materializes file: deps as a real copied
+ * directory — a pre-build placeholder copy that shadows the generated
+ * flavors until the next install), so the link step may replace it.
+ */
+async function isDeclaredClientFileDep(cwd: string, genDir: string): Promise<boolean> {
+  try {
+    const pkg = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
+    };
+    const declared = {
+      ...pkg.dependencies,
+      ...pkg.devDependencies,
+      ...pkg.optionalDependencies,
+    }[PACKAGE_NAME];
+    if (!declared?.startsWith('file:')) return false;
+    return resolve(cwd, declared.slice('file:'.length)) === resolve(genDir);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Ensure `<cwd>/node_modules/@scriptcable/client` resolves to `genDir`.
- * Best-effort: never throws, never touches a real (non-symlink) entry.
- * Uses a relative target so the link survives directory moves and CI checkouts.
+ * Best-effort: never throws. A symlink is repaired in place; a real entry is
+ * replaced only when package.json declares it as this project's `file:` dep
+ * (package-manager-managed copy) — anything else is the user's own package
+ * and stays untouched. Uses a relative target so the link survives directory
+ * moves and CI checkouts.
  */
 export async function ensureClientPackageLink(cwd: string, genDir: string): Promise<ClientLinkResult> {
   try {
@@ -152,11 +182,16 @@ export async function ensureClientPackageLink(cwd: string, genDir: string): Prom
   let replaced = false;
   try {
     const st = await lstat(linkPath);
-    if (!st.isSymbolicLink()) return 'blocked'; // user's own package — leave it alone
-    const resolved = resolve(dirname(linkPath), await readlink(linkPath));
-    if (resolved === resolve(genDir)) return 'current';
-    await unlink(linkPath);
-    replaced = true;
+    if (!st.isSymbolicLink()) {
+      if (!(await isDeclaredClientFileDep(cwd, genDir))) return 'blocked';
+      await rm(linkPath, { recursive: true, force: true });
+      replaced = true;
+    } else {
+      const resolved = resolve(dirname(linkPath), await readlink(linkPath));
+      if (resolved === resolve(genDir)) return 'current';
+      await unlink(linkPath);
+      replaced = true;
+    }
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== 'ENOENT') return 'blocked';
   }
