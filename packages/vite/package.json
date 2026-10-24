@@ -1,8 +1,17 @@
 {
   "name": "@scriptcable/vite",
   "version": "0.1.0",
-  "description": "Vite plugin \u2014 compile scriptc core on build/HMR",
+  "description": "Vite plugin — compile scriptc core on build/HMR",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "directory": "packages/vite"
+  },
+  "bugs": {
+    "url": "https://github.com/loopy-lim/scriptcable/issues"
+  },
+  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -40,5 +49,8 @@
   },
   "engines": {
     "bun": ">=1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

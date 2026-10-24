@@ -1,8 +1,17 @@
 {
   "name": "@scriptcable/tauri",
   "version": "0.1.0",
-  "description": "Tauri 2 adapter \u2014 invoke bridge to a scriptcable native core",
+  "description": "Tauri 2 adapter — invoke bridge to a scriptcable native core",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "directory": "packages/tauri"
+  },
+  "bugs": {
+    "url": "https://github.com/loopy-lim/scriptcable/issues"
+  },
+  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,5 +37,8 @@
   },
   "engines": {
     "bun": ">=1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

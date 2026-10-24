@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Shared types and EngineClient contract for scriptcable adapters",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "directory": "packages/types"
+  },
+  "bugs": {
+    "url": "https://github.com/loopy-lim/scriptcable/issues"
+  },
+  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -27,5 +36,8 @@
   },
   "dependencies": {
     "@babel/runtime": "^8.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

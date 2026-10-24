@@ -1,0 +1,80 @@
+# Release — 태그 푸시(v*)로 13개 @scriptcable/* 패키지를 npm에 발행한다.
+#
+# 전제(운영 시 필요):
+#   - GitHub 시크릿 NPM_TOKEN: npm "Automation" 토큰(npmjs.com → Access Tokens).
+#     @scriptcable 스코프에 대한 발행 권한이 있어야 한다.
+#   - 13개 패키지 버전이 태그와 동일해야 한다(불일치 시 check-release-version이 중단).
+#   - 재발행(이미 발행된 버전)은 npm이 거부한다 — 버전을 올린 뒤 새 태그.
+#
+# provenance는 bun 1.4.x publish가 미지원(2026-10-24 기준) — 서명이 필요해지면 npm CLI 경로를
+# 별도 검토한다. docs/plans/2026-10-24-npm-publish-readiness.md 가정 로그 참조.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # 발행 전 동일 커밋의 전체 테스트를 통과시킨다(G3 리뷰 F-3 — 태그 푸시는 ci.yml의
+  # `on: push`와 병렬로도 실행되므로, 발행 job이 테스트 성공을 needs로 강제).
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install clang (native link)
+        run: sudo apt-get update && sudo apt-get install -y clang g++
+      - name: Install zig (WASM toolchain)
+        run: |
+          curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
+          echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
+      - run: bun install
+      - run: bun run test
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      # dist는 순수 tsc 산출 — clang/zig 불요(pack-smoke가 tarball 형태를 게이트한다)
+      - run: bun run build
+      # bin 링크는 dist/index.js가 있어야 생김 — 빌드 후 재링크(CI 관례와 동일)
+      - run: bun install
+
+      - name: Check tag matches package versions
+        run: bun scripts/check-release-version.ts "${GITHUB_REF_NAME}"
+
+      - name: Pack smoke (publish-form gate)
+        run: bun scripts/pack-smoke.ts
+
+      - name: Configure npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # 의존성이 먼저 등록되도록 순서 발행(types → core → 어댑터 → cli 마지막).
+      # 중간 실패 시 재실행하면 이미 발행된 버전은 npm이 거부하므로 버전을 올리고 새 태그.
+      - name: Publish (dependency order)
+        run: |
+          set -euo pipefail
+          for pkg in types core node bun testing vite webpack next react-native tauri lynx expo cli; do
+            echo "::group::publish @scriptcable/${pkg}"
+            (cd "packages/${pkg}" && bun publish --access public)
+            echo "::endgroup::"
+          done

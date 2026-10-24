@@ -1,8 +1,17 @@
 {
   "name": "@scriptcable/cli",
   "version": "0.1.0",
-  "description": "scriptcable CLI \u2014 init, build, codegen, contract diff, doctor",
+  "description": "scriptcable CLI — init, build, codegen, contract diff, doctor",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/loopy-lim/scriptcable/issues"
+  },
+  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
   "type": "module",
   "bin": {
     "scriptcable": "./dist/index.js"
@@ -38,5 +47,8 @@
   },
   "engines": {
     "bun": ">=1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

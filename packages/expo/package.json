@@ -3,9 +3,25 @@
   "version": "0.1.0",
   "description": "Expo config plugin — wires the generated scriptcable Android bridge into `expo prebuild` automatically",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "directory": "packages/expo"
+  },
+  "bugs": {
+    "url": "https://github.com/loopy-lim/scriptcable/issues"
+  },
+  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
   "main": "app.plugin.js",
-  "files": ["app.plugin.js", "README.md"],
+  "files": [
+    "app.plugin.js",
+    "LICENSE",
+    "README.md"
+  ],
   "peerDependencies": {
     "expo": ">=52"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,8 +1,17 @@
 {
   "name": "@scriptcable/bun",
   "version": "0.1.0",
-  "description": "Bun adapter \u2014 native via bun:ffi by default; scriptc WASM (WASI) opt-in",
+  "description": "Bun adapter — native via bun:ffi by default; scriptc WASM (WASI) opt-in",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "directory": "packages/bun"
+  },
+  "bugs": {
+    "url": "https://github.com/loopy-lim/scriptcable/issues"
+  },
+  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,5 +38,8 @@
   },
   "engines": {
     "bun": ">=1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
