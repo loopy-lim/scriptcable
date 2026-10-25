@@ -122,6 +122,16 @@ function genNodeClient(
   const methods = methodBlock(profile);
   const directMethods = methodBlockDirect(profile);
   const directConsts = addonConsts(profile);
+  const marshaledExports = JSON.stringify(
+    profile.exports
+      .filter(
+        (e) =>
+          e.params.some((p) => p === 'string' || p === 'bytes' || p === 'cstring') ||
+          e.returns === 'string' ||
+          e.returns === 'bytes',
+      )
+      .map((e) => e.export),
+  );
   return `${header('node')}
 import { access, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -151,6 +161,23 @@ const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
 // (~8-15 ns/call, direct symbols) — prefer it over the N-API addon (~22-30
 // ns). Node keeps the addon first; koffi stays an optional fallback.
 const IS_BUN = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined';
+
+// Bun tiering refinement — marshaled exports (string/bytes) run inside the
+// N-API addon's C (~0.65-0.7 µs/call measured), faster than bun:ffi's JS
+// side marshaling (~0.85-1.05 µs). Numbers stay on bun:ffi (~5-15 ns direct
+// symbols), so only the marshaled exports are overridden when the addon exists.
+const MARSHALED_EXPORTS = ${marshaledExports} as const;
+function tierMarshaledForBun(
+  fns: Record<string, (...args: unknown[]) => unknown>,
+  addonFns: Record<string, (...args: unknown[]) => unknown> | null,
+): Record<string, (...args: unknown[]) => unknown> {
+  if (!addonFns || MARSHALED_EXPORTS.length === 0) return fns;
+  const merged = { ...fns };
+  for (const name of MARSHALED_EXPORTS) {
+    if (typeof addonFns[name] === 'function') merged[name] = addonFns[name];
+  }
+  return merged;
+}
 
 async function exists(path: string): Promise<boolean> {
   try { await access(path); return true; } catch { return false; }
@@ -242,7 +269,8 @@ ${directMethods}
   const shared = options.sharedPath ?? findSharedSync();
   if (shared) {
     const mod = loadNativeLibrarySync(shared, PROFILE);
-    const fns = mod.fns;
+    const fns =
+      IS_BUN && options.addon !== false ? tierMarshaledForBun(mod.fns, loadAddonSync()) : mod.fns;
     return {
 ${methods}
   dispose() { mod.dispose(); },
@@ -291,7 +319,10 @@ ${directMethods}
     const shared = options.sharedPath ?? (await firstExisting(SHARED_NAME));
     if (shared) {
       const mod = await loadNativeLibrary(shared, PROFILE);
-      const fns = mod.fns;
+      const fns =
+        IS_BUN && options.addon !== false
+          ? tierMarshaledForBun(mod.fns, await loadAddon())
+          : mod.fns;
       return {
 ${methods}
   dispose() { mod.dispose(); },

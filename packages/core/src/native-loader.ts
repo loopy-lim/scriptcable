@@ -88,6 +88,7 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
     ptr: (buf) => ptr(buf),
     readBytes: (addr, len) => new Uint8Array(toArrayBuffer(addr, 0, len)),
   };
+  const scratch = makeMarshalScratch(helpers);
   const fns: Record<string, (...args: unknown[]) => unknown> = {};
   for (const e of profile.exports) {
     const fn = sym[e.symbol];
@@ -98,7 +99,7 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
     } else if (hasDirectFfiSignature(e)) {
       fns[e.export] = makeDirectFfiFn(fn, e);
     } else {
-      fns[e.export] = (...args: unknown[]) => invokeNative(fn, e, args, helpers);
+      fns[e.export] = makeMarshaledFfiFn(fn, e, scratch, helpers);
     }
   }
 
@@ -106,9 +107,9 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
     call(symbol, args) {
       const def = profile.exports.find((x) => x.symbol === symbol);
       if (!def) throw new ScriptcableError('MISSING_EXPORT', symbol);
-      const fn = sym[symbol];
-      if (typeof fn !== 'function') throw new ScriptcableError('MISSING_EXPORT', symbol);
-      return invokeNative(fn, def, args, helpers);
+      // Same fast path as fns — the per-export closure carries the scratch
+      // and slot layout, so the universal entry pays no dispatch penalty.
+      return fns[def.export]!(...args);
     },
     fns,
   };
@@ -245,60 +246,165 @@ type PtrHelpers = {
   readBytes: (addr: number | bigint, len: number) => Uint8Array;
 };
 
-function invokeNative(
-  fn: (...a: never[]) => unknown,
-  def: ExportDef,
-  args: unknown[],
-  helpers: PtrHelpers,
-): unknown {
-  const ffiArgs: never[] = [];
-  const keepAlive: ArrayBufferView[] = [];
+/**
+ * Per-binding marshaling scratch shared across calls. The native path has no
+ * JS callbacks (re-entrancy exists only in the WASM loader, which keeps its
+ * own depth guard), and calls are synchronous — so one scratch buffer, one
+ * out-slot pair, and one encoder/decoder are safe and remove the per-call
+ * allocations the marshaling path used to pay for every invocation.
+ */
+type MarshalScratch = {
+  encoder: TextEncoder;
+  decoder: TextDecoder;
+  buf: Uint8Array;
+  /** Bump cursor into `buf` — each parameter carves its own region (F3). */
+  used: number;
+  /** Buffers replaced mid-call whose pointers may already sit in ffi args — kept alive until the call ends. */
+  retired: ArrayBufferView[];
+  outPtr: BigUint64Array;
+  outLen: BigUint64Array;
+  outPtrArg: unknown;
+  outLenArg: unknown;
+};
 
-  for (let i = 0; i < def.params.length; i++) {
-    const cls = def.params[i]!;
-    const v = args[i];
-    if (cls === 'string' || cls === 'bytes') {
-      const buf =
-        cls === 'string'
-          ? Buffer.from(String(v ?? ''), 'utf8')
-          : v instanceof Uint8Array
-            ? Buffer.from(v)
-            : Buffer.from(v as ArrayBuffer);
-      keepAlive.push(buf);
-      ffiArgs.push(helpers.ptr(buf) as never, BigInt(buf.byteLength) as never);
-    } else if (cls === 'cstring') {
-      const buf = Buffer.from(String(v ?? '') + '\0', 'utf8');
-      keepAlive.push(buf);
-      ffiArgs.push(helpers.ptr(buf) as never);
-    } else if (cls === 'bool') {
-      ffiArgs.push((v ? 1 : 0) as never);
-    } else {
-      ffiArgs.push(v as never);
+const cstrDecoder = new TextDecoder();
+
+function makeMarshalScratch(helpers: PtrHelpers): MarshalScratch {
+  const outPtr = new BigUint64Array(1);
+  const outLen = new BigUint64Array(1);
+  return {
+    encoder: new TextEncoder(),
+    decoder: new TextDecoder(),
+    buf: new Uint8Array(1024),
+    used: 0,
+    retired: [],
+    outPtr,
+    outLen,
+    outPtrArg: helpers.ptr(outPtr),
+    outLenArg: helpers.ptr(outLen),
+  };
+}
+
+/** Bump-allocate `size` bytes in the scratch, growing it (never mid-call-freeing) when needed. */
+function bumpScratch(st: MarshalScratch, size: number): number {
+  const n = size || 1;
+  st.used = (st.used + 15) & ~15;
+  if (st.used + n > st.buf.byteLength) {
+    // A grown buffer leaves pointers (from earlier parameters of this call)
+    // pointing into the old one — keep it alive until the call ends instead
+    // of letting GC reclaim it (F3). The cursor restarts at the new buffer.
+    st.retired.push(st.buf);
+    st.buf = new Uint8Array(Math.max(st.buf.byteLength * 2, st.used + n));
+    st.used = 0;
+  }
+  const off = st.used;
+  st.used += n;
+  return off;
+}
+
+/** Encode `s` at its own scratch offset — returns the (ptr, len) FFI slot pair. */
+function encodeScratch(st: MarshalScratch, helpers: PtrHelpers, s: string): { ptr: unknown; len: number } {
+  const max = s.length * 4 + 4;
+  const off = bumpScratch(st, max);
+  const region = st.buf.subarray(off, off + max);
+  const { written } = st.encoder.encodeInto(s, region);
+  return { ptr: helpers.ptr(region.subarray(0, written)), len: written };
+}
+
+/** Copy `data` at its own scratch offset — returns the ptr for the FFI slot. */
+function copyScratch(st: MarshalScratch, helpers: PtrHelpers, data: Uint8Array): unknown {
+  const off = bumpScratch(st, data.byteLength);
+  st.buf.set(data, off);
+  return helpers.ptr(st.buf.subarray(off, off + data.byteLength));
+}
+
+/** Scan a NUL-terminated C string at `addr` (doubling reads; 1 MiB hard cap). */
+function readNativeCString(helpers: PtrHelpers, addr: number | bigint): string {
+  let size = 64;
+  for (;;) {
+    const bytes = helpers.readBytes(addr, size);
+    const zero = bytes.indexOf(0);
+    if (zero >= 0) return cstrDecoder.decode(bytes.subarray(0, zero));
+    if (size >= 1 << 20) {
+      throw new ScriptcableError('ABI', 'unterminated cstring return (no NUL within 1 MiB)');
     }
+    size *= 16;
   }
+}
 
-  if (def.returns === 'string' || def.returns === 'bytes') {
-    const outPtr = new BigUint64Array(1);
-    const outLen = new BigUint64Array(1);
-    keepAlive.push(outPtr, outLen);
-    ffiArgs.push(helpers.ptr(outPtr) as never, helpers.ptr(outLen) as never);
-    fn(...ffiArgs);
-    const bytes = helpers.readBytes(outPtr[0]!, Number(outLen[0]));
-    return def.returns === 'string' ? new TextDecoder().decode(bytes) : bytes.slice();
+/**
+ * Slot positions of each param in the flat FFI argument list — string/bytes
+ * take two slots (ptr, len); everything else one. Precomputed per export so
+ * the hot path writes a reused array instead of building one per call.
+ */
+function slotLayout(def: ExportDef): { slots: number[]; totalSlots: number; outBase: number } {
+  const slots: number[] = [];
+  let pos = 0;
+  for (const p of def.params) {
+    slots.push(pos);
+    pos += p === 'string' || p === 'bytes' ? 2 : 1;
   }
+  const outBase = pos;
+  const marshaledRet = def.returns === 'string' || def.returns === 'bytes';
+  return { slots, totalSlots: pos + (marshaledRet ? 2 : 0), outBase };
+}
 
-  if (def.returns === 'void') {
-    fn(...ffiArgs);
-    return undefined;
+/**
+ * Marshaled exports (string/bytes in or out) get a per-export closure over
+ * the binding's scratch — no per-call ffiArgs/keepAlive arrays, no per-call
+ * ptr() for the stable scratch.
+ */
+function makeMarshaledFfiFn(
+  raw: (...a: never[]) => unknown,
+  def: ExportDef,
+  st: MarshalScratch,
+  helpers: PtrHelpers,
+): (...args: unknown[]) => unknown {
+  const { slots, totalSlots, outBase } = slotLayout(def);
+  const args: unknown[] = new Array(totalSlots);
+  const params = def.params;
+  const n = params.length;
+  const hasOut = def.returns === 'string' || def.returns === 'bytes';
+  if (hasOut) {
+    args[outBase] = st.outPtrArg;
+    args[outBase + 1] = st.outLenArg;
   }
-  if (def.returns === 'bool') return Boolean(fn(...ffiArgs));
-  // i64/u64 are TS-number classes (scriptc ≥ 0.4 prove-or-refuse keeps values
-  // within ±(2^53 − 1)) — bun:ffi still returns BigInt for those slots
-  if (def.returns === 'i64' || def.returns === 'u64') {
-    const r = fn(...ffiArgs);
-    return typeof r === 'bigint' ? Number(r) : r;
-  }
-  return fn(...ffiArgs);
+  return (...callArgs: unknown[]): unknown => {
+    // Fresh bump per call — the native path has no JS callbacks (re-entrancy
+    // exists only in the WASM loader), so shared scratch is safe, but every
+    // parameter gets its own region inside it (F3).
+    st.used = 0;
+    st.retired.length = 0;
+    for (let i = 0; i < n; i++) {
+      const cls = params[i]!;
+      const v = callArgs[i];
+      const slot = slots[i]!;
+      if (cls === 'string') {
+        const { ptr, len } = encodeScratch(st, helpers, String(v ?? ''));
+        args[slot] = ptr;
+        args[slot + 1] = len;
+      } else if (cls === 'bytes') {
+        const data = v instanceof Uint8Array ? v : new Uint8Array(v as ArrayBuffer);
+        args[slot] = copyScratch(st, helpers, data);
+        args[slot + 1] = data.byteLength;
+      } else if (cls === 'cstring') {
+        args[slot] = encodeScratch(st, helpers, String(v ?? '') + '\0').ptr;
+      } else if (cls === 'bool') {
+        args[slot] = v ? 1 : 0;
+      } else {
+        args[slot] = v;
+      }
+    }
+    if (hasOut) {
+      (raw as (...a: unknown[]) => void)(...args);
+      const bytes = helpers.readBytes(st.outPtr[0]!, Number(st.outLen[0]));
+      return def.returns === 'string' ? st.decoder.decode(bytes) : bytes.slice();
+    }
+    if (def.returns === 'cstring') {
+      return readNativeCString(helpers, (raw as (...a: unknown[]) => number)(...args));
+    }
+    return shapeFfiReturn(def, (raw as (...a: unknown[]) => unknown)(...args));
+  };
 }
 
 /** True when every param/return survives bun:ffi's direct symbol call unchanged. */
@@ -310,7 +416,7 @@ function hasDirectFfiSignature(def: ExportDef): boolean {
   );
 }
 
-/** Return-value shaping shared with invokeNative (void, bool, BigInt i64 slots). */
+/** Return-value shaping shared by the direct and marshaled fast paths (void, bool, BigInt i64 slots). */
 function shapeFfiReturn(def: ExportDef, value: unknown): unknown {
   if (def.returns === 'void') return undefined;
   if (def.returns === 'bool') return Boolean(value);

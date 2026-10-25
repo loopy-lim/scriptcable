@@ -2,5 +2,11 @@
   "darwin-arm64": {
     "add": 74,
     "ping": 65
+  },
+  "linux-x64": {
+    "add": 16,
+    "ping": 19,
+    "repeat": 1037,
+    "repeat-addon": 680
   }
 }

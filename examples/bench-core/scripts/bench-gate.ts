@@ -13,7 +13,9 @@
  * Prereq: bun run --filter @scriptcable/example-bench-core build
  */
 import { loadNativeFromOutDir } from '@scriptcable/core/native';
+import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -54,6 +56,19 @@ async function main(): Promise<void> {
   const results: Record<string, number> = {};
   for (const name of workloads) {
     results[name] = Math.round(medianNsPerCall(() => client.call(name, 3, 4), 200_000));
+  }
+  // repeat guards the string-marshaling contract (~0.6-1.1 µs/call) — the
+  // boundary-marshaling round (2026-10-25) tuned this path; the baseline is
+  // its post-optimization floor. The DELIVERED Bun tier routes marshaled
+  // exports through the N-API addon — guard that path too when built.
+  if (names.includes('repeat')) {
+    results['repeat'] = Math.round(medianNsPerCall(() => client.call('repeat', 'ab', 100), 100_000));
+    const addonPath = join(outDir, `${profile.name}.node`);
+    if (existsSync(addonPath)) {
+      const req = createRequire(join(outDir, 'package.json'));
+      const addon = req(addonPath) as Record<string, (...args: unknown[]) => unknown>;
+      results['repeat-addon'] = Math.round(medianNsPerCall(() => addon.repeat('ab', 100), 100_000));
+    }
   }
 
   const platform = platformKey();

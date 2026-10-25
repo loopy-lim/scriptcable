@@ -88,11 +88,23 @@ function cReadArg(cls: AbiClass, i: number, check: string): string {
       ].join('\n  ');
     case 'bool': return `NAPI_CHECK${check}(napi_get_value_boolean(env, ${v}, &a${i}));`;
     case 'string': case 'cstring':
+      // The utf8 buffer is a per-thread, grow-only scratch — malloc/free on
+      // every call dominated the string round trip (measured 2026-10-25).
+      // _Thread_local keeps worker threads from sharing the buffer. A failed
+      // grow leaves cap at 0 so the next call retries (F4).
       return [
         `NAPI_CHECK${check}(napi_get_value_string_utf8(env, ${v}, NULL, 0, &s${i}_len));`,
-        `s${i} = (char*)malloc(s${i}_len + 1);`,
-        `if (s${i} == NULL) { napi_throw_error(env, NULL, "scriptcable addon: out of memory"); goto cleanup; }`,
-        `NAPI_CHECK${check}(napi_get_value_string_utf8(env, ${v}, s${i}, s${i}_len + 1, &s${i}_len));`,
+        `if (s${i}_len + 1 > s${i}_cap) {`,
+        `  free(s${i}_buf);`,
+        `  s${i}_buf = NULL;`,
+        `  s${i}_cap = 0;`,
+        `  size_t s${i}_next = s${i}_len + 1 < 256 ? 256 : s${i}_len + 1;`,
+        `  char* s${i}_grown = (char*)malloc(s${i}_next);`,
+        `  if (s${i}_grown == NULL) { napi_throw_error(env, NULL, "scriptcable addon: out of memory"); goto cleanup; }`,
+        `  s${i}_buf = s${i}_grown;`,
+        `  s${i}_cap = s${i}_next;`,
+        `}`,
+        `NAPI_CHECK${check}(napi_get_value_string_utf8(env, ${v}, s${i}_buf, s${i}_cap, &s${i}_len));`,
       ].join('\n  ');
     case 'bytes':
       return `NAPI_CHECK${check}(napi_get_buffer_info(env, ${v}, &s${i}_data, &s${i}_len));`;
@@ -120,10 +132,10 @@ function cWrapper(e: ScriptcableProfile['exports'][number], prefix: string): str
   for (const p of e.params) {
     const i = jsArgIndex;
     if (p === 'string' || p === 'cstring') {
-      lines.push(`  char* s${i} = NULL;`);
+      lines.push(`  static _Thread_local char* s${i}_buf = NULL;`);
+      lines.push(`  static _Thread_local size_t s${i}_cap = 0;`);
       lines.push(`  size_t s${i}_len = 0;`);
-      frees.push(`free(s${i});`);
-      callArgs.push(p === 'string' ? `(const uint8_t*)s${i}` : `s${i}`, ...(p === 'string' ? [`(int64_t)s${i}_len`] : []));
+      callArgs.push(p === 'string' ? `(const uint8_t*)s${i}_buf` : `s${i}_buf`, ...(p === 'string' ? [`(int64_t)s${i}_len`] : []));
       jsArgIndex++;
     } else if (p === 'bytes') {
       lines.push(`  void* s${i}_data = NULL;`);
