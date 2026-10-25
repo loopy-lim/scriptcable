@@ -154,7 +154,49 @@ The package published into `.scriptcable/generated/` and linked as `node_modules
 
 1. **Native and WASM are interchangeable on speed** for scriptcable cores (~73–80 ns/call); pick per-platform.
 2. **The build cache is the big DX win** — 6.4× faster inner loop on unchanged inputs, with precise invalidation.
-3. **Coarse exports beat chatty ones** — batch string/bytes work to amortize the ~1.3 µs marshalling.
+3. **Coarse exports beat chatty ones** — string round-trips land at ~0.66–1.0 µs after the marshaling round (2026-10-25); batch string/bytes work inside one export to amortize the crossing.
 4. **`@scriptcable/client` adds no runtime cost** — flavor selection is import-time resolution; calls run at the measured engine speed everywhere (Bun CLI, Next server, browser).
 5. Startup is snappy: ~6 ms from import to a loaded, callable native engine.
 6. **Against the alternatives**: scriptcable now generates a typed N-API addon — 24.5 ns/call under Node, ~47 ns under Bun (napi-rs class from generated code on Node), with generic FFI (70–80 ns) as the automatic fallback and browser WASM at 48 ns. Node-only and per-language addon codebases buy ~2 ns over that; scriptcable compiles one TS core for all four hosts.
+
+## 8. Re-measured on linux-x64 (WSL2, bun 1.4.4) — 2026-10-25, boundary-marshaling round
+
+Median of 3 runs (`bun run --filter @scriptcable/example-bench-core bench`, `call()` path):
+
+| benchmark | before round | after | change |
+| --- | --- | --- | --- |
+| ping | 48.2 ns | 19.6 ns | **−58%** — `call()` now rides the direct fns closures |
+| add | 49.1 ns | 28.0 ns | −43% |
+| repeat(100) — native | 1.19 µs | 0.98 µs | −18% |
+| repeat(100) — wasm | 1.14 µs | 1.04 µs | −9% |
+
+What the breakdown probe showed first: per-call JS allocations were NOT the story
+(`new TextDecoder()` is eliminated by JSC escape analysis at ~18 ns; out-slot arrays ~8 ns).
+~0.67 µs of the old 1.04 µs string call was the C side (dispatch + core alloc/copy). So the
+round targeted the delivered number instead:
+
+- **Per-export Bun tiering**: marshaled exports (string/bytes/cstring) ride the N-API addon —
+  their marshaling happens in C, measured faster than bun:ffi's JS-side marshaling. Numbers stay
+  on bun:ffi (~5–20 ns). Delivered string call on Bun: 1.04–1.08 µs → **0.66–0.71 µs (−37%)**.
+- **bun:ffi marshaling scratch** (`native-loader`): per-binding reusable encode buffer + out-slot
+  pair + precomputed FFI slot layout; no per-call arrays or `ptr()` for stable buffers.
+  `fns` string call 1.04 µs → ~0.96–1.03 µs after the G3 correctness fixes turned the
+  scratch into per-parameter bump regions (the delivered Bun tier routes strings
+  through the addon, so user-facing cost is unaffected); universal `call()` rides the
+  same closures (ping 48 → 20 ns, add 49 → 28 ns).
+- **Addon C wrapper** (`napi-addon`): per-thread (`_Thread_local`) grow-only utf8 scratch replaces
+  the per-call query+malloc+free — addon string call 694 → 659 ns.
+- **WASM loader**: per-instance bump-allocated scratch (no `scriptc_alloc`/`free` per call),
+  `encodeInto` straight into wasm memory (no JS intermediate), cached `DataView`/`TextEncoder`/
+  `TextDecoder` (invalidated on `memory.grow`), and a depth guard so re-entrant calls from host
+  callbacks fall back to per-call state. wasm repeat −9% — the remaining ~0.9 µs is wasm-side
+  alloc/copy (scriptc runtime, intentionally out of scope).
+- **bench-gate**: `examples/bench-core/scripts/bench-gate.ts` now guards the string-marshaling
+  contract too, and the committed baseline covers linux-x64 (2.5× gross-regression tolerance).
+
+**When NOT to use scriptcable** (decision boundary, this host): the boundary pays one copy plus
+UTF-8 encode/decode. Pure-JS references: ping 0.8 ns, add 1.1 ns, repeat(100) ~336 ns. Even at
+~0.66 µs per string call, an API made of many small string round-trips is still ~2× slower in
+scriptcable than plain TS — keep that logic in TS. Where scriptcable wins is coarse exports: one
+crossing that does the work of many (fib, image math, parsing) beats JS at equal or better
+latency with memory isolation and type-safe ABI.

@@ -389,6 +389,8 @@ scriptcable diff --fail-on-breaking   # exit 1 on removals / signature changes
 
 Benchmarks live in `examples/bench-core` (`bun run bench`): native (typed N-API addon / FFI) vs wasm (WASI) call latency/throughput plus cold/warm build times. Headline numbers on an M1 Max: **~24.5 ns/call** via the generated typed N-API addon on Node (~47 ns on Bun, still ahead of bun:ffi), 48 ns browser WASM, cold core build **~1.1 s**, warm (cached) **~166 ms** — **6.4× faster**. The `@scriptcable/client` package adds no call-path cost (flavor selection is import-time resolution). See [BENCHMARK.md](./BENCHMARK.md).
 
+**Boundary costs, honestly** (linux-x64, 2026-10-25): number calls land at **5–20 ns** (Bun fns / typed addon) and string round-trips at **~0.66–1.0 µs** after the marshaling round — Bun now routes string/bytes exports through the addon's C while numbers stay on bun:ffi. A string round-trip still pays one copy + UTF-8 encode/decode, so an API made of *many small string calls* is ~2× slower than plain TypeScript — keep such logic in TS or batch it inside one coarse export. Compiled cores win where one crossing does real work (math, parsing, memory isolation). A `bench-gate` (`examples/bench-core`) guards both contracts against the committed per-platform baseline.
+
 Repeat builds are cached automatically — `scriptcable build --force` bypasses the cache.
 
 ## Monorepo scripts
