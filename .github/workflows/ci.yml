@@ -89,6 +89,28 @@ jobs:
       - name: Perf gate (vs committed baseline)
         run: bun examples/bench-core/scripts/bench-gate.ts
         continue-on-error: true
+      # Node(V8) string-tier measurement — the local dev environment has no
+      # node, so this record lives here. Measurement only: runner numbers
+      # don't gate (same tolerance caveat as bench-gate above).
+      - uses: actions/setup-node@v4
+        if: runner.os == 'Linux'
+        with:
+          node-version: 24
+      - name: Node runtime string measurement
+        if: runner.os == 'Linux'
+        run: |
+          node examples/bench-core/scripts/bench-node.ts --out bench-node.json | tee bench-node.txt
+          {
+            echo "### Node string tiers"
+            echo '```'
+            cat bench-node.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: bench-node-${{ matrix.os }}
+          path: bench-node.json
 
   # Windows: scriptc compiles, zig cc links, watch/init/tests pass. The
   # typed N-API addon doesn't build on Windows yet (FFI fallback serves
