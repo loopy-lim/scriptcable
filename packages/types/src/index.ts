@@ -36,6 +36,12 @@ export type CallbackDef = {
   returns: AbiClass;
 };
 
+/**
+ * One batch call — `[exportName, ...args]`. A whole batch crosses the
+ * boundary once (see createBatchWire and the generated clients' batch()).
+ */
+export type BatchEntry = [exportName: string, ...args: unknown[]];
+
 export type ScriptcableProfile = {
   profile_format: 1 | 2;
   name: string;

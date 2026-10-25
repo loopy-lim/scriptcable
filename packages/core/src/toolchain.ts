@@ -8,7 +8,7 @@ import { configToProfile } from './profile.js';
 import { generateClients } from './codegen.js';
 import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
 import { ensureClientPackageLink } from './client-package.js';
-import { buildNodeAddon, canBuildNodeAddon, napiAddonFileName } from './napi-addon.js';
+import { buildNodeAddon, canBuildNodeAddon, napiAddonFileName, generateSharedBatchSource, SHARED_BATCH_SYMBOL } from './napi-addon.js';
 import { ensureZig, findCachedZig } from './zig-tools.js';
 import { which } from './which.js';
 
@@ -419,6 +419,27 @@ export async function buildCore(
         await writeFile(p, body);
       }
     }
+    // Host batch executive — a plain C entry linked into the shared library
+    // so bun:ffi/koffi hosts (Node/Windows without the addon) run N calls
+    // across one boundary too. Android's version script exports only Java_*
+    // (which would localize the executive symbol into uselessness) and its
+    // selective-pulling link is sensitive to extra objects — excluded.
+    const extraSources: string[] = [];
+    if (androidArm64) {
+      extraSources.push(
+        join(outDir, 'generated', 'android', 'cable_host.cpp'),
+        join(outDir, 'generated', 'android', 'cable_jni.cpp'),
+      );
+    } else {
+      const batchSource = generateSharedBatchSource(profile);
+      if (batchSource) {
+        const batchC = join(outDir, `${config.name}-batch.c`);
+        await writeFile(batchC, batchSource);
+        extraSources.push(batchC);
+      } else {
+        console.log(`  batch-so:   skipped — exports empty or an export collides with ${SHARED_BATCH_SYMBOL}`);
+      }
+    }
     result.sharedPath = await linkSharedLibrary({
       archivePath: result.nativePath!,
       outPath: join(nativeDir, sharedLibraryFileName(config.name)),
@@ -426,12 +447,7 @@ export async function buildCore(
       cwd,
       zigPath: buildZig ?? info.zigPath,
       preferZigLink: !info.hasClang && !info.hasCc,
-      extraSources: androidArm64
-        ? [
-            join(outDir, 'generated', 'android', 'cable_host.cpp'),
-            join(outDir, 'generated', 'android', 'cable_jni.cpp'),
-          ]
-        : undefined,
+      extraSources: extraSources.length ? extraSources : undefined,
       includeDirs: androidArm64 ? [join(outDir, 'generated', 'android')] : undefined,
     });
     // Typed N-API direct binding — soft failure: generic FFI remains the fallback.

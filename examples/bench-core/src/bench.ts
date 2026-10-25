@@ -11,7 +11,10 @@ import { bench, formatTable, formatComparison, type BenchResult, type CompareRow
 import { loadNativeFromOutDir } from '@scriptcable/core/native';
 import { loadWasmModule } from '@scriptcable/core/wasm';
 import { createMinimalWasi } from '@scriptcable/core/wasi';
+import { createBatchWire } from '@scriptcable/core/batch';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -117,6 +120,75 @@ async function main(): Promise<void> {
   console.log(formatTable(wasmRows));
   console.log('\n== native vs wasm ==');
   console.log(formatComparison(comparisons));
+
+  // Batch — N calls across one boundary. The generated addon ships the
+  // executive; the loaders' batch() is a sequential loop (documented
+  // fallback, measured here for the honest comparison).
+  const BATCH_N = 64;
+  const batchEntries = Array.from(
+    { length: BATCH_N },
+    () => ['repeat', 'ab', 100] as [string, ...unknown[]],
+  );
+  const batchRows: string[] = [];
+  batchRows.push('| workload | ns/op | vs single |');
+  batchRows.push('| --- | --- | --- |');
+  const batchSingle: Record<string, number> = {
+    addon: 0,
+    native: nativeRows.find((r) => r.name.endsWith('repeat(100)'))!.meanNs,
+    wasm: wasmRows.find((r) => r.name.endsWith('repeat(100)'))!.meanNs,
+  };
+
+  const addonPath = join(outDir, `${profile.name}.node`);
+  if (existsSync(addonPath)) {
+    const req = createRequire(join(outDir, 'package.json'));
+    const addon = req(addonPath) as Record<string, (...args: unknown[]) => unknown>;
+    const exec = addon['__scriptcable_batch'] as
+      | ((meta: Int32Array, args: Uint8Array) => Uint8Array)
+      | undefined;
+    const wire = createBatchWire(profile);
+    if (typeof exec === 'function') {
+      const single = bench('addon:repeat(100)', () => addon.repeat('ab', 100), { iterations: 200_000 });
+      batchSingle.addon = single.meanNs;
+      const whole = bench(
+        'addon:repeat-batch(64)',
+        () => {
+          const { meta, args } = wire.encode(batchEntries);
+          wire.decode(exec(meta, args));
+        },
+        { iterations: 3_000 },
+      );
+      const perOp = whole.meanNs / BATCH_N;
+      batchRows.push(`| addon:repeat-batch(64) — executive | ${perOp.toFixed(0)} | ${(perOp / batchSingle.addon * 100).toFixed(0)}% |`);
+      batchRows.push(`| addon:repeat(100) single (ref) | ${batchSingle.addon.toFixed(0)} | 100% |`);
+
+      // Numeric batch — no string codec on the wire, only slot reads/writes.
+      const numEntries = Array.from(
+        { length: BATCH_N },
+        () => ['add', 20, 22] as [string, ...unknown[]],
+      );
+      const numSingle = bench('addon:add', () => addon.add(20, 22), { iterations: 2_000_000 });
+      const numWhole = bench(
+        'addon:add-batch(64)',
+        () => {
+          const { meta, args } = wire.encode(numEntries);
+          wire.decode(exec(meta, args));
+        },
+        { iterations: 20_000 },
+      );
+      const numPerOp = numWhole.meanNs / BATCH_N;
+      batchRows.push(`| addon:add-batch(64) — executive | ${numPerOp.toFixed(1)} | ${(numPerOp / numSingle.meanNs * 100).toFixed(0)}% of add single (${numSingle.meanNs.toFixed(0)}) |`);
+    } else {
+      console.error('addon has no batch executive — rebuild with the current codegen');
+    }
+  }
+  const nativeWhole = bench('native:repeat-batch(64)', () => native.batch(batchEntries), { iterations: 1_000 });
+  const wasmWhole = bench('wasm:repeat-batch(64)', () => wasm.batch(batchEntries), { iterations: 1_000 });
+  const nativeTransport = native.batchTransport === 'executive' ? 'host executive' : 'sequential fallback';
+  batchRows.push(`| native:repeat-batch(64) — ${nativeTransport} | ${(nativeWhole.meanNs / BATCH_N).toFixed(0)} | ${(nativeWhole.meanNs / BATCH_N / batchSingle.native * 100).toFixed(0)}% |`);
+  batchRows.push(`| wasm:repeat-batch(64) — sequential | ${(wasmWhole.meanNs / BATCH_N).toFixed(0)} | ${(wasmWhole.meanNs / BATCH_N / batchSingle.wasm * 100).toFixed(0)}% |`);
+
+  console.log(`\n== batch (${BATCH_N} × repeat('ab',100) per call) ==`);
+  console.log(batchRows.join('\n'));
 
   console.error('\nmeasuring build times (cold / warm-cache)…');
   const buildTimes = await timeColdAndWarmBuild();

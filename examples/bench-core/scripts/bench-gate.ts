@@ -13,6 +13,7 @@
  * Prereq: bun run --filter @scriptcable/example-bench-core build
  */
 import { loadNativeFromOutDir } from '@scriptcable/core/native';
+import { createBatchWire } from '@scriptcable/core/batch';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -63,12 +64,37 @@ async function main(): Promise<void> {
   // exports through the N-API addon — guard that path too when built.
   if (names.includes('repeat')) {
     results['repeat'] = Math.round(medianNsPerCall(() => client.call('repeat', 'ab', 100), 100_000));
+    const BATCH_N = 64;
+    const batchEntries = Array.from(
+      { length: BATCH_N },
+      () => ['repeat', 'ab', 100] as [string, ...unknown[]],
+    );
     const addonPath = join(outDir, `${profile.name}.node`);
     if (existsSync(addonPath)) {
       const req = createRequire(join(outDir, 'package.json'));
       const addon = req(addonPath) as Record<string, (...args: unknown[]) => unknown>;
       results['repeat-addon'] = Math.round(medianNsPerCall(() => addon.repeat('ab', 100), 100_000));
+      // The batch executive — 64 × repeat('ab',100) across one crossing,
+      // recorded per-op (encode + executive + decode ÷ 64). Steady-state:
+      // entries are built once, matching the amortized calling pattern.
+      const exec = addon['__scriptcable_batch'] as
+        | ((meta: Int32Array, args: Uint8Array) => Uint8Array)
+        | undefined;
+      if (typeof exec === 'function') {
+        const wire = createBatchWire(profile);
+        const perBatch = medianNsPerCall(() => {
+          const { meta, args } = wire.encode(batchEntries);
+          wire.decode(exec(meta, args));
+        }, 20_000);
+        results['repeat-batch'] = Math.round(perBatch / BATCH_N);
+      }
     }
+    // Host (.so) executive — same wire, ffi/koffi dispatch. The loader routes
+    // marshaled batches through it when linked (sequential fallback value
+    // otherwise; the baseline records whichever this build shipped).
+    results['repeat-batch-so'] = Math.round(
+      medianNsPerCall(() => client.batch(batchEntries), 20_000) / BATCH_N,
+    );
   }
 
   const platform = platformKey();

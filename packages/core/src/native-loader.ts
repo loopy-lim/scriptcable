@@ -2,11 +2,13 @@
  * Load a scriptc native shared library and call C ABI exports.
  * Bun → bun:ffi (default engine, built-in); plain Node → optional koffi fallback.
  */
-import type { AbiClass, ExportDef, ScriptcableProfile } from '@scriptcable/types';
+import type { AbiClass, BatchEntry, ExportDef, ScriptcableProfile } from '@scriptcable/types';
 import { ScriptcableError } from '@scriptcable/types';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { sharedLibraryFileName } from './link-shared.js';
+import { createBatchWire } from './batch-wire.js';
+import { SHARED_BATCH_SYMBOL } from './napi-addon.js';
 
 export type NativeModule = {
   profile: ScriptcableProfile;
@@ -18,7 +20,21 @@ export type NativeModule = {
    * marshaling as `call`.
    */
   fns: Record<string, (...args: unknown[]) => unknown>;
+  /**
+   * Batch — routed by composition when the shared library carries the batch
+   * executive (`scriptc_batch`): marshaled exports cross one boundary;
+   * bun:ffi number-only batches keep the direct-symbol loop (16 ns/op beats
+   * any batch). Without the executive this is a plain sequential loop.
+   */
+  batch: (entries: ReadonlyArray<BatchEntry>) => unknown[];
+  /** Whether the linked shared library carries the batch executive. */
+  batchTransport: 'executive' | 'sequential';
   dispose: () => void;
+};
+
+type BatchBinding = {
+  /** One-crossing batch — (meta, args) in, result block bytes out. */
+  exec: (meta: Int32Array, args: Uint8Array) => Uint8Array;
 };
 
 type FfiBinding = {
@@ -26,6 +42,14 @@ type FfiBinding = {
   /** Pre-bound per-export functions keyed by export name (see NativeModule.fns). */
   fns: Record<string, (...args: unknown[]) => unknown>;
   close?: () => void;
+  /** Present when the shared library exports the batch executive. */
+  batch?: BatchBinding;
+  /**
+   * bun:ffi's direct numeric symbols are the fastest dispatch in existence
+   * — number-only batches keep the loop there. koffi's dispatch is ~40×
+   * that, so its numeric batches prefer the executive.
+   */
+  loopFastNumbers: boolean;
 };
 
 function isBun(): boolean {
@@ -79,10 +103,51 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
     symbols[e.symbol] = { args, returns };
   }
 
-  const lib = dlopen(soPath, symbols);
+  // bun:ffi throws when ANY listed symbol is missing, so the batch executive
+  // is probed with it included and retried without on miss (measured
+  // 2026-10-25 — the failed attempt does not poison the second dlopen). If
+  // the retry fails too, the .so was never loadable — rethrow the FIRST
+  // error, which names the real cause.
+  let lib: { symbols: Record<string, unknown> };
+  try {
+    lib = dlopen(soPath, {
+      ...symbols,
+      [SHARED_BATCH_SYMBOL]: {
+        args: [FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.i64, FFIType.ptr],
+        returns: FFIType.i64,
+      },
+    }) as { symbols: Record<string, unknown> };
+  } catch (probeErr) {
+    try {
+      lib = dlopen(soPath, symbols) as { symbols: Record<string, unknown> };
+    } catch {
+      throw probeErr;
+    }
+  }
   const sym = lib.symbols as Record<string, (...args: never[]) => unknown>;
   const init = sym[profile.abi.init_symbol];
   if (typeof init === 'function') (init as () => void)();
+
+  let batch: BatchBinding | undefined;
+  const rawBatch = sym[SHARED_BATCH_SYMBOL];
+  if (typeof rawBatch === 'function') {
+    const outSlot = new BigUint64Array(1);
+    const outSlotArg = ptr(outSlot);
+    batch = {
+      exec(meta: Int32Array, args: Uint8Array): Uint8Array {
+        const size = Number((rawBatch as (m: unknown, me: number, a: unknown, al: number, o: unknown) => bigint)(ptr(meta), meta.length, ptr(args), args.byteLength, outSlotArg));
+        if (size < 0) {
+          throw new ScriptcableError(
+            'BATCH',
+            size === -3 ? 'batch executive out of memory' : 'batch wire rejected by the executive (bounds/wire error)',
+          );
+        }
+        // The result block is per-thread and valid only until the next batch
+        // on this thread — decode (which copies) must happen before returning.
+        return helpers.readBytes(Number(outSlot[0]!), size);
+      },
+    };
+  }
 
   const helpers: PtrHelpers = {
     ptr: (buf) => ptr(buf),
@@ -112,6 +177,8 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
       return fns[def.export]!(...args);
     },
     fns,
+    batch,
+    loopFastNumbers: true,
   };
 }
 
@@ -136,7 +203,7 @@ async function bindKoffi(soPath: string, profile: ScriptcableProfile): Promise<F
 }
 
 /** Same binding as `bindKoffi`, given the already-loaded koffi module. */
-function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffiMod: KoffiModule): FfiBinding {
+export function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffiMod: KoffiModule): FfiBinding {
   const koffi = koffiMod.default ?? koffiMod;
   const lib = koffi.load(soPath);
   const funcs: Record<string, (...args: unknown[]) => unknown> = {};
@@ -147,6 +214,31 @@ function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffiMod: Ko
     funcs[e.symbol] = makeKoffiFunc(koffi, lib, e);
   }
 
+  // koffi resolves symbols lazily-ish — declare defensively; a .so without
+  // the executive just keeps its sequential batch.
+  let koffiBatch: ((...a: unknown[]) => unknown) | null = null;
+  try {
+    koffiBatch = lib.func(`int64_t ${SHARED_BATCH_SYMBOL}(const int32_t*, int64_t, const uint8_t*, int64_t, _Out_ void**)`);
+  } catch {
+    koffiBatch = null;
+  }
+  let batch: BatchBinding | undefined;
+  if (koffiBatch) {
+    batch = {
+      exec(meta: Int32Array, args: Uint8Array): Uint8Array {
+        const out: unknown[] = [null];
+        const size = Number(koffiBatch!(meta, meta.length, args, args.byteLength, out));
+        if (size < 0) {
+          throw new ScriptcableError(
+            'BATCH',
+            size === -3 ? 'batch executive out of memory' : 'batch wire rejected by the executive (bounds/wire error)',
+          );
+        }
+        return koffi.decode(out[0], 'uint8_t', size) as Uint8Array;
+      },
+    };
+  }
+
   return {
     call(symbol, args) {
       const fn = funcs[symbol];
@@ -155,6 +247,8 @@ function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffiMod: Ko
     },
     // koffi's funcs already marshal per export — re-key them by export name.
     fns: Object.fromEntries(profile.exports.map((e) => [e.export, funcs[e.symbol]!])),
+    batch,
+    loopFastNumbers: false,
   };
 }
 
@@ -237,7 +331,14 @@ function makeKoffiFunc(
       const bytes = decoded instanceof Uint8Array ? decoded : Uint8Array.from(decoded);
       return e.returns === 'string' ? Buffer.from(bytes).toString('utf8') : bytes.slice();
     }
-    return raw(...ffiArgs);
+    const r = raw(...ffiArgs);
+    // koffi answers uint64_t/int64_t with BigInt — the class contract (and
+    // every other tier) carries them as TS numbers (values proven within
+    // ±(2^53 − 1)), so shape here or batch/sequential disagree on type.
+    if (e.returns === 'i64' || e.returns === 'u64') {
+      return typeof r === 'bigint' ? Number(r) : r;
+    }
+    return r;
   };
 }
 
@@ -454,20 +555,53 @@ function makeDirectFfiFn(
 
 function makeNativeModule(profile: ScriptcableProfile, binding: FfiBinding): NativeModule {
   const byName = new Map(profile.exports.map((e) => [e.export, e]));
+  const unknownExport = (exportName: string): ScriptcableError =>
+    new ScriptcableError(
+      'UNKNOWN_EXPORT',
+      `Unknown export "${exportName}"`,
+      `Known: ${[...byName.keys()].join(', ')}`,
+    );
+  const wire = binding.batch ? createBatchWire(profile) : null;
+  const marshaled = new Set(
+    profile.exports
+      .filter(
+        (e) =>
+          e.params.some((p) => p === 'string' || p === 'bytes' || p === 'cstring') ||
+          e.returns === 'string' ||
+          e.returns === 'bytes',
+      )
+      .map((e) => e.export),
+  );
 
   return {
     profile,
     call(exportName: string, ...args: unknown[]) {
       const def = byName.get(exportName);
-      if (!def) {
-        throw new ScriptcableError(
-          'UNKNOWN_EXPORT',
-          `Unknown export "${exportName}"`,
-          `Known: ${[...byName.keys()].join(', ')}`,
-        );
-      }
+      if (!def) throw unknownExport(exportName);
       return binding.call(def.symbol, args);
     },
+    batch(entries: ReadonlyArray<BatchEntry>) {
+      // Composition routing — the executive wins for marshaled exports (the
+      // wire removes per-call marshaling and dispatch) and for koffi, whose
+      // dispatch dwarfs it; bun:ffi number-only batches keep the direct
+      // symbol loop, the fastest dispatch that exists (~16 ns/op).
+      if (wire && binding.batch) {
+        const needsExec = !binding.loopFastNumbers || entries.some((e) => marshaled.has(e[0]));
+        if (needsExec) {
+          const { meta, args } = wire.encode(entries);
+          return wire.decode(binding.batch.exec(meta, args));
+        }
+        // Numeric-only on the fast loop: validate names/arg counts anyway so
+        // the sequential path throws the same wire errors as the executive.
+        wire.check(entries);
+      }
+      return entries.map((e) => {
+        const def = byName.get(e[0]);
+        if (!def) throw unknownExport(e[0]);
+        return binding.call(def.symbol, e.slice(1) as unknown[]);
+      });
+    },
+    batchTransport: wire ? 'executive' : 'sequential',
     fns: binding.fns,
     dispose() {
       binding.close?.();

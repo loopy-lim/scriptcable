@@ -179,7 +179,11 @@ export async function linkSharedLibrary(options: LinkSharedOptions): Promise<str
     const obj = join(dirname(outPath), `link-extra-${extraIdx++}.o`);
     const std = /\.cpp$|\.cc$|\.cxx$/.test(srcPath) ? ['-std=c++17'] : [];
     const inc = (options.includeDirs ?? []).flatMap((d) => ['-I', d]);
-    const c = await run(linker, [...linkerArgs, ...std, ...inc, '-c', srcPath, '-o', obj]);
+    // -fPIC: extras land in a shared object, and gcc compiles _Thread_local
+    // statics with the local-exec TLS model without it — unrepresentable in
+    // -shared (R_X86_64_TPOFF32 link failure; the NDK/zig drivers default to
+    // PIC anyway, so the flag is inert there).
+    const c = await run(linker, [...linkerArgs, ...std, '-fPIC', ...inc, '-c', srcPath, '-o', obj]);
     if (c.code !== 0) {
       throw new ScriptcableToolchainError(`Failed to compile ${srcPath}:\n${c.stderr}`);
     }

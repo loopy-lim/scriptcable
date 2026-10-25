@@ -4,6 +4,7 @@ export * from './toolchain.js';
 export * from './wasm-loader.js';
 export * from './link-shared.js';
 export * from './native-loader.js';
+export * from './batch-wire.js';
 export * from './codegen.js';
 export * from './client-package.js';
 export * from './wasi-polyfill.js';

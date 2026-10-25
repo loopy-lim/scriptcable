@@ -4,9 +4,11 @@
     "ping": 65
   },
   "linux-x64": {
-    "add": 16,
-    "ping": 19,
-    "repeat": 1037,
-    "repeat-addon": 680
+    "add": 19,
+    "ping": 23,
+    "repeat": 1256,
+    "repeat-addon": 764,
+    "repeat-batch": 913,
+    "repeat-batch-so": 898
   }
 }

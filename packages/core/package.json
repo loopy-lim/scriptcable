@@ -44,6 +44,10 @@
       "types": "./dist/native-loader.d.ts",
       "import": "./dist/native-loader.js"
     },
+    "./batch": {
+      "types": "./dist/batch-wire.d.ts",
+      "import": "./dist/batch-wire.js"
+    },
     "./link": {
       "types": "./dist/link-shared.d.ts",
       "import": "./dist/link-shared.js"

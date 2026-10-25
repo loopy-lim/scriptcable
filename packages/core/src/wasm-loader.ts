@@ -2,7 +2,7 @@
  * Shared WASI Preview 1 reactor loader for scriptc library WASM modules.
  * Works in Node 24+ (node:wasi) and can be adapted for Bun / browsers.
  */
-import type { AbiClass, CallbackDef, ExportDef, ScriptcableProfile } from '@scriptcable/types';
+import type { AbiClass, BatchEntry, CallbackDef, ExportDef, ScriptcableProfile } from '@scriptcable/types';
 import { ScriptcableError } from '@scriptcable/types';
 
 export type WasmExports = WebAssembly.Exports & {
@@ -23,6 +23,13 @@ export type LoadedModule = {
    * directly; the rest reuse the same marshaling as `call`.
    */
   fns: Record<string, (...args: unknown[]) => unknown>;
+  /**
+   * Sequential batch — N calls through the regular marshaling. An
+   * in-boundary batch (one crossing for N calls) needs a batch executive
+   * inside the wasm module, which is scriptc-runtime territory; the
+   * generated N-API addon ships one, this loader does not.
+   */
+  batch: (entries: ReadonlyArray<BatchEntry>) => unknown[];
   dispose: () => void;
 };
 
@@ -500,6 +507,19 @@ export async function loadWasmModule(
         );
       }
       return callExport(st, def, args);
+    },
+    batch(entries: ReadonlyArray<BatchEntry>) {
+      return entries.map((e) => {
+        const def = byName.get(e[0]);
+        if (!def) {
+          throw new ScriptcableError(
+            'UNKNOWN_EXPORT',
+            `Unknown export "${e[0]}"`,
+            `Known: ${[...byName.keys()].join(', ')}`,
+          );
+        }
+        return callExport(st, def, e.slice(1) as unknown[]);
+      });
     },
     fns,
     dispose() {

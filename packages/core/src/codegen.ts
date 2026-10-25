@@ -1,5 +1,6 @@
 import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
 import { configToProfile } from './profile.js';
+import { BATCH_SYMBOL } from './napi-addon.js';
 
 export type CodegenTarget =
   | 'node'
@@ -38,12 +39,17 @@ function docComment(e: ScriptcableProfile['exports'][number]): string {
 function genTypes(profile: ScriptcableProfile): string {
   const lines: string[] = [
     header('types'),
+    `import type { BatchEntry } from '@scriptcable/types';`,
     `export type ScriptcableClient = {`,
   ];
   for (const e of profile.exports) {
     if (e.doc) lines.push(`  /** ${e.doc.replace(/\*\//g, '*\\/')} */`);
     lines.push(`  ${e.export}(${paramList(e)}): ${tsType(e.returns)};`);
   }
+  lines.push(
+    `  /** Run N calls across one boundary — addon batch executive when present, sequential loop otherwise. */`,
+  );
+  lines.push(`  batch(entries: ReadonlyArray<BatchEntry>): unknown[];`);
   lines.push(`  dispose(): void;`);
   lines.push(`};\n`);
   return lines.join('\n');
@@ -92,10 +98,50 @@ function methodBlock(profile: ScriptcableProfile): string {
 
 /** Per-call consts binding the typed N-API addon's functions once per client. */
 function addonConsts(profile: ScriptcableProfile): string {
-  return profile.exports
-    .map((e) => `      const __addon_${e.export} = addonFns['${e.export}'];`)
-    .join('\n');
+  const exec = `      const __execBatch = addonFns['${BATCH_SYMBOL}'] as ((meta: Int32Array, args: Uint8Array) => Uint8Array) | undefined;`;
+  return (
+    profile.exports
+      .map((e) => `      const __addon_${e.export} = addonFns['${e.export}'];`)
+      .join('\n') + (profile.exports.length ? '\n' + exec : exec)
+  );
 }
+
+/** batch() — ride the addon executive when present, sequential fallback otherwise. */
+const BATCH_DIRECT = `  batch(entries: ReadonlyArray<BatchEntry>): unknown[] {
+    if (typeof __execBatch === 'function') {
+      const { meta, args } = __wire.encode(entries);
+      return __wire.decode(__execBatch(meta, args));
+    }
+    __wire.check(entries);
+    return entries.map((e) => addonFns[e[0]](...(e.slice(1) as unknown[])) as unknown);
+  },
+`;
+
+/**
+ * Shared-library flavor — the addon executive wins for marshaled exports
+ * everywhere and for numbers on Node (koffi dispatch dwarfs it); bun:ffi's
+ * direct numeric loop (~16 ns/op) beats ANY batch, so pure numeric batches
+ * on Bun go to mod.batch — which routes the shared library's own executive
+ * the same way for hosts without the addon (koffi/Windows).
+ */
+const BATCH_SHARED = `  batch(entries: ReadonlyArray<BatchEntry>): unknown[] {
+    const needsCodec = entries.some((e) => __MARSHALED.has(e[0]));
+    if (typeof __execBatch === 'function' && (!IS_BUN || needsCodec)) {
+      const { meta, args } = __wire.encode(entries);
+      return __wire.decode(__execBatch(meta, args));
+    }
+    return mod.batch(entries);
+  },
+`;
+
+/**
+ * WASM flavors — sequential via call(): errors match single calls exactly.
+ * (An in-boundary batch needs scriptc-runtime support — upstream.)
+ */
+const BATCH_WASM = `  batch(entries: ReadonlyArray<BatchEntry>): unknown[] {
+    return entries.map((e) => mod.call(e[0], ...(e.slice(1) as unknown[])));
+  },
+`;
 
 /** Methods that call the typed N-API addon's direct functions (bytes get a Buffer copy). */
 function methodBlockDirect(profile: ScriptcableProfile): string {
@@ -141,7 +187,8 @@ import { dirname, join } from 'node:path';
 import { WASI } from 'node:wasi';
 import { loadNativeLibrary, loadNativeLibrarySync } from '@scriptcable/core/native';
 import { loadWasmModule } from '@scriptcable/core/wasm';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import { createBatchWire } from '@scriptcable/core/batch';
+import type { ScriptcableProfile, BatchEntry } from '@scriptcable/types';
 import type { ScriptcableClient } from './types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -157,6 +204,8 @@ const SHARED_NAME = '${sharedRelPath}';
 const WASM_NAME = '${wasmRelPath}';
 const ADDON_NAME = '${profile.name}.node';
 const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
+// One wire per client module — encode/decode pools are reused across batches.
+const __wire = createBatchWire(PROFILE);
 // Bun: the pre-bound bun:ffi shared-library path is the fastest boundary
 // (~8-15 ns/call, direct symbols) — prefer it over the N-API addon (~22-30
 // ns). Node keeps the addon first; koffi stays an optional fallback.
@@ -167,6 +216,7 @@ const IS_BUN = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined';
 // side marshaling (~0.85-1.05 µs). Numbers stay on bun:ffi (~5-15 ns direct
 // symbols), so only the marshaled exports are overridden when the addon exists.
 const MARSHALED_EXPORTS = ${marshaledExports} as const;
+const __MARSHALED = new Set<string>(MARSHALED_EXPORTS);
 function tierMarshaledForBun(
   fns: Record<string, (...args: unknown[]) => unknown>,
   addonFns: Record<string, (...args: unknown[]) => unknown> | null,
@@ -262,6 +312,7 @@ export function createClientSync(options: CreateClientSyncOptions = {}): Scriptc
 ${directConsts}
       return {
 ${directMethods}
+${BATCH_DIRECT}
   dispose() {},
       };
     }
@@ -269,10 +320,14 @@ ${directMethods}
   const shared = options.sharedPath ?? findSharedSync();
   if (shared) {
     const mod = loadNativeLibrarySync(shared, PROFILE);
-    const fns =
-      IS_BUN && options.addon !== false ? tierMarshaledForBun(mod.fns, loadAddonSync()) : mod.fns;
+    const addonFns = IS_BUN && options.addon !== false ? loadAddonSync() : null;
+    const fns = tierMarshaledForBun(mod.fns, addonFns);
+    const __execBatch = addonFns === null ? undefined : (addonFns['${BATCH_SYMBOL}'] as
+      | ((meta: Int32Array, args: Uint8Array) => Uint8Array)
+      | undefined);
     return {
 ${methods}
+${BATCH_SHARED}
   dispose() { mod.dispose(); },
     };
   }
@@ -284,6 +339,7 @@ ${methods}
 ${directConsts}
       return {
 ${directMethods}
+${BATCH_DIRECT}
   dispose() {},
       };
     }
@@ -311,6 +367,7 @@ export async function createClient(options: CreateClientOptions = {}): Promise<S
 ${directConsts}
       return {
 ${directMethods}
+${BATCH_DIRECT}
   dispose() {},
       };
     }
@@ -319,12 +376,14 @@ ${directMethods}
     const shared = options.sharedPath ?? (await firstExisting(SHARED_NAME));
     if (shared) {
       const mod = await loadNativeLibrary(shared, PROFILE);
-      const fns =
-        IS_BUN && options.addon !== false
-          ? tierMarshaledForBun(mod.fns, await loadAddon())
-          : mod.fns;
+      const addonFns = IS_BUN && options.addon !== false ? await loadAddon() : null;
+      const fns = tierMarshaledForBun(mod.fns, addonFns);
+      const __execBatch = addonFns === null ? undefined : (addonFns['${BATCH_SYMBOL}'] as
+        | ((meta: Int32Array, args: Uint8Array) => Uint8Array)
+        | undefined);
       return {
 ${methods}
+${BATCH_SHARED}
   dispose() { mod.dispose(); },
       };
     }
@@ -337,6 +396,7 @@ ${methods}
 ${directConsts}
       return {
 ${directMethods}
+${BATCH_DIRECT}
   dispose() {},
       };
     }
@@ -356,6 +416,7 @@ ${directMethods}
   const fns = mod.fns;
   return {
 ${methods}
+${BATCH_WASM}
   dispose() { mod.dispose(); },
   };
 }
@@ -465,6 +526,7 @@ export async function createClient(options: CreateClientOptions = {}): Promise<S
   const fns = mod.fns;
   return {
 ${methods}
+${BATCH_WASM}
   dispose() { mod.dispose(); },
   };
 }
@@ -511,6 +573,7 @@ export async function createClient(options: CreateClientOptions = {}): Promise<S
   const fns = mod.fns;
   return {
 ${methods}
+${BATCH_WASM}
   dispose() { mod.dispose(); },
   };
 }
@@ -611,6 +674,7 @@ ${profile.exports
 function genReactNativeClient(profile: ScriptcableProfile): string {
   return `${header('react-native')}
 import type { ScriptcableClient } from './types.js';
+import type { BatchEntry } from '@scriptcable/types';
 
 /**
  * React Native adapter.
@@ -632,6 +696,9 @@ ${profile.exports
     return `${docComment(e)}    ${e.export}(${paramList(e)}) {\n      return bridge.call('${e.export}', [${argList(e)}]) as ${tsType(e.returns)};\n    },`;
   })
   .join('\n')}
+    batch(entries: ReadonlyArray<BatchEntry>): unknown[] {
+      return entries.map((e) => bridge.call(e[0], e.slice(1) as unknown[])) as unknown[];
+    },
     dispose() { bridge.dispose?.(); },
   };
 }
