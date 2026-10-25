@@ -200,3 +200,56 @@ UTF-8 encode/decode. Pure-JS references: ping 0.8 ns, add 1.1 ns, repeat(100) ~3
 scriptcable than plain TS — keep that logic in TS. Where scriptcable wins is coarse exports: one
 crossing that does the work of many (fib, image math, parsing) beats JS at equal or better
 latency with memory isolation and type-safe ABI.
+
+## 9. Batch — N calls across one boundary — 2026-10-25, batch round (linux-x64 WSL2, bun 1.4.4)
+
+`client.batch([['repeat','ab',100], ['add',20,22], …])` runs N calls across ONE boundary: the
+generated N-API addon carries a batch executive — a packed wire (`Int32Array` meta + `Uint8Array`
+args) goes in, one result `Buffer` comes back, JS decodes. Loaders expose the same `batch()`
+signature as a sequential loop (wasm: an in-boundary batch needs scriptc-runtime support —
+upstream).
+
+Measured per-op (64 × repeat('ab',100) or add per batch call; session band across runs):
+
+| workload | single | batch(64) per op | change |
+| --- | --- | --- | --- |
+| addon: add | 50 ns | 43.6 ns | **−13%** — numbers win: no codec on the wire |
+| addon: repeat(100) | 762–801 ns | 826–926 ns | **+8–16% (slower)** |
+| bun:ffi repeat(100) | 1.20–1.36 µs | 1.20–1.37 µs | ~even (sequential fallback) |
+| wasm repeat(100) | 1.14–1.19 µs | 1.14 µs | ~even (sequential fallback) |
+| addon under Node (V8) | — | — | measured in CI (`bench-node.ts` step); no local node |
+
+**Why strings don't win**: the wire replaces napi's C-side utf8 conversion with a JS-side codec
+(`encodeInto` + `TextDecoder`) — the cost class is the same, so the only true saving is the
+amortized dispatch (~50 ns), which the wire machinery eats. The per-op floor for a string call is
+the core-side C work (alloc/copy inside the scriptc runtime, ~0.5–0.67 µs) plus one encode and one
+decode — batching cannot remove either at this ABI. That corrects the round's premise: a batch
+API is the fundamental fix for *numeric* chatty surfaces and saves the dispatch on mixed ones;
+for chatty *string* APIs the fixes remain coarse exports (do the work of many strings inside one
+export) or upstream scriptc-runtime changes.
+
+Fixes shipped alongside: the addon's bool-param path used a nonexistent `napi_get_value_boolean`
+(correct symbol: `napi_get_value_bool`) — any core with a bool parameter silently lost its addon
+and fell back to FFI; surfaced by the batch round's fixture and now covered by it.
+
+### 9b. Host (.so) batch executive — same-day follow-up (2026-10-25)
+
+The shared library now links a plain-C `scriptc_batch` executive (host links only — android's
+version script exports only `Java_*`, which would localize the symbol into uselessness). Same
+wire as the addon; the loader routes by composition: marshaled batches → executive, **bun:ffi
+number-only batches stay on the direct-symbol loop** (~16 ns/op — the fastest dispatch that
+exists; measured this session, batching numbers through the addon executive there is *slower*,
+43.6 vs 16 ns/op, so the router keeps them). koffi (dispatch ~40× bun:ffi) sends everything,
+numbers included.
+
+| workload (64/batch, linux-x64 session band) | single | batch per-op | change |
+| --- | --- | --- | --- |
+| bun:ffi repeat(100) | 1.20–1.36 µs | **842–898 ns** | **−31%** — the host executive even beats the addon executive on this host (ffi dispatch is cheaper than napi's) |
+| koffi (Node/Windows, addonless) | — | CI (`bench-node.ts`) | koffi's per-call conversion cost is what the executive removes — expected to dominate |
+| wasm | — | unchanged | sequential loop (in-boundary batch = scriptc-runtime territory, see docs/research) |
+
+Also fixed en route: `link-shared` compiled extra TUs without `-fPIC` — gcc then emitted
+local-exec TLS relocations for `_Thread_local` statics that `-shared` cannot represent
+(R_X86_64_TPOFF32); android had been spared only because the NDK/zig drivers default to PIC.
+And the koffi binding now shapes i64/u64 returns to TS numbers (it answered BigInt where every
+other tier answers the documented number contract — batch and sequential disagreed on type).
