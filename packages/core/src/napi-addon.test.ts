@@ -49,13 +49,16 @@ describe('napi-addon', () => {
     assert.match(src, /add expects 2 arguments"/);
   });
 
-  it('guards allocation and frees string buffers on a cleanup path', () => {
+  it('guards allocation and reuses a thread-local utf8 scratch (no per-call malloc)', () => {
     const src = generateNodeAddonSource(PROFILE);
     assert.match(src, /#define NAPI_CHECK_GOTO/);
-    assert.match(src, /char\* s0 = NULL;/);
-    assert.match(src, /s0 = \(char\*\)malloc\(s0_len \+ 1\);/);
-    assert.match(src, /if \(s0 == NULL\) \{ napi_throw_error\(env, NULL, "scriptcable addon: out of memory"\); goto cleanup; \}/);
-    assert.match(src, /cleanup:\n  free\(s0\);\n  return res;/);
+    assert.match(src, /static _Thread_local char\* s0_buf = NULL;/);
+    assert.match(src, /char\* s0_grown = \(char\*\)malloc\(s0_next\);/);
+    // failed grow resets cap to 0 so the next call retries (F4)
+    assert.match(src, /s0_buf = NULL;\n    s0_cap = 0;/);
+    // the scratch outlives the call — the cleanup path frees nothing per call
+    assert.doesNotMatch(src, /free\(s0\);/);
+    assert.match(src, /cleanup:\n  return res;/);
   });
 
   it('returns bool via napi_get_boolean and unsigned classes without sign wrap', () => {
