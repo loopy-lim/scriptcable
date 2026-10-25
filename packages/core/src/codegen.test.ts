@@ -152,7 +152,10 @@ describe('pre-bound per-export fns dispatch', () => {
     // shared-library + wasm tiers bind per-export functions
     assert.match(src, /const fns = mod\.fns;/);
     assert.match(src, /return fns\['add'\]\(/, 'methods go through pre-bound fns');
-    assert.doesNotMatch(src, /mod\.call\(/, 'generic call dispatch must be gone from methods');
+    // per-export methods must not fall back to generic call dispatch — the
+    // batch() block may (wasm-tier batch routes via mod.call for uniform
+    // single-call semantics), the `add` method itself may not
+    assert.doesNotMatch(src, /mod\.call\('add'/, 'generic call dispatch must be gone from methods');
     // bun prefers the shared-library fast path; node keeps the addon first
     assert.match(src, /const IS_BUN = typeof \(globalThis as \{ Bun\?: unknown \}\)\.Bun !== 'undefined';/);
     assert.match(src, /if \(!IS_BUN && options\.addon !== false && !options\.sharedPath\) \{/);
@@ -183,5 +186,82 @@ describe('pre-bound per-export fns dispatch', () => {
       assert.match(files[f]!, /const fns = mod\.fns;/, `${f} missing the fns hoist`);
       assert.match(files[f]!, /return fns\['add'\]\(/, `${f} not calling pre-bound fns`);
     }
+  });
+});
+
+describe('batch surface', () => {
+  const CONFIG = { name: 'calc', entry: 'src/core.ts' } as unknown as ResolvedConfig;
+  const PROFILE = {
+    profile_format: 1,
+    name: 'calc',
+    entry: 'src/core.ts',
+    emission: 'llvm',
+    abi: { prefix: 'calc_', init_symbol: 'calc_init', sink_register_symbol: 'calc_sink' },
+    exports: [
+      { export: 'add', symbol: 'calc_add', params: ['f64', 'f64'], returns: 'f64' },
+      { export: 'greet', symbol: 'calc_greet', params: ['string'], returns: 'string' },
+    ],
+  } as unknown as ScriptcableProfile;
+
+  it('node flavor wires the addon executive into batch() with a sequential fallback', () => {
+    const src = generateClients(CONFIG, ['node'], { profile: PROFILE }).files['node.ts']!;
+    assert.match(src, /import \{ createBatchWire \} from '@scriptcable\/core\/batch';/);
+    assert.match(src, /const __wire = createBatchWire\(PROFILE\);/, 'one wire per client module');
+    assert.match(
+      src,
+      /const __execBatch = addonFns\['__scriptcable_batch'\] as \(\(meta: Int32Array, args: Uint8Array\) => Uint8Array\) \| undefined;/,
+    );
+    assert.match(src, /return __wire\.decode\(__execBatch\(meta, args\)\);/);
+    // direct-tier sequential fallback validates via the wire so unknown/argc
+    // errors are the same class no matter which tier is active (review F-5)
+    assert.match(src, /__wire\.check\(entries\);/);
+    assert.match(src, /addonFns\[e\[0\]\]\(\.\.\.\(e\.slice\(1\) as unknown\[\]\)\)/, 'direct-tier fallback dispatches addonFns');
+  });
+
+  it('shared tier routes by composition — bun numeric batches keep the ffi loop', () => {
+    const src = generateClients(CONFIG, ['node'], { profile: PROFILE }).files['node.ts']!;
+    assert.match(src, /const __MARSHALED = new Set<string>\(MARSHALED_EXPORTS\);/);
+    assert.match(src, /const needsCodec = entries\.some\(\(e\) => __MARSHALED\.has\(e\[0\]\)\);/);
+    // addon executive: always on Node, marshaled-only on Bun (ffi direct
+    // numeric singles ~16 ns/op beat any batch — measured 2026-10-25)
+    assert.match(src, /if \(typeof __execBatch === 'function' && \(!IS_BUN \|\| needsCodec\)\) \{/);
+    // everything else (numeric-on-Bun, hosts without the addon) rides the
+    // loader — which routes the shared library's own executive the same way
+    assert.match(src, /return mod\.batch\(entries\);/);
+  });
+
+  it('wasm flavors batch through mod.call so errors match single calls', () => {
+    const browser = generateClients(CONFIG, ['browser'], { profile: PROFILE }).files['browser.ts']!;
+    assert.doesNotMatch(browser, /createBatchWire/, 'browser graphs must not pull the node wire module');
+    assert.match(browser, /return entries\.map\(\(e\) => mod\.call\(e\[0\], \.\.\.\(e\.slice\(1\) as unknown\[\]\)\)\);/);
+    const deno = generateClients(CONFIG, ['deno'], { profile: PROFILE }).files['deno.ts']!;
+    assert.match(deno, /mod\.call\(e\[0\]/);
+    const workers = generateClients(CONFIG, ['workers'], { profile: PROFILE }).files['workers.ts']!;
+    assert.match(workers, /mod\.call\(e\[0\]/);
+  });
+
+  it('shared tier binds the executive from a nullable addon lookup', () => {
+    const src = generateClients(CONFIG, ['node'], { profile: PROFILE }).files['node.ts']!;
+    assert.match(src, /const addonFns = IS_BUN && options\.addon !== false \? loadAddonSync\(\) : null;/);
+    assert.match(src, /const addonFns = IS_BUN && options\.addon !== false \? await loadAddon\(\) : null;/);
+    assert.match(src, /__execBatch = addonFns === null \? undefined :/);
+  });
+
+  it('wasm flavors batch sequentially — an in-boundary batch is upstream territory', () => {
+    const browser = generateClients(CONFIG, ['browser'], { profile: PROFILE }).files['browser.ts']!;
+    assert.match(browser, /mod\.call\(e\[0\]/);
+    const deno = generateClients(CONFIG, ['deno'], { profile: PROFILE }).files['deno.ts']!;
+    assert.match(deno, /mod\.call\(e\[0\]/);
+  });
+
+  it('the react-native client batches through the bridge', () => {
+    const src = generateClients(CONFIG, ['react-native'], { profile: PROFILE }).files['react-native.ts']!;
+    assert.match(src, /return entries\.map\(\(e\) => bridge\.call\(e\[0\], e\.slice\(1\) as unknown\[\]\)\) as unknown\[\];/);
+  });
+
+  it('ScriptcableClient declares batch(entries)', () => {
+    const types = generateClients(CONFIG, ['node'], { profile: PROFILE }).files['types.ts']!;
+    assert.match(types, /import type \{ BatchEntry \} from '@scriptcable\/types';/);
+    assert.match(types, /batch\(entries: ReadonlyArray<BatchEntry>\): unknown\[\];/);
   });
 });

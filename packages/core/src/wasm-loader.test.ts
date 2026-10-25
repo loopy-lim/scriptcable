@@ -50,6 +50,18 @@ describe('wasm-loader marshaling regressions', () => {
     mod.dispose();
   });
 
+  it('batch() falls back to sequential calls with identical results (batch round)', async () => {
+    const mod = await load();
+    const results = mod.batch([
+      ['concat2', 'hello', 'world'],
+      ['echo', 'plain'],
+      ['inner', 100, 200],
+    ] as never);
+    assert.deepEqual(results, ['hello|world', 'plain', 300]);
+    assert.throws(() => mod.batch([['missing']] as never), /Unknown export/);
+    mod.dispose();
+  });
+
   it('mid-call scratch growth does not free earlier parameters (F2 — freed ranges read back as 0xDE)', async () => {
     const mod = await load();
     // Two ~900-char strings: each writeString reserves 4×len+4 (> the 1 KiB

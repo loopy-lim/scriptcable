@@ -32,3 +32,21 @@ void echo(const uint8_t* a, int64_t alen, const uint8_t** out, int64_t* outlen) 
   *out = buf;
   *outlen = alen;
 }
+
+/* Bytes echo — exercises the bytes param/return path. */
+void becho(const uint8_t* a, int64_t alen, const uint8_t** out, int64_t* outlen) {
+  uint8_t* buf = (uint8_t*)malloc((size_t)(alen + 1));
+  memcpy(buf, a, (size_t)alen);
+  buf[alen] = 0xFF;
+  *out = buf;
+  *outlen = alen + 1;
+}
+
+/* Scalar classes for the batch executive's result kinds. */
+double dadd(double a, double b) { return a + b; }
+int64_t big(int64_t v) { return v * 2; }
+uint64_t ubig(uint64_t v) { return v + 1; }
+bool flag(bool b) { return !b; }
+uint32_t u32id(uint32_t v) { return v + 1; }
+int32_t i32id(int32_t v) { return v - 1; }
+void noop(void) {}

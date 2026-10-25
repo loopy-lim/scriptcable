@@ -80,4 +80,23 @@ describe('native-loader marshaling regressions', () => {
     assert.equal(typeof r, 'string');
     mod.dispose();
   });
+
+  it('batch() falls back to sequential calls with identical results (batch round)', () => {
+    let so: string;
+    try {
+      so = compileFixture();
+    } catch (e) {
+      console.log(`skip: ${(e as Error).message}`);
+      return;
+    }
+    const mod = loadNativeLibrarySync(so, PROFILE as never);
+    const results = mod.batch([
+      ['concat', 'hello', 'world'],
+      ['cc', 'alpha', 'beta'],
+      ['echo', 'plain'],
+    ] as never);
+    assert.deepEqual(results, ['hello|world', 'alpha/beta', 'plain']);
+    assert.throws(() => mod.batch([['missing']] as never), /Unknown export/);
+    mod.dispose();
+  });
 });
