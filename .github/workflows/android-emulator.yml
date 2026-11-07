@@ -37,7 +37,10 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
           mkdir -p "$ANDROID_HOME/cmdline-tools"
-          curl -fsSL -o /tmp/tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          # Pin the CURRENT cmdline-tools: the 2024 build (11076708) only
+          # parses SDK repository XML up to v3 and silently failed to write
+          # the AVD against today's v4 repo.
+          curl -fsSL -o /tmp/tools.zip https://dl.google.com/android/repository/commandlinetools-linux-15859902_latest.zip
           unzip -q /tmp/tools.zip -d "$ANDROID_HOME/cmdline-tools"
           mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
@@ -89,6 +92,15 @@ jobs:
       - name: Boot emulator (API 30 google_apis x86_64 — arm64 via translation)
         run: |
           echo no | avdmanager create avd -n cable -k "system-images;android-30;google_apis;x86_64" -d pixel_5
+          # Fail fast (with diagnostics) if the AVD didn't land where the
+          # emulator looks — a missing AVD otherwise shows up only as a
+          # 10-minute wait-for-device hang.
+          if [ ! -f "$HOME/.android/avd/cable.ini" ]; then
+            echo "cable.ini missing after avdmanager — AVD listing follows:"
+            avdmanager list avd 2>&1 || true
+            ls -la "$HOME/.android/avd" 2>&1 || true
+            exit 1
+          fi
           ACCEL=""
           if [ -e /dev/kvm ] && [ -w /dev/kvm ]; then
             ACCEL="-accel kvm"; echo "KVM available — hardware emulation"
