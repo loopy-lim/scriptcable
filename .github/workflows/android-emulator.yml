@@ -136,14 +136,23 @@ jobs:
           "$ADB" logcat -c
           "$ADB" shell monkey -p com.scriptcable.rnexample 1
           HIT=""
-          for i in $(seq 1 150); do
+          for i in $(seq 1 90); do
             HIT=$("$ADB" logcat -d -s ReactNativeJS:* 2>/dev/null | grep "CABLE_RESULT" | tail -1)
             [ -n "$HIT" ] && break
             sleep 10
           done
           if [ -z "$HIT" ]; then
-            echo "bridge result never appeared — last JS + AndroidRuntime log:"
-            "$ADB" logcat -d -s ReactNativeJS:* AndroidRuntime:E | tail -200
+            echo "bridge result never appeared — diagnostics:"
+            echo "--- app process (empty = died/never started):"
+            "$ADB" shell pidof com.scriptcable.rnexample || true
+            echo "--- focused window:"
+            "$ADB" shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true
+            echo "--- metro request log (empty = device fetch never reached metro):"
+            curl -s http://localhost:8081/logs 2>/dev/null | tail -c 3000 || true
+            echo "--- ReactNativeJS + AndroidRuntime:"
+            "$ADB" logcat -d -s ReactNativeJS:* AndroidRuntime:E | tail -100
+            echo "--- raw logcat tail (all tags):"
+            "$ADB" logcat -d | tail -300
             exit 1
           fi
           echo "$HIT"
