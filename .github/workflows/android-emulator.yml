@@ -107,16 +107,20 @@ jobs:
             ls -la "$ANDROID_AVD_HOME" 2>&1 || true
             exit 1
           fi
+          # Hosted x64 runners expose /dev/kvm (nested virtualization) but the
+          # runner user isn't in the kvm group — grant rw so the emulator can
+          # use it (x86_64 guests have NO software-emulation fallback).
+          sudo chmod 666 /dev/kvm 2>/dev/null || true
           ACCEL=""
           if [ -e /dev/kvm ] && [ -w /dev/kvm ]; then
             ACCEL="-accel kvm"; echo "KVM available — hardware emulation"
           else
-            echo "no /dev/kvm — software emulation (slower boot, still bounded below)"
+            echo "no usable /dev/kvm — x86_64 will refuse to start (see chmod above)"
           fi
           "$ANDROID_HOME/emulator/emulator" -avd cable -no-window -no-audio -no-boot-anim \
             -gpu swiftshader_indirect -no-snapshot -no-metrics $ACCEL &
           ADB="$ANDROID_HOME/platform-tools/adb"
-          timeout 600 "$ADB" wait-for-device
+          timeout 300 "$ADB" wait-for-device
           for i in $(seq 1 90); do
             BOOTED=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
             [ "$BOOTED" = "1" ] && break
