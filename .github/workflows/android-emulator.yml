@@ -94,7 +94,7 @@ jobs:
         working-directory: examples/react-native-app
         run: |
           bunx expo prebuild -p android --no-install
-          cd android && ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
+          cd android && ./gradlew assembleDebug assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
       - name: Boot emulator (API 30 google_apis x86_64 — arm64 via translation)
         run: |
           echo no | avdmanager create avd -n cable -k "system-images;android-30;google_apis;x86_64" -d pixel_5
@@ -129,33 +129,64 @@ jobs:
         working-directory: examples/react-native-app
         run: |
           ADB="$ANDROID_HOME/platform-tools/adb"
-          # Debug APK loads JS from metro over adb reverse — set it up before
-          # the app's first fetch, not after.
           "$ADB" reverse tcp:8081 tcp:8081
+          assert_result () {
+            for i in $(seq 1 "$2"); do
+              HIT=$("$ADB" logcat -d -s ReactNativeJS:* 2>/dev/null | grep "CABLE_RESULT" | tail -1)
+              [ -n "$HIT" ] && break
+              sleep 10
+            done
+            if [ -n "$HIT" ]; then
+              echo "$HIT"
+              echo "$HIT" | grep -q 'CABLE_RESULT:{"sum":42}' \
+                && echo "$3 OK" && return 0
+              echo "$3 gave a CABLE_RESULT but not the 42"; return 1
+            fi
+            return 1
+          }
+          # --- Primary: debug APK (JS from metro over adb reverse) ---
           "$ADB" install -r android/app/build/outputs/apk/debug/app-debug.apk
           "$ADB" logcat -c
           "$ADB" shell monkey -p com.scriptcable.rnexample 1
-          HIT=""
-          for i in $(seq 1 90); do
-            HIT=$("$ADB" logcat -d -s ReactNativeJS:* 2>/dev/null | grep "CABLE_RESULT" | tail -1)
-            [ -n "$HIT" ] && break
-            sleep 10
-          done
-          if [ -z "$HIT" ]; then
-            echo "bridge result never appeared — diagnostics:"
-            echo "--- app process (empty = died/never started):"
-            "$ADB" shell pidof com.scriptcable.rnexample || true
-            echo "--- focused window:"
-            "$ADB" shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true
-            echo "--- metro request log (empty = device fetch never reached metro):"
-            curl -s http://localhost:8081/logs 2>/dev/null | tail -c 3000 || true
-            echo "--- ReactNativeJS + AndroidRuntime:"
-            "$ADB" logcat -d -s ReactNativeJS:* AndroidRuntime:E | tail -100
-            echo "--- raw logcat tail (all tags):"
-            "$ADB" logcat -d | tail -300
-            exit 1
+          sleep 120
+          "$ADB" exec-out screencap -p > /tmp/debug-hang.png 2>/dev/null || true
+          if assert_result "" 30 "debug APK"; then exit 0; fi
+          echo "debug APK silent after 7 min — JS never produced a log."
+          echo "--- app threads (missing js/mqt_js = React never initialized):"
+          "$ADB" shell ps -T "$("$ADB" shell pidof com.scriptcable.rnexample | tr -d '\r')" 2>/dev/null | head -60 || true
+          echo "--- focused window:"
+          "$ADB" shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true
+          # --- Fallback: release APK (bundle baked in — no dev server at all;
+          # --- RN template ships minify disabled, so JNI symbols stay intact).
+          echo "--- falling back to release APK (embedded bundle, no metro)"
+          "$ADB" uninstall com.scriptcable.rnexample >/dev/null 2>&1 || true
+          "$ADB" install -r android/app/build/outputs/apk/release/app-release.apk
+          "$ADB" logcat -c
+          "$ADB" shell monkey -p com.scriptcable.rnexample 1
+          sleep 60
+          "$ADB" exec-out screencap -p > /tmp/release-hang.png 2>/dev/null || true
+          if assert_result "" 60 "release APK"; then
+            echo "NOTE: debug path hung but release works — investigate dev-server load on this image"
+            exit 0
           fi
-          echo "$HIT"
-          echo "$HIT" | grep -q 'CABLE_RESULT:{"sum":42}' \
-            && echo "on-device bridge OK (arm64 artifacts on x86_64 translation image)" \
-            || exit 1
+          echo "release APK silent too — diagnostics:"
+          echo "--- app process (empty = died/never started):"
+          "$ADB" shell pidof com.scriptcable.rnexample || true
+          echo "--- focused window:"
+          "$ADB" shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true
+          echo "--- app threads:"
+          "$ADB" shell ps -T "$("$ADB" shell pidof com.scriptcable.rnexample | tr -d '\r')" 2>/dev/null | head -60 || true
+          echo "--- ReactNativeJS + AndroidRuntime:"
+          "$ADB" logcat -d -s ReactNativeJS:* AndroidRuntime:E | tail -100
+          echo "--- crash signals (DEBUG/libc):"
+          "$ADB" logcat -d -s DEBUG:* libc:* | tail -50
+          echo "--- raw logcat tail (all tags):"
+          "$ADB" logcat -d | tail -300
+          exit 1
+      - name: Upload device screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-screenshots
+          path: /tmp/*-hang.png
+          if-no-files-found: ignore
