@@ -111,14 +111,8 @@ jobs:
           # runner user isn't in the kvm group — grant rw so the emulator can
           # use it (x86_64 guests have NO software-emulation fallback).
           sudo chmod 666 /dev/kvm 2>/dev/null || true
-          ACCEL=""
-          if [ -e /dev/kvm ] && [ -w /dev/kvm ]; then
-            ACCEL="-accel kvm"; echo "KVM available — hardware emulation"
-          else
-            echo "no usable /dev/kvm — x86_64 will refuse to start (see chmod above)"
-          fi
           "$ANDROID_HOME/emulator/emulator" -avd cable -no-window -no-audio -no-boot-anim \
-            -gpu swiftshader_indirect -no-snapshot -no-metrics $ACCEL &
+            -gpu swiftshader_indirect -no-snapshot -no-metrics -accel auto &
           ADB="$ANDROID_HOME/platform-tools/adb"
           timeout 300 "$ADB" wait-for-device
           for i in $(seq 1 90); do
