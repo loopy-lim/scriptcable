@@ -58,7 +58,9 @@ jobs:
       - name: Serve JS bundle (expo metro — warm it before the app asks)
         run: |
           cd examples/react-native-app
-          EXPO_NO_TELEMETRY=1 CI=1 bunx expo start --port 8081 --no-open &
+          # --no-open doesn't exist in expo 58's CLI; CI=1 already keeps it
+          # non-interactive, and --host localhost skips LAN interface probing.
+          EXPO_NO_TELEMETRY=1 CI=1 bunx expo start --port 8081 --host localhost &
           for i in $(seq 1 60); do
             curl -fsS http://localhost:8081/status 2>/dev/null | grep -q packager-status:running && break
             sleep 2
