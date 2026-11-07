@@ -8,6 +8,9 @@ dist-ts/
 *.o
 *.wasm
 !examples/**/fixtures/*.wasm
+# Committed test fixtures — freestanding probe modules for the marshaling
+# regression tests (built from the sibling .c with zig cc --target=wasm32-freestanding)
+!packages/core/test-fixtures/*.wasm
 .DS_Store
 *.log
 .turbo/
