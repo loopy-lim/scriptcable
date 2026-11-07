@@ -84,6 +84,11 @@ const ccDriver = process.env.CC ?? 'c++';
 const cCompiler = process.env.CC_C ?? 'cc';
 const stubsOut = run(cCompiler, ['-c', join(work, 'stubs.c'), '-o', join(work, 'stubs.o')]);
 if (stubsOut.status !== 0) throw new Error(`stubs compile failed:\n${stubsOut.stderr}`);
+// GNU ld takes --whole-archive/--no-whole-archive; Apple ld wants -force_load.
+const wholeArchive =
+  process.platform === 'darwin'
+    ? ['-Wl,-force_load', hostArchive]
+    : ['-Wl,--whole-archive', hostArchive, '-Wl,--no-whole-archive'];
 const built = run(ccDriver, [
   '-std=c++17',
   '-I',
@@ -93,9 +98,7 @@ const built = run(ccDriver, [
   join(work, 'main.cpp'),
   join(androidGen, 'cable_host.cpp'),
   join(work, 'stubs.o'),
-  '-Wl,--whole-archive',
-  hostArchive,
-  '-Wl,--no-whole-archive',
+  ...wholeArchive,
   '-ldl',
   '-lpthread',
 ]);

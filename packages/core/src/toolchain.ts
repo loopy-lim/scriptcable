@@ -278,6 +278,11 @@ export async function buildCore(
   // Android artifacts live under outDir/android-arm64/ so a host .so and the
   // android one never overwrite each other.
   const nativeDir = androidArm64 ? join(outDir, 'android-arm64') : outDir;
+  // Android DSOs follow the Android convention (lib<name>.so) regardless of
+  // the host OS — the android smoke, the RN Gradle scaffold and zig-tools'
+  // bundle check all expect .so; sharedLibraryFileName() would name it
+  // .dylib/.dll on macOS/Windows hosts.
+  const sharedName = androidArm64 ? `lib${config.name}.so` : sharedLibraryFileName(config.name);
   await mkdir(outDir, { recursive: true });
 
   const info = await doctor(cwd, { skipRuntimeGate: options.doctorRuntimeGate === 'skip' });
@@ -336,8 +341,8 @@ export async function buildCore(
     target === 'wasm'
       ? [join(outDir, `${config.name}.wasm`)]
       : target === 'both'
-        ? [join(outDir, `${config.name}.wasm`), join(nativeDir, sharedLibraryFileName(config.name))]
-        : [join(nativeDir, sharedLibraryFileName(config.name))];
+        ? [join(outDir, `${config.name}.wasm`), join(nativeDir, sharedName)]
+        : [join(nativeDir, sharedName)];
   const addonDemanded = addonEligible && !addonFailedBefore;
   if (addonDemanded) wantedArtifacts.push(join(outDir, napiAddonFileName(config.name)));
   const cacheHit =
@@ -350,7 +355,7 @@ export async function buildCore(
     }
     if (target === 'native' || target === 'both') {
       result.nativePath = join(nativeDir, `${config.name}.lib.a`);
-      result.sharedPath = join(nativeDir, sharedLibraryFileName(config.name));
+      result.sharedPath = join(nativeDir, sharedName);
       if (addonDemanded) result.addonPath = join(outDir, napiAddonFileName(config.name));
     }
     result.cached = true;
@@ -454,7 +459,7 @@ export async function buildCore(
     }
     result.sharedPath = await linkSharedLibrary({
       archivePath: result.nativePath!,
-      outPath: join(nativeDir, sharedLibraryFileName(config.name)),
+      outPath: join(nativeDir, sharedName),
       target: androidArm64 ? 'aarch64-linux-android' : undefined,
       cwd,
       zigPath: buildZig ?? info.zigPath,

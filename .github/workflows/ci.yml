@@ -59,7 +59,16 @@ jobs:
       # libnss3 and xvfb-run.
       - name: Electron (main native + renderer drop-in)
         if: runner.os == 'Linux'
-        run: bun run --filter @scriptcable/example-electron-app test
+        # GH Actions ubuntu runners cannot configure the SUID chrome-sandbox
+        # helper (root-owned, mode 4755) — Electron pre-spawns its zygote
+        # before app code runs, so an in-app appendSwitch is too late. Drop
+        # the helper binary (namespace sandbox then applies) and set
+        # Electron's sandbox opt-out for good measure.
+        env:
+          ELECTRON_DISABLE_SANDBOX: '1'
+        run: |
+          rm -f node_modules/electron/dist/chrome-sandbox
+          bun run --filter @scriptcable/example-electron-app test
       - name: Astro
         run: bun run --filter @scriptcable/example-astro-app test
       - name: SvelteKit
