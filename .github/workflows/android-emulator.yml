@@ -1,10 +1,19 @@
 name: android-emulator
 
-# On-device bridge verification: an arm64 emulator on a KVM-capable ARM64
-# runner runs the real TurboModule bridge (generated Kotlin + JNI + the
-# android-arm64 scriptc archive) and asserts add(20,22) === 42 through logcat.
-# x86 CI runners can't run scriptc's android-arm64 artifacts, and this repo's
-# WSL2 host has no KVM — ARM64 runners are the one place all three line up.
+# On-device bridge verification: an x86_64 emulator runs the REAL arm64
+# artifacts (generated Kotlin + JNI + the android-arm64 scriptc archive via
+# the @scriptcable/expo plugin's jniLibs+assets copy) and asserts
+# add(20,22) === 42 through logcat.
+#
+# Why x86_64 and not an ARM64 runner: Google ships no Linux arm64 emulator
+# binary — sdkmanager can't even see the `emulator` package on arm64 hosts
+# ("Failed to find package"), so the original ubuntu-24.04-arm design dies
+# at SDK install. Instead we ride the Android 11 (API 30) google_apis
+# x86_64 system image, whose abilist includes arm64-v8a through Google's
+# built-in ARM→x86 translation — exactly the "ARM-translation devices"
+# case the expo plugin already handles (assets copy + useLegacyPackaging).
+# KVM on hosted runners is best-effort: without /dev/kvm the emulator
+# falls back to software emulation (slow boot, still inside the timeout).
 on:
   workflow_dispatch:
   push:
@@ -12,17 +21,17 @@ on:
 
 jobs:
   emulator:
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-      # ARM64 runners ship no Android SDK — bootstrap cmdline-tools (the zip
-      # is arch-independent Java), then pull the emulator + arm64 image.
-      - name: Android SDK (bootstrap + emulator arm64)
+          java-version: '21'
+      # Bootstrap cmdline-tools (the zip is arch-independent Java) — do NOT
+      # rely on the runner's preinstalled SDK layout.
+      - name: Android SDK (bootstrap + emulator x86_64 w/ arm64 translation)
         run: |
           ANDROID_HOME="$HOME/android-sdk"
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
@@ -33,52 +42,84 @@ jobs:
           mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKM" --licenses > /dev/null || true
-          "$SDKM" "platform-tools" "emulator" "platforms;android-35" "build-tools;35.0.0" "system-images;android-31;google_apis;arm64-v8a"
+          "$SDKM" "platform-tools" "emulator" "platforms;android-35" "build-tools;35.0.0" "system-images;android-30;google_apis;x86_64"
+          df -h "$HOME" | tail -1
       - uses: oven-sh/setup-bun@v2
       - name: zig 0.13 (wasm + android cross-link)
         run: |
-          case "$(uname -m)" in
-            x86_64) Z=zig-linux-x86_64-0.13.0.tar.xz ;;
-            aarch64|arm64) Z=zig-linux-aarch64-0.13.0.tar.xz ;;
-            *) echo "unsupported arch: $(uname -m)"; exit 1 ;;
-          esac
-          curl -fsSL "https://ziglang.org/download/0.13.0/$Z" | tar -xJ
-          echo "$PWD/${Z%.tar.xz}" >> "$GITHUB_PATH"
+          curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
+          echo "$PWD/zig-linux-x86_64-0.13.0" >> "$GITHUB_PATH"
       - run: bun install
       - run: bun run build
       - name: Build core + android artifacts + dispatch smoke
         run: bun run --filter @scriptcable/example-react-native-app test:android
       - name: App bundle smoke (launchability — real metro graph)
         run: bun run --filter @scriptcable/example-react-native-app test:app-bundle
-      - name: Assemble APK (arm64, debug)
+      - name: Serve JS bundle (expo metro — warm it before the app asks)
+        run: |
+          cd examples/react-native-app
+          EXPO_NO_TELEMETRY=1 CI=1 bunx expo start --port 8081 --no-open &
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8081/status 2>/dev/null | grep -q packager-status:running && break
+            sleep 2
+          done
+          curl -fsS http://localhost:8081/status | grep -q packager-status:running \
+            || { echo "metro never came up"; exit 1; }
+          # Force the graph compile NOW so the on-device fetch hits a warm
+          # server (cold RN graph + 60s-class fetch timeouts don't mix).
+          curl -fsS -m 900 -o /tmp/warm.bundle \
+            "http://localhost:8081/index.bundle?platform=android&dev=true&lazy=true"
+          wc -c /tmp/warm.bundle
+      - name: Assemble APK (arm64-only — the translation image accepts it)
         working-directory: examples/react-native-app
         run: |
           bunx expo prebuild -p android --no-install
           cd android && ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
-      - name: Boot emulator
+      - name: Boot emulator (API 30 google_apis x86_64 — arm64 via translation)
         run: |
-          echo no | avdmanager create avd -n cable -k "system-images;android-31;google_apis;arm64-v8a" -d pixel_5
-          "$ANDROID_HOME/emulator/emulator" -avd cable -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot &
-          "$ANDROID_HOME/platform-tools/adb" wait-for-device
-          until [ "$("$ANDROID_HOME/platform-tools/adb" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do sleep 5; done
+          echo no | avdmanager create avd -n cable -k "system-images;android-30;google_apis;x86_64" -d pixel_5
+          ACCEL=""
+          if [ -e /dev/kvm ] && [ -w /dev/kvm ]; then
+            ACCEL="-accel kvm"; echo "KVM available — hardware emulation"
+          else
+            echo "no /dev/kvm — software emulation (slower boot, still bounded below)"
+          fi
+          "$ANDROID_HOME/emulator/emulator" -avd cable -no-window -no-audio -no-boot-anim \
+            -gpu swiftshader_indirect -no-snapshot -no-metrics $ACCEL &
+          ADB="$ANDROID_HOME/platform-tools/adb"
+          timeout 600 "$ADB" wait-for-device
+          for i in $(seq 1 90); do
+            BOOTED=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            [ "$BOOTED" = "1" ] && break
+            sleep 10
+          done
+          [ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] \
+            || { echo "emulator never finished booting"; "$ADB" logcat -d | tail -100; exit 1; }
+          # Translation sanity: the image must expose arm64-v8a or the
+          # arm64-only APK can never install.
+          "$ADB" shell getprop ro.product.cpu.abilist
       - name: Install + run bridge call
         working-directory: examples/react-native-app
         run: |
           ADB="$ANDROID_HOME/platform-tools/adb"
-          # Debug APK loads JS from metro — serve it and hand the port over.
-          bunx react-native start --port 8081 &
-          sleep 20
+          # Debug APK loads JS from metro over adb reverse — set it up before
+          # the app's first fetch, not after.
           "$ADB" reverse tcp:8081 tcp:8081
           "$ADB" install -r android/app/build/outputs/apk/debug/app-debug.apk
           "$ADB" logcat -c
           "$ADB" shell monkey -p com.scriptcable.rnexample 1
           HIT=""
-          for i in $(seq 1 90); do
+          for i in $(seq 1 150); do
             HIT=$("$ADB" logcat -d -s ReactNativeJS:* 2>/dev/null | grep "CABLE_RESULT" | tail -1)
             [ -n "$HIT" ] && break
-            sleep 5
+            sleep 10
           done
+          if [ -z "$HIT" ]; then
+            echo "bridge result never appeared — last JS + AndroidRuntime log:"
+            "$ADB" logcat -d -s ReactNativeJS:* AndroidRuntime:E | tail -200
+            exit 1
+          fi
           echo "$HIT"
           echo "$HIT" | grep -q 'CABLE_RESULT:{"sum":42}' \
-            && echo "on-device bridge OK" \
-            || { echo "bridge result never appeared"; exit 1; }
+            && echo "on-device bridge OK (arm64 artifacts on x86_64 translation image)" \
+            || exit 1

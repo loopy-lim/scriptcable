@@ -10,8 +10,10 @@
  *    emits valid C++ and the marshaling is right.
  *
  * Running the bridge inside a real Android (emulator) is the CI's job —
- * .github/workflows/android-emulator.yml boots an arm64 emulator on a KVM
- * ARM64 runner, installs the app, and asserts the 42 through logcat.
+ * .github/workflows/android-emulator.yml boots an x86_64 emulator on the
+ * API 30 google_apis image (arm64-v8a via built-in ARM translation —
+ * Google ships no Linux arm64 emulator binary), installs the arm64-only
+ * APK, and asserts the 42 through logcat.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
