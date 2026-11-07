@@ -68,9 +68,13 @@ jobs:
           curl -fsS http://localhost:8081/status | grep -q packager-status:running \
             || { echo "metro never came up"; exit 1; }
           # Force the graph compile NOW so the on-device fetch hits a warm
-          # server (cold RN graph + 60s-class fetch timeouts don't mix).
+          # server (cold RN graph + 60s-class fetch timeouts don't mix). The
+          # URL must be expo's virtual entry — the prebuilt debug app fetches
+          # it (ExpoReactHostFactory defaults jsMainModulePath to
+          # ".expo/.virtual-metro-entry"), and /index.bundle 404s on expo's
+          # metro.
           curl -fsS -m 900 -o /tmp/warm.bundle \
-            "http://localhost:8081/index.bundle?platform=android&dev=true&lazy=true"
+            "http://localhost:8081/.expo/.virtual-metro-entry.bundle?platform=android&dev=true&lazy=true"
           wc -c /tmp/warm.bundle
       - name: Assemble APK (arm64-only — the translation image accepts it)
         working-directory: examples/react-native-app
