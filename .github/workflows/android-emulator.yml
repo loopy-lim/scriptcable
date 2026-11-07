@@ -46,6 +46,12 @@ jobs:
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKM" --licenses > /dev/null || true
           "$SDKM" "platform-tools" "emulator" "platforms;android-35" "build-tools;35.0.0" "system-images;android-30;google_apis;x86_64"
+          # New cmdline-tools default AVD home to the XDG path
+          # (~/.config/.android/avd) while the emulator binary still defaults
+          # to ~/.android/avd — pin BOTH to one explicit location.
+          mkdir -p "$HOME/android-avd"
+          echo "ANDROID_AVD_HOME=$HOME/android-avd" >> "$GITHUB_ENV"
+          echo "ANDROID_USER_HOME=$HOME/android-avd" >> "$GITHUB_ENV"
           # Later steps call adb/avdmanager/emulator bare — register the SDK
           # bin dirs on PATH for them.
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
@@ -95,10 +101,10 @@ jobs:
           # Fail fast (with diagnostics) if the AVD didn't land where the
           # emulator looks — a missing AVD otherwise shows up only as a
           # 10-minute wait-for-device hang.
-          if [ ! -f "$HOME/.android/avd/cable.ini" ]; then
+          if [ ! -f "$ANDROID_AVD_HOME/cable.ini" ]; then
             echo "cable.ini missing after avdmanager — AVD listing follows:"
             avdmanager list avd 2>&1 || true
-            ls -la "$HOME/.android/avd" 2>&1 || true
+            ls -la "$ANDROID_AVD_HOME" 2>&1 || true
             exit 1
           fi
           ACCEL=""
