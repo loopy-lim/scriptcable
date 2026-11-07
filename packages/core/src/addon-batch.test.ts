@@ -65,16 +65,27 @@ async function compileAddon(): Promise<Addon> {
   }
   // No toolchain → the caller skips (the addon is a soft-fail feature).
   // A buildNodeAddon failure AFTER this point is a generated-source defect —
-  // it propagates and fails the test.
+  // it propagates and fails the test. Exception: Windows, where the typed
+  // addon is a documented soft-fail (mingw ld has no node_api import lib) —
+  // buildCore records addon-failed there; here the callers skip instead.
   if (!linked) throw new NoToolchainError('no C compiler/ar available for the addon fixture');
 
-  const addonPath = await buildNodeAddon({
-    archivePath: archive,
-    outDir: dir,
-    name: 'probe',
-    profile: PROFILE,
-  });
-  return createRequire(join(addonPath, 'x.js'))(addonPath) as Addon;
+  try {
+    const addonPath = await buildNodeAddon({
+      archivePath: archive,
+      outDir: dir,
+      name: 'probe',
+      profile: PROFILE,
+    });
+    return createRequire(join(addonPath, 'x.js'))(addonPath) as Addon;
+  } catch (e) {
+    if (process.platform === 'win32') {
+      throw new NoToolchainError(
+        `addon soft-fails on Windows (expected): ${(e as Error).message.split('\n')[0]}`,
+      );
+    }
+    throw e;
+  }
 }
 
 class NoToolchainError extends Error {}

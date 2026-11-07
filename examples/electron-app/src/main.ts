@@ -17,6 +17,11 @@ import { createClient } from '@scriptcable/client';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// CI runners cannot configure the SUID chrome-sandbox helper (root-owned,
+// mode 4755) — without this Electron aborts with SIGTRAP before main runs.
+// CI-only: the smoke loads no untrusted content; local runs keep the sandbox.
+if (process.env.CI) app.commandLine.appendSwitch('no-sandbox');
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(here, '..', 'dist');
 

@@ -95,7 +95,11 @@ function expectParity(mod: NativeModule): void {
 }
 
 describe('host batch executive (.so)', () => {
-  it('links the TU, detects the executive, and matches sequential calls', async () => {
+  // Compile + link on a cold CI runner can exceed bun's 5s default — the
+  // gate itself is fast (<1s locally); give the toolchain work room.
+  it(
+    'links the TU, detects the executive, and matches sequential calls',
+    async () => {
     let so: string;
     try {
       so = await buildSo(true);
@@ -116,7 +120,9 @@ describe('host batch executive (.so)', () => {
     assert.deepEqual(str, ['a|b', 'c']);
     assert.deepEqual(mod.batch([['echo', 'again']] as never), ['again']);
     mod.dispose();
-  });
+    },
+    60_000,
+  );
 
   it('a .so without the executive stays sequential and equally correct', async () => {
     let so: string;
