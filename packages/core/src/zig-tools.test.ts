@@ -23,7 +23,8 @@ describe('zig-tools', () => {
     const prev = process.env.SCRIPTCABLE_CACHE_DIR;
     process.env.SCRIPTCABLE_CACHE_DIR = '/tmp/sc-zig-test-cache';
     expect(zigCacheRoot()).toBe('/tmp/sc-zig-test-cache');
-    expect(zigInstallDir()).toBe('/tmp/sc-zig-test-cache/zig-0.13.0');
+    // Platform-correct separators — zigInstallDir() joins with the OS path.
+    expect(zigInstallDir()).toBe(join('/tmp/sc-zig-test-cache', 'zig-0.13.0'));
     if (prev === undefined) delete process.env.SCRIPTCABLE_CACHE_DIR;
     else process.env.SCRIPTCABLE_CACHE_DIR = prev;
     // Platform default — only assert it stays inside the user's profile.

@@ -137,7 +137,7 @@ describe('host batch executive (.so)', () => {
     expectParity(mod);
     assert.throws(() => mod.batch([['missing']] as never), /Unknown export/);
     mod.dispose();
-  });
+  }, 60_000);
 
   it('the koffi binding exposes the executive under the same contract', async () => {
     let so: string;
@@ -162,5 +162,5 @@ describe('host batch executive (.so)', () => {
       binding.call(symbol, rest),
     );
     assert.deepEqual(results, sequential);
-  });
+  }, 60_000);
 });

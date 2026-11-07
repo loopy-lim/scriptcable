@@ -102,6 +102,8 @@ function getAddonPath(): string {
 }
 
 describe('addon batch executive', () => {
+  // The first test carries the compile (native.c → ar → typed addon) — on a
+  // cold CI runner that exceeds bun's 5s default. <1s locally.
   it('one crossing returns the same results as sequential addon calls', async () => {
     let addon: Addon;
     try {
@@ -141,7 +143,7 @@ describe('addon batch executive', () => {
       addon.i32id(-2147483648),
       undefined,
     ]);
-  });
+  }, 60_000);
 
   it('keeps multibyte and empty payloads intact', async () => {
     let addon: Addon;

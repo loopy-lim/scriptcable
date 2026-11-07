@@ -63,7 +63,7 @@
       "name": "@scriptcable/example-deno-app",
       "version": "0.1.0",
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.0",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
         "@scriptcable/cli": "workspace:*",
         "@scriptcable/core": "workspace:*",
         "@scriptcable/types": "workspace:*",
@@ -166,7 +166,7 @@
         "@react-native-community/cli": "^20.2.0",
         "@react-native/community-cli-plugin": "^0.88.0",
         "@react-native/metro-config": "^0.88.0",
-        "@scriptc/runtime-android-arm64": "0.4.0",
+        "@scriptc/runtime-android-arm64": "0.4.9",
         "@scriptcable/types": "workspace:*",
         "metro": "^0.87.1",
       },
@@ -248,7 +248,7 @@
       "name": "@scriptcable/example-workers-app",
       "version": "0.1.0",
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.0",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
         "@scriptcable/cli": "workspace:*",
         "@scriptcable/core": "workspace:*",
         "@scriptcable/types": "workspace:*",
@@ -1223,7 +1223,7 @@
 
     "@scriptc/llvm-win32-x64-msvc": ["@scriptc/llvm-win32-x64-msvc@0.4.9", "", { "os": "win32", "cpu": "x64" }, "sha512-Qw6iNORSbJZzZKzQIJ6aqu6LiOFaAkUMwsoZljH2ulzRnXNeTGeskOyahuLb2ekkcOycRw6SZHQIXWz30m4neQ=="],
 
-    "@scriptc/runtime-android-arm64": ["@scriptc/runtime-android-arm64@0.4.0", "", {}, "sha512-u3sSKxJdSQuyu3kSPgE/CYQTRBTacQWKt/SjPQiOUKuHL2DPbGCxDHNcqGWA6PV2R5ANNoIGtYD7P+1Mv6Sxdg=="],
+    "@scriptc/runtime-android-arm64": ["@scriptc/runtime-android-arm64@0.4.9", "", {}, "sha512-qTULvzLOfnEibDsrJP3Ek+34UZF2wf32xnKP3vvFogmXXBHv2vtIofttcGAnnVPSrBuo+7dFtcP1GQsnAvj1Dw=="],
 
     "@scriptc/runtime-darwin-arm64": ["@scriptc/runtime-darwin-arm64@0.4.9", "", {}, "sha512-rleEY5lDpp39O6jpShOIPt/hOQPVF4jMbKiBBrctXdznv8noFmiVZwYmjAVZrEUo9PdcLLozO30aObeyAK0WtQ=="],
 
