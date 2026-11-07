@@ -9,11 +9,12 @@
  *    Android inside the module .so — compiling it here proves the generator
  *    emits valid C++ and the marshaling is right.
  *
- * Running the bridge inside a real Android (emulator) is the CI's job —
- * .github/workflows/android-emulator.yml boots an x86_64 emulator on the
- * API 30 google_apis image (arm64-v8a via built-in ARM translation —
- * Google ships no Linux arm64 emulator binary), installs the arm64-only
- * APK, and asserts the 42 through logcat.
+ * Running the bridge inside a real Android emulator is structurally blocked
+ * — .github/workflows/android-emulator.yml documents the three verified
+ * dead ends (no Linux arm64 emulator binary; libndk translation SIGILLs on
+ * Hermes NEON; no upstream android-x86_64 runtime pack) and stays skipped
+ * until @scriptc/runtime-android-x86_64 ships. This host dispatch smoke is
+ * the android bridge verification that runs today.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';

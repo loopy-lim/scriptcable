@@ -1,19 +1,40 @@
 name: android-emulator
 
-# On-device bridge verification: an x86_64 emulator runs the REAL arm64
-# artifacts (generated Kotlin + JNI + the android-arm64 scriptc archive via
-# the @scriptcable/expo plugin's jniLibs+assets copy) and asserts
-# add(20,22) === 42 through logcat.
+# STRUCTURALLY BLOCKED — job is skipped until upstream unblocks one of the
+# three paths. Everything below was VERIFIED IN CI on 2026-11-07 (runs
+# 42385981695..42397559190), not guessed:
 #
-# Why x86_64 and not an ARM64 runner: Google ships no Linux arm64 emulator
-# binary — sdkmanager can't even see the `emulator` package on arm64 hosts
-# ("Failed to find package"), so the original ubuntu-24.04-arm design dies
-# at SDK install. Instead we ride the Android 11 (API 30) google_apis
-# x86_64 system image, whose abilist includes arm64-v8a through Google's
-# built-in ARM→x86 translation — exactly the "ARM-translation devices"
-# case the expo plugin already handles (assets copy + useLegacyPackaging).
-# KVM on hosted runners is best-effort: without /dev/kvm the emulator
-# falls back to software emulation (slow boot, still inside the timeout).
+# 1. arm64 runner (ubuntu-24.04-arm): Google ships no Linux arm64 emulator
+#    BINARY — sdkmanager can't even see the `emulator` package ("Failed to
+#    find package"). ARM64 host support exists as SOURCE ONLY since 2020
+#    (emulator release notes 30.0.26) — an AOSP emu-master-dev repo sync +
+#    cross-compile, far outside CI budgets. (The old ubuntu-24.04-arm
+#    design died here.)
+# 2. x86_64 runner + ARM translation (API 30 google_apis;x86_64): the image
+#    IS bootable with KVM (chmod 666 /dev/kvm; `-accel auto`) and the
+#    arm64-only APK installs (abilist = x86_64,x86,arm64-v8a,...) — but the
+#    image's libndk translation INTERPRETER doesn't cover the NEON
+#    instructions Hermes arm64 emits: the release APK dies with
+#    `Fatal signal 4 (SIGILL) in mqt_v_js`,
+#    backtrace `libndk_translation.so DecodeSimdScalarTwoRegMisc`; the
+#    debug APK hangs before React init (no js/mqt_js threads ever appear).
+#    arm64-on-x86_64 translation cannot run RN+Hermes apps. (This path was
+#    fully built out below before being blocked — see git log.)
+# 3. x86_64 runner + x86_64 artifacts: scriptc publishes precompiled
+#    runtime packs per target (@scriptc/runtime-android-arm64 etc.) and
+#    scriptc rejects a target without a matching pack (SC3003 family).
+#    There is NO @scriptc/runtime-android-x86_64 on npm, and the packs are
+#    precompiled .o/.a — not reproducible from @scriptc/runtime sources
+#    without upstream tooling.
+#
+# RE-ENABLE when vercel-labs/scriptc ships @scriptc/runtime-android-x86_64:
+#   - build: scriptcable build --platform android --abi x86_64 (core needs
+#     the abi plumbed through toolchain.ts platform + ensureRuntimePack)
+#   - expo plugin: jniLibs/x86_64 copy
+#   - below: image system-images;android-30;google_apis;x86_64 (native
+#     x86_64, no translation), APK with -PreactNativeArchitectures=x86_64,
+#     everything else (KVM chmod, metro virtual-entry warm, boot, assert)
+#     already proven working by the blocked arm64 attempt.
 on:
   workflow_dispatch:
   push:
@@ -21,6 +42,7 @@ on:
 
 jobs:
   emulator:
+    if: false # structurally blocked — see the header for the three paths
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -174,8 +196,6 @@ jobs:
           "$ADB" shell pidof com.scriptcable.rnexample || true
           echo "--- focused window:"
           "$ADB" shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true
-          echo "--- app threads:"
-          "$ADB" shell ps -T "$("$ADB" shell pidof com.scriptcable.rnexample | tr -d '\r')" 2>/dev/null | head -60 || true
           echo "--- ReactNativeJS + AndroidRuntime:"
           "$ADB" logcat -d -s ReactNativeJS:* AndroidRuntime:E | tail -100
           echo "--- crash signals (DEBUG/libc):"
