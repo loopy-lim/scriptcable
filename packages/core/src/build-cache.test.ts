@@ -92,6 +92,19 @@ describe('build cache', () => {
     assert.notEqual(native, wasm);
   });
 
+  it('hash changes when the toolchain version differs — a scriptc upgrade recompiles', async () => {
+    const opts = { cwd: workDir, config, profile, target: 'native' as const };
+    const withA = await computeBuildHash({ ...opts, toolchainVersion: '0.4.0' });
+    const withAbis = await computeBuildHash({ ...opts, toolchainVersion: '0.4.0' });
+    assert.equal(withA, withAbis, 'same toolchain version must stay cached');
+    const withB = await computeBuildHash({ ...opts, toolchainVersion: '0.4.9' });
+    assert.notEqual(withB, withA, 'toolchain upgrade must invalidate the cache');
+    const unspecified = await computeBuildHash(opts);
+    const unspecifiedAgain = await computeBuildHash(opts);
+    assert.equal(unspecified, unspecifiedAgain, 'omitting the version stays stable');
+    assert.notEqual(unspecified, withA, 'versioned and unversioned keys differ');
+  });
+
   it('miss → mark → hit lifecycle, and artifact presence is required', async () => {
     const outDir = join(workDir, '.scriptcable');
     await mkdir(outDir, { recursive: true });

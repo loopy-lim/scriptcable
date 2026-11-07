@@ -94,7 +94,9 @@ export async function resolveScriptc(cwd = process.cwd()): Promise<string> {
   const onPath = await which('scriptc');
   if (onPath) return onPath;
 
-  const install = await run('bun', ['add', '--dev', 'scriptc@^0.3.6'], { cwd });
+  // The verified floor — keep in lockstep with the scriptc devDependency pin
+  // in the root package.json.
+  const install = await run('bun', ['add', '--dev', 'scriptc@^0.4.9'], { cwd });
   if (install.code !== 0) {
     throw new ScriptcableToolchainError(
       'scriptc is not installed and auto-install failed.',
@@ -310,7 +312,16 @@ export async function buildCore(
   const { computeBuildHash, isCachedBuild, markBuildDone } = await import('./build-cache.js');
   const configInputs = [join(cwd, 'scriptcable.config.ts'), join(cwd, 'scriptcable.json')]
     .filter((p) => p.startsWith(outDir) === false);
-  const buildHash = await computeBuildHash({ cwd, config, profile, target, extraInputs: configInputs });
+  const buildHash = await computeBuildHash({
+    cwd,
+    config,
+    profile,
+    target,
+    extraInputs: configInputs,
+    // The cached artifacts were produced by a specific scriptc — a toolchain
+    // upgrade recompiles even when no source changed.
+    toolchainVersion: info.version,
+  });
   const addonEligible = target !== 'wasm' && !androidArm64 && canBuildNodeAddon(profile);
   // A previous soft-failed addon attempt is recorded in a marker — keep the
   // cache valid without demanding the artifact until a build succeeds again
@@ -354,7 +365,8 @@ export async function buildCore(
           'scriptcable provisions zig 0.13.x automatically — that was skipped (download failed, or SCRIPTCABLE_NO_AUTO_TOOLS=1).\n' +
             'Retry without the env, or install zig 0.13.x and put it on PATH.\n' +
             '  curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ\n' +
-            'Note: zig 0.14 currently fails WASI builds with scriptc 0.3.x — use 0.13.',
+            'Note: CI pins zig 0.13.0 — zig 0.16 is verified with scriptc 0.4.9 too\n' +
+            '  (zig 0.14 failed WASI builds back on scriptc 0.3.x).',
         );
       }
       await ensureRuntimePack(cwd, 'wasm');

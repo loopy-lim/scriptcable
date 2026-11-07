@@ -149,6 +149,8 @@ export async function computeBuildHash(options: {
   profile: ScriptcableProfile;
   target: 'native' | 'wasm' | 'both';
   extraInputs?: string[];
+  /** scriptc version that produces the build — an upgrade must recompile. */
+  toolchainVersion?: string;
 }): Promise<string> {
   const entryAbs = resolve(options.cwd, options.config.entry);
   const sourceHashes = await collectSourceHashes(entryAbs, options.extraInputs ?? []);
@@ -159,6 +161,7 @@ export async function computeBuildHash(options: {
     callbacks: options.config.callbacks ?? [],
     optimization: options.config.optimization ?? 'release',
     target: options.target,
+    toolchain: options.toolchainVersion ?? 'unspecified',
     sources: sourceHashes.sort(),
   });
   return createHash('sha256').update(surface).digest('hex').slice(0, 32);
