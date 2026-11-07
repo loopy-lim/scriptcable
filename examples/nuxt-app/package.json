@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build:core": "bun run --filter @scriptcable/example-calculator-core build",
-    "build": "bun run build:core && bunx --bun nuxt build",
+    "build": "bun run build:core && mkdir -p public && cp .scriptcable/calculator.wasm public/ && bunx --bun nuxt build",
     "test": "bun run build && bun scripts/assert-output.mjs"
   },
   "dependencies": {
