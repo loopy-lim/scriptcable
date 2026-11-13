@@ -21,9 +21,10 @@ bun run --filter @scriptca/site typecheck
 
 ## Structure
 
-- `src/core.ts` — the dogfooded core (add / fib / repeat / sumBytes / greet)
-- `src/i18n.tsx` — EN/KO dictionaries (single source of all copy) + language provider
-- `src/components/` — Hero, LiveDemo (shell + error boundary), LiveDemoPanels (React.lazy chunk that imports the compiled core), HostMatrix, Benchmarks, BeforeAfter, LinuxVerified, Footer
+- `src/core.ts` — the dogfooded core (mandelbrot / image kernels / sumRange / fib / sumBytes / add / repeat / greet)
+- `src/i18n/` — `ko.ts` (source of the `Dict` shape), `en.ts`, `types.ts`, `index.tsx` (language provider)
+- `src/demo/` — the live-demo engine, outside React: `bench.ts` (WASM-vs-JS harness), `jsTwins.ts` (plain-JS baselines), `canvas.ts` (buffer/canvas helpers), `types.ts`, `ResultViews.tsx`, `panels/` (one file per demo tab)
+- `src/components/` — Hero, Nav, LiveDemo (shell + error boundary), LiveDemoPanels (slim React.lazy chunk that pulls in the panels), HostMatrix, Benchmarks, Footer
 - `src/styles.css` — Tailwind v4 + UniKit zinc tokens + Geist fonts
 - `wrangler.toml` — Pages project config (`dist`)
 

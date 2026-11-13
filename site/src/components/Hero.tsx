@@ -23,7 +23,7 @@ function TargetRouter() {
       </div>
 
       <div className="grid gap-3 p-4">
-        <div className="rounded-lg border border-border bg-muted/40 p-3">
+        <div className="min-w-0 rounded-lg border border-border bg-muted/40 p-3">
           <div className="flex items-center justify-between gap-2">
             <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               {t.hero.router.sourceLabel}
@@ -100,7 +100,7 @@ function TargetRouter() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-muted/40 p-3">
+        <div className="min-w-0 rounded-lg border border-border bg-muted/40 p-3">
           <p className="font-mono text-[11px] text-muted-foreground">
             {t.hero.router.callSiteLabel}
           </p>
@@ -122,7 +122,11 @@ export function Hero() {
       <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-14 md:pb-24 md:pt-20">
         <div className="grid gap-10 lg:grid-cols-12 lg:items-start lg:gap-12">
           <div className="min-w-0 lg:col-span-7">
-            <p className="font-mono text-xs text-muted-foreground md:text-sm">{t.hero.eyebrow}</p>
+            <p className="font-mono text-xs text-muted-foreground md:text-sm">
+              {/* nbsp before each `·` so wrapped lines never start with a
+                  dangling separator */}
+              {t.hero.eyebrow.split(' · ').join(' · ')}
+            </p>
             <h1 className="mt-5 text-4xl font-semibold tracking-tight md:text-5xl lg:text-[56px] lg:leading-[1.08]">
               {t.hero.title1}
               <br />

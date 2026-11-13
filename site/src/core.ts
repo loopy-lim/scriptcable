@@ -181,6 +181,76 @@ export function sobelRgba(data: Uint8Array, width: number, height: number): Uint
   return out;
 }
 
+/**
+ * Escape-time Mandelbrot set with banded coloring — the flagship
+ * compute-bound workload: up to `maxIter` float iterations per pixel,
+ * and the whole frame comes back across the boundary exactly once.
+ */
+export function mandelbrotRgba(
+  width: number,
+  height: number,
+  centerX: number,
+  centerY: number,
+  /** Complex-plane units per pixel — smaller is deeper zoom. */
+  scale: number,
+  maxIter: number,
+): Uint8Array {
+  const w = width | 0;
+  const h = height | 0;
+  const iters = Math.min(2048, Math.max(16, maxIter | 0));
+  const out = new Uint8Array(w * h * 4);
+  // Cyclic 6-stop ramp: deep navy → violet → magenta → amber → cream.
+  const ramp = [
+    [10, 12, 36],
+    [38, 21, 80],
+    [122, 34, 116],
+    [224, 88, 84],
+    [249, 178, 61],
+    [255, 246, 214],
+  ];
+  const stops = ramp.length;
+  const halfW = w / 2;
+  const halfH = h / 2;
+  for (let py = 0; py < h; py++) {
+    const ci = centerY + (py - halfH) * scale;
+    for (let px = 0; px < w; px++) {
+      const cr = centerX + (px - halfW) * scale;
+      let zx = 0;
+      let zy = 0;
+      let zx2 = 0;
+      let zy2 = 0;
+      let i = 0;
+      while (zx2 + zy2 <= 4 && i < iters) {
+        zy = 2 * zx * zy + ci;
+        zx = zx2 - zy2 + cr;
+        zx2 = zx * zx;
+        zy2 = zy * zy;
+        i++;
+      }
+      const o = (py * w + px) << 2;
+      if (i >= iters) {
+        out[o] = 6;
+        out[o + 1] = 7;
+        out[o + 2] = 14;
+      } else {
+        // Integer-only banded coloring (no log2 in the hot path — the
+        // classic look, and it keeps the kernel pure int/float arithmetic).
+        const f = (i & 15) / 16 * stops;
+        const i0 = f | 0;
+        const i1 = (i0 + 1) % stops;
+        const fr = f - i0;
+        const a = ramp[i0];
+        const b = ramp[i1];
+        out[o] = a[0] + (b[0] - a[0]) * fr;
+        out[o + 1] = a[1] + (b[1] - a[1]) * fr;
+        out[o + 2] = a[2] + (b[2] - a[2]) * fr;
+      }
+      out[o + 3] = 255;
+    }
+  }
+  return out;
+}
+
 /** Greets someone by name. */
 export function greet(name: string): string {
   return `hello, ${name}`;
