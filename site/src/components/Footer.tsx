@@ -53,11 +53,9 @@ export function Footer() {
             </a>
           </nav>
         </div>
-        <div className="mt-10 flex flex-col gap-2 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between md:gap-8">
-          <p>{t.footer.dogfood}</p>
-          <p className="shrink-0 font-mono">
-            {t.footer.license} · {SITE_URL.replace('https://', '')}
-          </p>
+        <div className="mt-10 flex flex-col gap-2 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p>{t.footer.license}</p>
+          <p className="font-mono">{SITE_URL.replace('https://', '')}</p>
         </div>
       </div>
     </footer>

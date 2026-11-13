@@ -16,16 +16,85 @@ import { useI18n } from '../i18n';
 
 type DemoTabKey = 'add' | 'fib' | 'repeat' | 'bytes';
 
-/** Runs `fn` `iterations` times and returns µs per call (after one warm-up). */
-function timeIt(fn: () => unknown, iterations: number): number {
-  fn();
-  const start = performance.now();
-  for (let i = 0; i < iterations; i++) fn();
-  return ((performance.now() - start) * 1000) / iterations;
+const SAMPLE_ROUNDS = 5;
+const TARGET_SAMPLE_MS = 14;
+
+// Module-level sink prevents JIT compilers from eliminating pure loops whose
+// return value appears unused.
+let benchSink = 0;
+
+function calibrateBatch(
+  runBatch: (count: number) => number,
+  minBatch: number,
+  maxBatch: number,
+): number {
+  // Initial JIT warmup before calibration
+  benchSink += runBatch(Math.min(minBatch, 256));
+  let count = minBatch;
+  while (count < maxBatch) {
+    const start = performance.now();
+    benchSink += runBatch(count);
+    const elapsed = performance.now() - start;
+    if (elapsed >= TARGET_SAMPLE_MS) break;
+    const scale = elapsed > 0.4 ? Math.ceil(TARGET_SAMPLE_MS / elapsed) : 4;
+    count = Math.min(maxBatch, count * Math.min(8, Math.max(2, scale)));
+  }
+  return count;
 }
 
-function formatMs(micros: number): string {
-  if (micros < 0.01) return '< 0.01 µs'; // performance.now() resolution floor
+function trimmedMean(samples: number[]): number {
+  const sorted = [...samples].sort((a, b) => a - b);
+  const middle = sorted.length >= 3 ? sorted.slice(1, -1) : sorted;
+  return middle.reduce((sum, v) => sum + v, 0) / middle.length;
+}
+
+function measurePair(
+  wasmBatch: (count: number) => number,
+  jsBatch: (count: number) => number,
+  bounds: { minBatch: number; maxBatch: number },
+): { wasm: number; js: number; wasmCalls: number; jsCalls: number; rounds: number } {
+  const wasmCount = calibrateBatch(wasmBatch, bounds.minBatch, bounds.maxBatch);
+  const jsCount = calibrateBatch(jsBatch, bounds.minBatch, bounds.maxBatch);
+
+  const wasmSamples: number[] = [];
+  const jsSamples: number[] = [];
+
+  // Interleave execution order (AB / BA) across rounds to cancel GC or thermal bias.
+  for (let r = 0; r < SAMPLE_ROUNDS; r++) {
+    if (r % 2 === 0) {
+      const t0 = performance.now();
+      benchSink += wasmBatch(wasmCount);
+      const t1 = performance.now();
+      benchSink += jsBatch(jsCount);
+      const t2 = performance.now();
+      wasmSamples.push(((t1 - t0) * 1000) / wasmCount);
+      jsSamples.push(((t2 - t1) * 1000) / jsCount);
+    } else {
+      const t0 = performance.now();
+      benchSink += jsBatch(jsCount);
+      const t1 = performance.now();
+      benchSink += wasmBatch(wasmCount);
+      const t2 = performance.now();
+      jsSamples.push(((t1 - t0) * 1000) / jsCount);
+      wasmSamples.push(((t2 - t1) * 1000) / wasmCount);
+    }
+  }
+
+  return {
+    wasm: trimmedMean(wasmSamples),
+    js: trimmedMean(jsSamples),
+    wasmCalls: wasmCount * SAMPLE_ROUNDS,
+    jsCalls: jsCount * SAMPLE_ROUNDS,
+    rounds: SAMPLE_ROUNDS,
+  };
+}
+
+function formatDuration(micros: number): string {
+  if (micros < 0.001) return '< 1 ns';
+  if (micros < 1) {
+    const ns = micros * 1000;
+    return `${ns < 10 ? ns.toFixed(1) : Math.round(ns)} ns`;
+  }
   if (micros >= 1000) return `${(micros / 1000).toFixed(2)} ms`;
   return `${micros.toFixed(2)} µs`;
 }
@@ -42,8 +111,11 @@ const jsFib = (n: number): number => {
   }
   return a;
 };
-const jsRepeat = (text: string, times: number): string =>
-  Array.from({ length: times }, () => text).join(' / ');
+const jsRepeat = (text: string, times: number): string => {
+  const parts: string[] = [];
+  for (let i = 0; i < times; i++) parts.push(text);
+  return parts.join(' / ');
+};
 const jsSumBytes = (data: Uint8Array): number => {
   let sum = 0;
   for (let i = 0; i < data.length; i++) sum += data[i];
@@ -60,11 +132,18 @@ function randomBytes(size: number): Uint8Array {
   return data;
 }
 
-type Result = { value: string; wasm: number; js: number; iterations: number };
+type Result = {
+  value: string;
+  wasm: number;
+  js: number;
+  wasmCalls: number;
+  jsCalls: number;
+  rounds: number;
+};
 
 function ResultView({ result }: { result: Result }) {
   const { t } = useI18n();
-  const maxTime = Math.max(result.wasm, result.js, 0.01);
+  const maxTime = Math.max(result.wasm, result.js, 0.001);
   const wasmPct = Math.max(4, Math.min(100, Math.round((result.wasm / maxTime) * 100)));
   const jsPct = Math.max(4, Math.min(100, Math.round((result.js / maxTime) * 100)));
 
@@ -74,7 +153,7 @@ function ResultView({ result }: { result: Result }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-mono text-xs text-muted-foreground">{t.demo.result}</p>
           <p className="font-mono text-[11px] text-muted-foreground">
-            {result.iterations.toLocaleString()} {t.demo.avgOf}
+            {result.rounds} {t.demo.avgOf}
           </p>
         </div>
         <p className="mt-1.5 truncate font-mono text-xl font-semibold" title={result.value}>
@@ -83,16 +162,30 @@ function ResultView({ result }: { result: Result }) {
       </div>
 
       <div className="rounded-lg border border-border p-4">
-        <p className="text-xs text-muted-foreground">{t.demo.wasmTime}</p>
-        <p className="mt-1 font-mono text-lg font-medium tabular-nums">{formatMs(result.wasm)}</p>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-xs text-muted-foreground">{t.demo.wasmTime}</p>
+          <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
+            {result.wasmCalls.toLocaleString()} {t.demo.callsUnit}
+          </p>
+        </div>
+        <p className="mt-1 font-mono text-lg font-medium tabular-nums">
+          {formatDuration(result.wasm)}
+        </p>
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div className="h-full rounded-full bg-foreground" style={{ width: `${wasmPct}%` }} />
         </div>
       </div>
 
       <div className="rounded-lg border border-border p-4">
-        <p className="text-xs text-muted-foreground">{t.demo.jsTime}</p>
-        <p className="mt-1 font-mono text-lg font-medium tabular-nums">{formatMs(result.js)}</p>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-xs text-muted-foreground">{t.demo.jsTime}</p>
+          <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
+            {result.jsCalls.toLocaleString()} {t.demo.callsUnit}
+          </p>
+        </div>
+        <p className="mt-1 font-mono text-lg font-medium tabular-nums">
+          {formatDuration(result.js)}
+        </p>
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-muted-foreground/50"
@@ -128,12 +221,21 @@ function AddPanel() {
     const x = Number(a);
     const y = Number(b);
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    setResult({
-      value: String(add(x, y)),
-      wasm: timeIt(() => add(x, y), 1000),
-      js: timeIt(() => jsAdd(x, y), 1000),
-      iterations: 1000,
-    });
+    const value = String(add(x, y));
+    const stats = measurePair(
+      (count) => {
+        let sum = 0;
+        for (let i = 0; i < count; i++) sum += add(x + (i & 1), y);
+        return sum;
+      },
+      (count) => {
+        let sum = 0;
+        for (let i = 0; i < count; i++) sum += jsAdd(x + (i & 1), y);
+        return sum;
+      },
+      { minBatch: 10_000, maxBatch: 1_000_000 },
+    );
+    setResult({ value, ...stats });
   }, [a, b]);
 
   return (
@@ -180,12 +282,22 @@ function FibPanel() {
     // silently lose precision.
     const x = Math.min(78, Math.max(10, Math.floor(Number(n) || 40)));
     setN(String(x));
-    setResult({
-      value: fib(x).toLocaleString(),
-      wasm: timeIt(() => fib(x), 200),
-      js: timeIt(() => jsFib(x), 200),
-      iterations: 200,
-    });
+    const alt = Math.max(10, x - 1);
+    const value = fib(x).toLocaleString();
+    const stats = measurePair(
+      (count) => {
+        let sum = 0;
+        for (let i = 0; i < count; i++) sum += fib((i & 1) === 0 ? x : alt);
+        return sum;
+      },
+      (count) => {
+        let sum = 0;
+        for (let i = 0; i < count; i++) sum += jsFib((i & 1) === 0 ? x : alt);
+        return sum;
+      },
+      { minBatch: 5_000, maxBatch: 500_000 },
+    );
+    setResult({ value, ...stats });
   }, [n]);
 
   return (
@@ -216,15 +328,26 @@ function RepeatPanel() {
 
   const run = useCallback(() => {
     const s = text.slice(0, 24) || 'scriptcable';
+    const sAlt = `${s.slice(0, -1)}${s.endsWith('0') ? '1' : '0'}`;
     const count = Math.min(12, Math.max(1, Math.floor(Number(times) || 1)));
     setText(s);
     setTimes(String(count));
-    setResult({
-      value: repeat(s, count),
-      wasm: timeIt(() => repeat(s, count), 500),
-      js: timeIt(() => jsRepeat(s, count), 500),
-      iterations: 500,
-    });
+    const value = repeat(s, count);
+    const stats = measurePair(
+      (iterations) => {
+        let len = 0;
+        for (let i = 0; i < iterations; i++) len += repeat((i & 1) === 0 ? s : sAlt, count).length;
+        return len;
+      },
+      (iterations) => {
+        let len = 0;
+        for (let i = 0; i < iterations; i++)
+          len += jsRepeat((i & 1) === 0 ? s : sAlt, count).length;
+        return len;
+      },
+      { minBatch: 1_000, maxBatch: 50_000 },
+    );
+    setResult({ value, ...stats });
   }, [text, times]);
 
   return (
@@ -268,13 +391,23 @@ function BytesPanel() {
   const run = useCallback(() => {
     const n = Math.min(8192, Math.max(128, Math.floor(Number(size) || 1024)));
     setSize(String(n));
-    const data = randomBytes(n);
-    setResult({
-      value: sumBytes(data).toLocaleString(),
-      wasm: timeIt(() => sumBytes(data), 300),
-      js: timeIt(() => jsSumBytes(data), 300),
-      iterations: 300,
-    });
+    const dataA = randomBytes(n);
+    const dataB = randomBytes(n);
+    const value = sumBytes(dataA).toLocaleString();
+    const stats = measurePair(
+      (iterations) => {
+        let sum = 0;
+        for (let i = 0; i < iterations; i++) sum += sumBytes((i & 1) === 0 ? dataA : dataB);
+        return sum;
+      },
+      (iterations) => {
+        let sum = 0;
+        for (let i = 0; i < iterations; i++) sum += jsSumBytes((i & 1) === 0 ? dataA : dataB);
+        return sum;
+      },
+      { minBatch: 1_000, maxBatch: 100_000 },
+    );
+    setResult({ value, ...stats });
   }, [size]);
 
   return (
