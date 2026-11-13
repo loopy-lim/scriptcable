@@ -468,9 +468,39 @@ const CANDIDATES: URL[] = [RELATIVE_URL, rootUrl()].filter((u): u is URL => u !=
 
 let resolvedUrl: URL | null = null;
 
+// A 200 is not proof: SPA-fallback hosts answer a missing asset path with
+// index.html (200, text/html), and WebAssembly.compile then dies on those
+// bytes with a cryptic magic-word error. Read the first bytes of the
+// response stream and require the wasm magic word; cancel right after —
+// the probe costs ~4 bytes, and the later compile re-downloads via cache.
 async function reachable(url: URL): Promise<boolean> {
   try {
-    return (await fetch(url, { method: 'HEAD' })).ok;
+    const res = await fetch(url);
+    if (!res.ok) {
+      res.body?.cancel().catch(() => {});
+      return false;
+    }
+    if (!res.body) return true; // opaque/legacy body — let the compile step surface it
+    const reader = res.body.getReader();
+    try {
+      const head = new Uint8Array(4); // 00 61 73 6d — "\0asm"
+      let got = 0;
+      while (got < head.length) {
+        const { done, value } = await reader.read();
+        if (done || !value) break;
+        head.set(value.subarray(0, head.length - got), got);
+        got += Math.min(value.length, head.length - got);
+      }
+      return (
+        got === head.length &&
+        head[0] === 0x00 &&
+        head[1] === 0x61 &&
+        head[2] === 0x73 &&
+        head[3] === 0x6d
+      );
+    } finally {
+      reader.cancel().catch(() => {});
+    }
   } catch {
     return false;
   }
@@ -485,8 +515,9 @@ async function resolveWasmUrl(explicit?: string | URL): Promise<URL> {
       return url;
     }
   }
-  // None answered HEAD (or HEAD is refused) — fall back to the original
-  // candidate so its compile error surfaces exactly as before.
+  // None passed the wasm-magic probe (offline, 404, or an HTML fallback) —
+  // fall back to the original candidate so its compile error surfaces
+  // exactly as before.
   return CANDIDATES[0]!;
 }
 

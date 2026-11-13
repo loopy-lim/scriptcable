@@ -1,6 +1,7 @@
 /**
  * Codegen tests: the generated browser client's WASM URL resolution —
- * module-relative and origin-root candidates with a HEAD probe, explicit
+ * module-relative and origin-root candidates with a wasm-magic probe
+ * (an SPA-fallback 200 HTML page must NOT count as reachable), explicit
  * `wasmUrl` winning, and the first candidate as the error-surfacing fallback.
  */
 import { describe, it } from 'bun:test';
@@ -28,9 +29,11 @@ describe('generated browser client', () => {
     assert.match(src, /CANDIDATES\[0\]/, 'missing fallback to the first candidate');
   });
 
-  it('resolves with a HEAD probe and caches the winner', () => {
+  it('probes by streaming the response and checking the wasm magic word', () => {
     const src = browserClient();
-    assert.match(src, /method: 'HEAD'/);
+    assert.match(src, /getReader\(\)/, 'probe must stream instead of trusting HEAD/200');
+    assert.match(src, /head\[1\] === 0x61/, 'missing "\\0asm" magic-word check');
+    assert.doesNotMatch(src, /method: 'HEAD'/, 'HEAD alone trusts SPA-fallback HTML');
     assert.match(src, /let resolvedUrl/, 'missing module-scope resolution cache');
   });
 
@@ -53,7 +56,7 @@ describe('generated browser client', () => {
   it('lynx/tauri flavors inherit the same resolution', () => {
     const { files } = generateClients(CONFIG, ['lynx', 'tauri']);
     for (const f of ['lynx.ts', 'tauri.ts']) {
-      assert.match(files[f]!, /method: 'HEAD'/, `${f} missing URL resolution`);
+      assert.match(files[f]!, /head\[1\] === 0x61/, `${f} missing wasm-magic URL resolution`);
     }
   });
 });
@@ -64,7 +67,7 @@ describe('deno and workers clients', () => {
     const src = files['deno.ts']!;
     assert.match(src, /Deno\.readFile\(new URL\(WASM_FILE, import\.meta\.url\)\)/);
     assert.match(src, /WebAssembly\.compile\(bytes\)/);
-    assert.doesNotMatch(src, /method: 'HEAD'/, 'deno must not probe URLs');
+    assert.doesNotMatch(src, /getReader\(\)/, 'deno must not probe URLs');
     assert.doesNotMatch(src, /\bfetch\(/, 'deno must not fetch — deno: URLs are unfetchable');
     assert.match(src, /createMinimalWasi/);
   });
