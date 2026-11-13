@@ -2,7 +2,6 @@ import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { RotateCcw } from 'lucide-react';
 
 import {
-  Badge,
   Button,
   Card,
   CardContent,
@@ -47,11 +46,14 @@ class DemoErrorBoundary extends Component<
 function DemoLoading() {
   const { t } = useI18n();
   return (
-    <div className="grid gap-4" aria-busy="true" aria-label={t.demo.loading}>
-      <div className="h-9 w-72 animate-pulse rounded-md bg-muted" />
-      <div className="h-10 w-full animate-pulse rounded-md bg-muted" />
-      <div className="h-10 w-1/2 animate-pulse rounded-md bg-muted" />
-      <div className="mt-4 h-9 w-28 animate-pulse rounded-md bg-muted" />
+    <div className="grid gap-6 lg:grid-cols-12" aria-busy="true" aria-label={t.demo.loading}>
+      <div className="h-52 animate-pulse rounded-lg bg-muted lg:col-span-5" />
+      <div className="grid gap-4 lg:col-span-7">
+        <div className="h-9 w-72 animate-pulse rounded-md bg-muted" />
+        <div className="h-10 w-full animate-pulse rounded-md bg-muted" />
+        <div className="h-10 w-1/2 animate-pulse rounded-md bg-muted" />
+        <div className="mt-2 h-9 w-28 animate-pulse rounded-md bg-muted" />
+      </div>
     </div>
   );
 }
@@ -77,20 +79,28 @@ export function LiveDemo() {
   const { t } = useI18n();
 
   return (
-    <Section id="demo" eyebrow={t.demo.eyebrow} title={t.demo.title} sub={t.demo.sub}>
+    <Section
+      id="demo"
+      eyebrow={t.demo.eyebrow}
+      title={t.demo.title}
+      sub={t.demo.sub}
+      headerRight={
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 font-mono text-[11px] font-medium text-secondary-foreground">
+          <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+          <span>{t.demo.badge}</span>
+        </div>
+      }
+    >
       <Card>
-        <CardHeader>
+        <CardHeader className="border-b border-border pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="font-mono text-base">src/core.ts</CardTitle>
-            <Badge variant="secondary" className="font-mono text-[11px]">
-              {t.demo.badge}
-            </Badge>
+            <CardTitle className="font-mono text-base">{t.demo.sourceTitle}</CardTitle>
+            <CardDescription className="font-mono text-xs">
+              add · fib · repeat · sumBytes
+            </CardDescription>
           </div>
-          <CardDescription className="font-mono text-xs">
-            add · fib · repeat · sumBytes
-          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <DemoErrorBoundary>
             <Suspense fallback={<DemoLoading />}>
               <DemoPanels />

@@ -7,10 +7,10 @@ export function Footer() {
 
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto w-full max-w-5xl px-6 py-12">
+      <div className="mx-auto w-full max-w-6xl px-6 py-12">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <span className="flex size-6 items-center justify-center rounded-md bg-foreground font-mono text-xs font-semibold text-background">
                 sc
               </span>
@@ -53,9 +53,9 @@ export function Footer() {
             </a>
           </nav>
         </div>
-        <div className="mt-10 flex flex-col gap-2 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
+        <div className="mt-10 flex flex-col gap-2 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between md:gap-8">
           <p>{t.footer.dogfood}</p>
-          <p className="font-mono">
+          <p className="shrink-0 font-mono">
             {t.footer.license} · {SITE_URL.replace('https://', '')}
           </p>
         </div>

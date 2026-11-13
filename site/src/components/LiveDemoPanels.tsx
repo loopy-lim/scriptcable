@@ -14,6 +14,8 @@ import { add, fib, repeat, sumBytes } from '../core';
 
 import { useI18n } from '../i18n';
 
+type DemoTabKey = 'add' | 'fib' | 'repeat' | 'bytes';
+
 /** Runs `fn` `iterations` times and returns µs per call (after one warm-up). */
 function timeIt(fn: () => unknown, iterations: number): number {
   fn();
@@ -28,7 +30,7 @@ function formatMs(micros: number): string {
   return `${micros.toFixed(2)} µs`;
 }
 
-// Plain-JS twins of the core exports — the honest baseline next to WASM.
+// Plain-JS twins of the core exports — the baseline next to WASM.
 const jsAdd = (a: number, b: number): number => a + b;
 const jsFib = (n: number): number => {
   let a = 0;
@@ -62,26 +64,41 @@ type Result = { value: string; wasm: number; js: number; iterations: number };
 
 function ResultView({ result }: { result: Result }) {
   const { t } = useI18n();
+  const maxTime = Math.max(result.wasm, result.js, 0.01);
+  const wasmPct = Math.max(4, Math.min(100, Math.round((result.wasm / maxTime) * 100)));
+  const jsPct = Math.max(4, Math.min(100, Math.round((result.js / maxTime) * 100)));
+
   return (
-    <div className="mt-6 grid gap-3 sm:grid-cols-3">
-      <div className="rounded-lg border border-border bg-muted/40 p-4 sm:col-span-3">
-        <p className="font-mono text-xs text-muted-foreground">{t.demo.result}</p>
-        <p className="mt-1 truncate font-mono text-lg font-medium" title={result.value}>
+    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className="rounded-lg border border-border bg-muted/40 p-4 sm:col-span-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-mono text-xs text-muted-foreground">{t.demo.result}</p>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            {result.iterations.toLocaleString()} {t.demo.avgOf}
+          </p>
+        </div>
+        <p className="mt-1.5 truncate font-mono text-xl font-semibold" title={result.value}>
           → {result.value}
         </p>
       </div>
+
       <div className="rounded-lg border border-border p-4">
         <p className="text-xs text-muted-foreground">{t.demo.wasmTime}</p>
-        <p className="mt-1 font-mono text-lg font-medium">{formatMs(result.wasm)}</p>
+        <p className="mt-1 font-mono text-lg font-medium tabular-nums">{formatMs(result.wasm)}</p>
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-foreground" style={{ width: `${wasmPct}%` }} />
+        </div>
       </div>
+
       <div className="rounded-lg border border-border p-4">
         <p className="text-xs text-muted-foreground">{t.demo.jsTime}</p>
-        <p className="mt-1 font-mono text-lg font-medium">{formatMs(result.js)}</p>
-      </div>
-      <div className="flex items-end rounded-lg border border-border p-4">
-        <p className="text-xs text-muted-foreground">
-          {result.iterations.toLocaleString()} {t.demo.avgOf}
-        </p>
+        <p className="mt-1 font-mono text-lg font-medium tabular-nums">{formatMs(result.js)}</p>
+        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-muted-foreground/50"
+            style={{ width: `${jsPct}%` }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -283,27 +300,50 @@ function BytesPanel() {
 /** The tabbed demo panels — imports the compiled core; lazy-loaded. */
 export default function DemoPanels() {
   const { t } = useI18n();
+  const [activeTab, setActiveTab] = useState<DemoTabKey>('add');
+  const activeMeta = t.demo.tabs[activeTab];
 
   return (
-    <Tabs defaultValue="add">
-      <TabsList>
-        <TabsTrigger value="add">{t.demo.tabs.add.label}</TabsTrigger>
-        <TabsTrigger value="fib">{t.demo.tabs.fib.label}</TabsTrigger>
-        <TabsTrigger value="repeat">{t.demo.tabs.repeat.label}</TabsTrigger>
-        <TabsTrigger value="bytes">{t.demo.tabs.bytes.label}</TabsTrigger>
-      </TabsList>
-      <TabsContent value="add" className="mt-6">
-        <AddPanel />
-      </TabsContent>
-      <TabsContent value="fib" className="mt-6">
-        <FibPanel />
-      </TabsContent>
-      <TabsContent value="repeat" className="mt-6">
-        <RepeatPanel />
-      </TabsContent>
-      <TabsContent value="bytes" className="mt-6">
-        <BytesPanel />
-      </TabsContent>
-    </Tabs>
+    <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
+      <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-muted/30 lg:col-span-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/50 px-3.5 py-2">
+          <span className="font-mono text-xs text-foreground">{activeMeta.label}()</span>
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {t.demo.abiLabel}: {activeMeta.abi}
+          </span>
+        </div>
+        <pre className="overflow-x-auto p-4 font-mono text-xs leading-relaxed text-foreground">
+          <code>{activeMeta.code}</code>
+        </pre>
+        <div className="border-t border-border px-3.5 py-2.5">
+          <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
+            {t.demo.importNote}
+          </p>
+        </div>
+      </div>
+
+      <div className="min-w-0 lg:col-span-7">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DemoTabKey)}>
+          <TabsList>
+            <TabsTrigger value="add">{t.demo.tabs.add.label}</TabsTrigger>
+            <TabsTrigger value="fib">{t.demo.tabs.fib.label}</TabsTrigger>
+            <TabsTrigger value="repeat">{t.demo.tabs.repeat.label}</TabsTrigger>
+            <TabsTrigger value="bytes">{t.demo.tabs.bytes.label}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="add" className="mt-5">
+            <AddPanel />
+          </TabsContent>
+          <TabsContent value="fib" className="mt-5">
+            <FibPanel />
+          </TabsContent>
+          <TabsContent value="repeat" className="mt-5">
+            <RepeatPanel />
+          </TabsContent>
+          <TabsContent value="bytes" className="mt-5">
+            <BytesPanel />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
   );
 }

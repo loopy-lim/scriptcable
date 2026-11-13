@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 export type Lang = 'en' | 'ko';
+export type HostCategory = 'all' | 'dropin' | 'conditions' | 'native';
 
 const STORAGE_KEY = 'scriptcable-lang';
 
@@ -9,9 +10,11 @@ const ko = {
     title: 'scriptcable — 하나의 TypeScript 코어, 모든 런타임',
   },
   nav: {
-    github: 'GitHub',
+    demo: '데모',
+    hosts: '호스트',
+    bench: '성능',
     docs: '문서',
-    demo: '라이브 데모',
+    github: 'GitHub',
     langAria: '언어 전환 (현재: 한국어)',
     themeLightAria: '다크 모드 켜기',
     themeDarkAria: '라이트 모드 켜기',
@@ -30,22 +33,118 @@ bun install
 bun run doctor && bun run build && bun start
 # → {"sum":42,"hi":"hello, bun"}`,
     quickstartNote: '모든 명령을 예상 출력과 함께 엔드투엔드로 검증했습니다(docs/getting-started.md).',
+    router: {
+      header: 'src/core.ts → 타깃 라우팅',
+      badge: '1 core · N hosts',
+      sourceLabel: '단일 입력 코어',
+      sourceFile: 'src/core.ts',
+      sourceCode: 'export function add(a: number, b: number): number',
+      compilerLabel: 'scriptc + scriptcable build',
+      compilerDetail: 'ABI 추론 · 계약 해시 · 호스트별 클라이언트 생성',
+      targetLabel: '타깃 호스트 선택',
+      artifactLabel: '생성 산출물',
+      wiringLabel: '연결 방식',
+      callSiteLabel: '앱 호출부 (변경 없음)',
+      callSiteCode: `import { add } from './src/core';
+add(20, 22); // 42`,
+      targets: [
+        {
+          id: 'bun-node',
+          label: 'Bun / Node',
+          kind: 'NATIVE',
+          artifact: 'libcore.so · core.node',
+          wiring: 'bun:ffi 또는 타입 N-API 애드온으로 직접 호출',
+          note: '기본 출력은 네이티브 공유 라이브러리입니다.',
+        },
+        {
+          id: 'browser',
+          label: 'Vite / Next',
+          kind: 'WASM DROP-IN',
+          artifact: 'core.wasm · browser.ts',
+          wiring: '플러그인 resolveId가 ./core import를 가로채 연결',
+          note: '인자 없는 createClient()와 내장 최소 WASI 포함.',
+        },
+        {
+          id: 'workers',
+          label: 'Workers',
+          kind: 'WORKERD',
+          artifact: 'workers.ts · CompiledWasm',
+          wiring: 'workerd export 조건으로 정적 WASM import 해석',
+          note: 'fetch나 top-level await 없이 wrangler에서 즉시 로드.',
+        },
+        {
+          id: 'mobile',
+          label: 'RN / Expo',
+          kind: 'BRIDGE',
+          artifact: 'react-native.ts · libcore.a',
+          wiring: 'metro.config.js의 withScriptcableMetro()가 브리지 연결',
+          note: '네이티브 아카이브 링크 + JS 스레드 타입 안전 호출.',
+        },
+      ],
+    },
   },
   demo: {
     eyebrow: '라이브 데모',
     title: '이 페이지 자체가 데모입니다',
     sub: '아래 호출들은 이 사이트의 src/core.ts를 scriptcable이 WebAssembly로 컴파일한 것입니다. 앱 코드는 평범한 import 그대로 두고, Vite 플러그인이 컴파일된 클라이언트로 교체합니다(드롭인).',
-    badge: '브라우저에서 컴파일된 WASM 실행 중',
+    badge: '브라우저 WASM 실행 중',
+    sourceTitle: 'src/core.ts',
+    abiLabel: '추론 ABI',
+    importNote: "실제 호출부: import { add, fib, repeat, sumBytes } from '../core'",
     run: '실행',
-    result: '결과',
+    result: '실행 결과',
     wasmTime: '컴파일된 코어 (WASM)',
     jsTime: '동일 로직의 순수 JS',
-    avgOf: '회 평균 · 직접 브라우저에서 측정',
+    avgOf: '회 평균 · 브라우저 실측',
     tabs: {
-      add: { label: 'add', desc: '두 숫자를 더합니다(number 왕복).', a: 'a', b: 'b' },
-      fib: { label: 'fib', desc: '반복 피보나치, 숫자 연산 왕복.', n: 'n (10–78)' },
-      repeat: { label: 'repeat', desc: '문자열 결합, 경계를 넘는 string 왕복.', text: '텍스트', times: '반복 (1–12)' },
-      bytes: { label: 'sumBytes', desc: '무작위 바이트 버퍼 합산, Uint8Array 마셜링.', size: '버퍼 크기 (바이트)' },
+      add: {
+        label: 'add',
+        desc: '두 숫자를 더합니다(number 왕복).',
+        abi: '(f64, f64) → f64',
+        code: `export function add(a: number, b: number): number {
+  return a + b;
+}`,
+        a: 'a',
+        b: 'b',
+      },
+      fib: {
+        label: 'fib',
+        desc: '반복 피보나치, 숫자 연산 왕복.',
+        abi: '(f64) → f64',
+        code: `export function fib(n: number): number {
+  let a = 0, b = 1;
+  for (let i = 0; i < n; i++) {
+    const next = a + b;
+    a = b;
+    b = next;
+  }
+  return a;
+}`,
+        n: 'n (10–78)',
+      },
+      repeat: {
+        label: 'repeat',
+        desc: '문자열 결합, 경계를 넘는 string 왕복.',
+        abi: '(utf8, f64) → utf8',
+        code: `export function repeat(text: string, times: number): string {
+  const parts: string[] = [];
+  for (let i = 0; i < times; i++) parts.push(text);
+  return parts.join(' / ');
+}`,
+        text: '텍스트',
+        times: '반복 (1–12)',
+      },
+      bytes: {
+        label: 'sumBytes',
+        desc: '무작위 바이트 버퍼 합산, Uint8Array 마셜링.',
+        abi: '(bytes) → f64',
+        code: `export function sumBytes(data: Uint8Array): number {
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i];
+  return sum;
+}`,
+        size: '버퍼 크기 (바이트)',
+      },
     },
     errorTitle: '데모 코어를 불러오지 못했습니다',
     errorBody: 'WASM 모듈 초기화에 실패했습니다. 콘솔을 확인하거나 아래 버튼으로 다시 시도하세요.',
@@ -56,19 +155,25 @@ bun run doctor && bun run build && bun start
     eyebrow: '호스트 매트릭스',
     title: '앱이 도는 곳 어디서나',
     sub: '번들러 플러그인은 import를 가로채 컴파일된 클라이언트로 연결합니다. 런타임 클라이언트는 export 조건으로 해석됩니다. 코드에는 분기가 없습니다.',
+    filters: [
+      { id: 'all' as HostCategory, label: '전체 (11)' },
+      { id: 'dropin' as HostCategory, label: '번들러 드롭인 (6)' },
+      { id: 'conditions' as HostCategory, label: '조건 경로 (4)' },
+      { id: 'native' as HostCategory, label: '네이티브 런타임 (1)' },
+    ],
     columns: { host: '호스트', how: '연결 방식', verified: '검증 버전' },
     rows: [
-      { host: 'Vite', how: '자동 드롭인, resolveId가 내장 리졸버보다 먼저 실행', verified: 'Vite 6 dev + build' },
-      { host: 'Next.js (webpack)', how: '클라이언트 그래프는 브라우저 드롭인, 서버는 node 클라이언트', verified: 'Next 16.4.2' },
-      { host: 'Next.js (Turbopack)', how: 'resolve 훅이 없어 export 조건 경로 사용', verified: 'Next 16.4.2' },
-      { host: 'React Native / Expo', how: 'metro.config.js에 withScriptcableMetro()', verified: 'Metro 0.87 · RN 0.88 · Expo 58' },
-      { host: 'Electron', how: '메인은 네이티브, 렌더러는 WASM 드롭인', verified: 'Electron 33 실물 런타임' },
-      { host: 'Astro · SvelteKit · Nuxt · SolidStart', how: 'Vite 플러그인 등록 (@unikit-bridge/scriptcable/vite)', verified: 'Astro 5.18 · Nuxt 4.6 등' },
-      { host: 'Bun · Node', how: '네이티브 공유 라이브러리, bun:ffi / 타입 N-API 애드온', verified: '실물 런타임 호출' },
-      { host: 'Deno', how: 'deno 플레이버(컴파일된 .js)가 node보다 먼저 해석', verified: 'Deno 2.9' },
-      { host: 'Cloudflare Workers', how: 'workerd 조건, wasm이 정적 CompiledWasm import로 탑재', verified: 'wrangler 4.151' },
-      { host: 'Lynx (Rspeedy)', how: 'Rspack 리졸버에 JS 훅이 없어 조건 경로 사용', verified: 'Rspeedy 0.18.2' },
-      { host: 'Rollup', how: '동일 플러그인, 표준 resolveId 훅', verified: 'rollup 4' },
+      { host: 'Vite', category: 'dropin' as const, how: '자동 드롭인, resolveId가 내장 리졸버보다 먼저 실행', verified: 'Vite 6 dev + build' },
+      { host: 'Next.js (webpack)', category: 'dropin' as const, how: '클라이언트 그래프는 브라우저 드롭인, 서버는 node 클라이언트', verified: 'Next 16.4.2' },
+      { host: 'Next.js (Turbopack)', category: 'conditions' as const, how: 'resolve 훅이 없어 export 조건 경로 사용', verified: 'Next 16.4.2' },
+      { host: 'React Native / Expo', category: 'dropin' as const, how: 'metro.config.js에 withScriptcableMetro()', verified: 'Metro 0.87 · RN 0.88 · Expo 58' },
+      { host: 'Electron', category: 'dropin' as const, how: '메인은 네이티브, 렌더러는 WASM 드롭인', verified: 'Electron 33 실물 런타임' },
+      { host: 'Astro · SvelteKit · Nuxt · SolidStart', category: 'dropin' as const, how: 'Vite 플러그인 등록 (@unikit-bridge/scriptcable/vite)', verified: 'Astro 5.18 · Nuxt 4.6 등' },
+      { host: 'Bun · Node', category: 'native' as const, how: '네이티브 공유 라이브러리, bun:ffi / 타입 N-API 애드온', verified: '실물 런타임 호출' },
+      { host: 'Deno', category: 'conditions' as const, how: 'deno 플레이버(컴파일된 .js)가 node보다 먼저 해석', verified: 'Deno 2.9' },
+      { host: 'Cloudflare Workers', category: 'conditions' as const, how: 'workerd 조건, wasm이 정적 CompiledWasm import로 탑재', verified: 'wrangler 4.151' },
+      { host: 'Lynx (Rspeedy)', category: 'conditions' as const, how: 'Rspack 리졸버에 JS 훅이 없어 조건 경로 사용', verified: 'Rspeedy 0.18.2' },
+      { host: 'Rollup', category: 'dropin' as const, how: '동일 플러그인, 표준 resolveId 훅', verified: 'rollup 4' },
     ],
   },
   bench: {
@@ -76,10 +181,10 @@ bun run doctor && bun run build && bun start
     title: '측정된 수치',
     sub: 'examples/bench-core의 벤치마크입니다. 헤드라인 수치는 M1 Max, 경계 비용은 linux-x64(2026-10-25) 실측이고, bench-gate가 커밋된 기준선과 비교해 수치를 검사합니다.',
     tiles: [
-      { value: '~24.5 ns', label: '타입 N-API 애드온 (Node) · 호출당' },
-      { value: '~47 ns', label: 'Bun (bun:ffi보다 앞섬) · 호출당' },
-      { value: '48 ns', label: '브라우저 WASM · 호출당' },
-      { value: '1.1 s → 166 ms', label: '콜드 → 웜 빌드 (6.4×)' },
+      { value: '~24.5 ns', label: '타입 N-API 애드온 (Node) · 호출당', tag: 'native' },
+      { value: '~47 ns', label: 'Bun (bun:ffi보다 앞섬) · 호출당', tag: 'native' },
+      { value: '48 ns', label: '브라우저 WASM · 호출당', tag: 'wasm' },
+      { value: '1.1 s → 166 ms', label: '콜드 → 웜 빌드 (6.4×)', tag: 'cache' },
     ],
     boundaryTitle: '경계를 넘는 비용',
     boundaryColumns: { op: '연산', cost: '비용 (linux-x64)', note: '메모' },
@@ -89,7 +194,12 @@ bun run doctor && bun run build && bun start
       { op: 'string 배치', cost: '−31%', note: 'client.batch()로 경계 1회에 N 호출' },
       { op: '작은 string 다발', cost: '≈ 2× 지연', note: 'TS보다 느립니다. 큰 단위의 export로 묶어 배치하거나 TS에 두세요' },
     ],
-    boundaryNote: '컴파일된 코어는 경계 한 번으로 실제 일이 많을 때 이깁니다. 수학, 파싱, 메모리 격리가 그 예입니다.',
+    calloutTitle: '경계 설계 기준',
+    calloutBody: '컴파일된 코어는 경계 한 번으로 실제 일이 많을 때 이깁니다. 수학, 파싱, 메모리 격리가 그 예입니다.',
+    calloutPoints: [
+      '숫자·버퍼 연산이나 큰 단위 export는 네이티브/WASM 이득이 큽니다.',
+      '짧은 문자열을 잘게 자주 넘길 때는 client.batch()로 묶거나 TS에 둡니다.',
+    ],
   },
   beforeAfter: {
     eyebrow: 'Before → After',
@@ -105,7 +215,11 @@ bun run doctor && bun run build && bun start
       { what: '에디터 타입', before: '수동 tsconfig paths', now: '실제 패키지, 그대로 해석' },
       { what: '호출부', before: 'createClient() + 메서드 호출로 재작성', now: '그대로, ./core import가 컴파일 클라이언트로 리다이렉트' },
     ],
-    codeTitle: '어느 런타임에서나 동일한 호출부',
+    beforeCodeTitle: '이전: 호스트별 수동 배선',
+    beforeCode: `// 호스트마다 다른 어댑터·경로·WASI 인자 필요
+const engine = await createNodeEngine({ outDir: '.scriptcable' });
+engine.call('add', 20, 22);`,
+    codeTitle: '현재: 어느 런타임에서나 동일한 호출부',
     code: `// 변경 없는 앱 코드 — 플러그인이 이 import 뒤의 모듈을 교체합니다
 import { add } from './src/core';
 add(20, 22); // 42, 네이티브 애드온 속도`,
@@ -114,6 +228,7 @@ add(20, 22); // 42, 네이티브 애드온 속도`,
     eyebrow: '검증 증거',
     title: '오늘 이 Linux에서 검증됨',
     sub: '2026-11-13, 이 저장소가 있는 linux-x64 머신에서 실제로 실행한 결과입니다. 스크린샷이 아니라 명령과 출력입니다.',
+    headerMeta: 'linux-x64 · 6개 검증 통과 · exit 0',
     rows: [
       { cmd: 'bun install && bun run build', out: '13개 패키지 + 조립된 @unikit-bridge/scriptcable 빌드 · exit 0' },
       { cmd: 'file libcalculator.so', out: 'ELF 64-bit LSB shared object, x86-64' },
@@ -142,9 +257,11 @@ const en: Dict = {
     title: 'scriptcable — one TypeScript core, every runtime',
   },
   nav: {
-    github: 'GitHub',
+    demo: 'Demo',
+    hosts: 'Hosts',
+    bench: 'Benchmarks',
     docs: 'Docs',
-    demo: 'Live demo',
+    github: 'GitHub',
     langAria: 'Switch language (current: English)',
     themeLightAria: 'Switch to dark mode',
     themeDarkAria: 'Switch to light mode',
@@ -163,22 +280,118 @@ bun install
 bun run doctor && bun run build && bun start
 # → {"sum":42,"hi":"hello, bun"}`,
     quickstartNote: 'Every command is verified end-to-end with its expected output (docs/getting-started.md).',
+    router: {
+      header: 'src/core.ts → target routing',
+      badge: '1 core · N hosts',
+      sourceLabel: 'Single input core',
+      sourceFile: 'src/core.ts',
+      sourceCode: 'export function add(a: number, b: number): number',
+      compilerLabel: 'scriptc + scriptcable build',
+      compilerDetail: 'ABI inferred · contract hash · per-host client emit',
+      targetLabel: 'Select target host',
+      artifactLabel: 'Emitted artifact',
+      wiringLabel: 'Resolution',
+      callSiteLabel: 'App call site (unchanged)',
+      callSiteCode: `import { add } from './src/core';
+add(20, 22); // 42`,
+      targets: [
+        {
+          id: 'bun-node',
+          label: 'Bun / Node',
+          kind: 'NATIVE',
+          artifact: 'libcore.so · core.node',
+          wiring: 'Direct native call via bun:ffi or typed N-API addon',
+          note: 'Default artifact is a native shared library.',
+        },
+        {
+          id: 'browser',
+          label: 'Vite / Next',
+          kind: 'WASM DROP-IN',
+          artifact: 'core.wasm · browser.ts',
+          wiring: 'Plugin resolveId intercepts ./core imports automatically',
+          note: 'Includes minimal WASI polyfill; createClient() takes no args.',
+        },
+        {
+          id: 'workers',
+          label: 'Workers',
+          kind: 'WORKERD',
+          artifact: 'workers.ts · CompiledWasm',
+          wiring: 'workerd export condition resolves static WASM import',
+          note: 'Runs in wrangler with zero fetch and no top-level await.',
+        },
+        {
+          id: 'mobile',
+          label: 'RN / Expo',
+          kind: 'BRIDGE',
+          artifact: 'react-native.ts · libcore.a',
+          wiring: 'withScriptcableMetro() in metro.config.js wires the bridge',
+          note: 'Links native archive; type-safe calls from JS.',
+        },
+      ],
+    },
   },
   demo: {
     eyebrow: 'Live demo',
     title: 'This page is the demo',
     sub: 'Every call below runs this site’s own src/core.ts, compiled to WebAssembly by scriptcable. The app code keeps its plain imports; the Vite plugin redirects them onto the compiled client (the drop-in).',
-    badge: 'compiled WASM, running in your browser',
+    badge: 'running compiled WASM',
+    sourceTitle: 'src/core.ts',
+    abiLabel: 'Inferred ABI',
+    importNote: "Actual call site: import { add, fib, repeat, sumBytes } from '../core'",
     run: 'Run',
     result: 'Result',
     wasmTime: 'compiled core (WASM)',
     jsTime: 'same logic in plain JS',
-    avgOf: 'calls, averaged · measured in your browser',
+    avgOf: 'calls, averaged · measured in browser',
     tabs: {
-      add: { label: 'add', desc: 'Adds two numbers (a number round-trip).', a: 'a', b: 'b' },
-      fib: { label: 'fib', desc: 'Iterative fibonacci, a number-crunching round-trip.', n: 'n (10–78)' },
-      repeat: { label: 'repeat', desc: 'Joins copies of a string, a string round-trip over the boundary.', text: 'text', times: 'times (1–12)' },
-      bytes: { label: 'sumBytes', desc: 'Sums a random byte buffer, Uint8Array marshaling.', size: 'buffer size (bytes)' },
+      add: {
+        label: 'add',
+        desc: 'Adds two numbers (a number round-trip).',
+        abi: '(f64, f64) → f64',
+        code: `export function add(a: number, b: number): number {
+  return a + b;
+}`,
+        a: 'a',
+        b: 'b',
+      },
+      fib: {
+        label: 'fib',
+        desc: 'Iterative fibonacci, a number-crunching round-trip.',
+        abi: '(f64) → f64',
+        code: `export function fib(n: number): number {
+  let a = 0, b = 1;
+  for (let i = 0; i < n; i++) {
+    const next = a + b;
+    a = b;
+    b = next;
+  }
+  return a;
+}`,
+        n: 'n (10–78)',
+      },
+      repeat: {
+        label: 'repeat',
+        desc: 'Joins copies of a string, a string round-trip over the boundary.',
+        abi: '(utf8, f64) → utf8',
+        code: `export function repeat(text: string, times: number): string {
+  const parts: string[] = [];
+  for (let i = 0; i < times; i++) parts.push(text);
+  return parts.join(' / ');
+}`,
+        text: 'text',
+        times: 'times (1–12)',
+      },
+      bytes: {
+        label: 'sumBytes',
+        desc: 'Sums a random byte buffer, Uint8Array marshaling.',
+        abi: '(bytes) → f64',
+        code: `export function sumBytes(data: Uint8Array): number {
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i];
+  return sum;
+}`,
+        size: 'buffer size (bytes)',
+      },
     },
     errorTitle: 'Could not load the demo core',
     errorBody: 'WASM module initialization failed. Check the console, or retry below.',
@@ -189,19 +402,25 @@ bun run doctor && bun run build && bun start
     eyebrow: 'Host matrix',
     title: 'Runs wherever your app runs',
     sub: 'Bundler plugins intercept imports and wire the compiled client in. Runtime clients resolve through export conditions; no branching in your code.',
+    filters: [
+      { id: 'all' as HostCategory, label: 'All (11)' },
+      { id: 'dropin' as HostCategory, label: 'Bundler drop-in (6)' },
+      { id: 'conditions' as HostCategory, label: 'Conditions path (4)' },
+      { id: 'native' as HostCategory, label: 'Native runtime (1)' },
+    ],
     columns: { host: 'Host', how: 'How interception wires up', verified: 'Verified against' },
     rows: [
-      { host: 'Vite', how: 'automatic drop-in: resolveId runs before the builtin resolver', verified: 'Vite 6 dev + build' },
-      { host: 'Next.js (webpack)', how: 'client graphs get the browser drop-in, server the node client', verified: 'Next 16.4.2' },
-      { host: 'Next.js (Turbopack)', how: 'no resolve hook, conditions path', verified: 'Next 16.4.2' },
-      { host: 'React Native / Expo', how: 'withScriptcableMetro() in metro.config.js', verified: 'Metro 0.87 · RN 0.88 · Expo 58' },
-      { host: 'Electron', how: 'main runs native, renderer gets the WASM drop-in', verified: 'Electron 33 real runtime' },
-      { host: 'Astro · SvelteKit · Nuxt · SolidStart', how: 'register the Vite plugin (@unikit-bridge/scriptcable/vite)', verified: 'Astro 5.18 · Nuxt 4.6 …' },
-      { host: 'Bun · Node', how: 'native shared library: bun:ffi / typed N-API addon', verified: 'real runtime calls' },
-      { host: 'Deno', how: 'deno flavor (compiled .js) resolves ahead of node', verified: 'Deno 2.9' },
-      { host: 'Cloudflare Workers', how: 'workerd condition: wasm rides a static CompiledWasm import', verified: 'wrangler 4.151' },
-      { host: 'Lynx (Rspeedy)', how: 'Rspack resolver has no JS hooks, conditions path', verified: 'Rspeedy 0.18.2' },
-      { host: 'Rollup', how: 'same plugin: standard resolveId hook', verified: 'rollup 4' },
+      { host: 'Vite', category: 'dropin' as const, how: 'automatic drop-in: resolveId runs before the builtin resolver', verified: 'Vite 6 dev + build' },
+      { host: 'Next.js (webpack)', category: 'dropin' as const, how: 'client graphs get the browser drop-in, server the node client', verified: 'Next 16.4.2' },
+      { host: 'Next.js (Turbopack)', category: 'conditions' as const, how: 'no resolve hook, conditions path', verified: 'Next 16.4.2' },
+      { host: 'React Native / Expo', category: 'dropin' as const, how: 'withScriptcableMetro() in metro.config.js', verified: 'Metro 0.87 · RN 0.88 · Expo 58' },
+      { host: 'Electron', category: 'dropin' as const, how: 'main runs native, renderer gets the WASM drop-in', verified: 'Electron 33 real runtime' },
+      { host: 'Astro · SvelteKit · Nuxt · SolidStart', category: 'dropin' as const, how: 'register the Vite plugin (@unikit-bridge/scriptcable/vite)', verified: 'Astro 5.18 · Nuxt 4.6 …' },
+      { host: 'Bun · Node', category: 'native' as const, how: 'native shared library: bun:ffi / typed N-API addon', verified: 'real runtime calls' },
+      { host: 'Deno', category: 'conditions' as const, how: 'deno flavor (compiled .js) resolves ahead of node', verified: 'Deno 2.9' },
+      { host: 'Cloudflare Workers', category: 'conditions' as const, how: 'workerd condition: wasm rides a static CompiledWasm import', verified: 'wrangler 4.151' },
+      { host: 'Lynx (Rspeedy)', category: 'conditions' as const, how: 'Rspack resolver has no JS hooks, conditions path', verified: 'Rspeedy 0.18.2' },
+      { host: 'Rollup', category: 'dropin' as const, how: 'same plugin: standard resolveId hook', verified: 'rollup 4' },
     ],
   },
   bench: {
@@ -209,10 +428,10 @@ bun run doctor && bun run build && bun start
     title: 'The numbers',
     sub: 'Benchmarks live in examples/bench-core: M1 Max headline numbers; boundary costs measured on linux-x64 (2026-10-25). A bench-gate guards both contracts against the committed baseline.',
     tiles: [
-      { value: '~24.5 ns', label: 'typed N-API addon (Node) · per call' },
-      { value: '~47 ns', label: 'Bun (still ahead of bun:ffi) · per call' },
-      { value: '48 ns', label: 'browser WASM · per call' },
-      { value: '1.1 s → 166 ms', label: 'cold → warm build (6.4×)' },
+      { value: '~24.5 ns', label: 'typed N-API addon (Node) · per call', tag: 'native' },
+      { value: '~47 ns', label: 'Bun (still ahead of bun:ffi) · per call', tag: 'native' },
+      { value: '48 ns', label: 'browser WASM · per call', tag: 'wasm' },
+      { value: '1.1 s → 166 ms', label: 'cold → warm build (6.4×)', tag: 'cache' },
     ],
     boundaryTitle: 'What a crossing costs',
     boundaryColumns: { op: 'Operation', cost: 'Cost (linux-x64)', note: 'Note' },
@@ -222,7 +441,12 @@ bun run doctor && bun run build && bun start
       { op: 'string batch', cost: '−31%', note: 'client.batch(): N calls across one boundary' },
       { op: 'many small strings', cost: '≈ 2× slower', note: 'than plain TS; batch it or keep it in TS' },
     ],
-    boundaryNote: 'Compiled cores win where one crossing does real work: math, parsing, memory isolation.',
+    calloutTitle: 'Boundary rule of thumb',
+    calloutBody: 'Compiled cores win where one crossing does real work: math, parsing, memory isolation.',
+    calloutPoints: [
+      'Number loops, byte buffers, and coarse exports deliver full native/WASM speed.',
+      'For chatty small strings, group calls with client.batch() or keep them in TS.',
+    ],
   },
   beforeAfter: {
     eyebrow: 'Before → After',
@@ -238,7 +462,11 @@ bun run doctor && bun run build && bun start
       { what: 'Editor types', before: 'manual tsconfig paths', now: 'a real package, resolved as-is' },
       { what: 'Call sites', before: 'rewrite to createClient() + method calls', now: 'unchanged; ./core imports redirect onto the compiled client' },
     ],
-    codeTitle: 'Identical call sites in every runtime',
+    beforeCodeTitle: 'Before: manual per-host wiring',
+    beforeCode: `// per-host imports, paths, and WASI adapters
+const engine = await createNodeEngine({ outDir: '.scriptcable' });
+engine.call('add', 20, 22);`,
+    codeTitle: 'Now: identical call sites in every runtime',
     code: `// unchanged app code — the plugin swaps the module behind this import
 import { add } from './src/core';
 add(20, 22); // 42, native-addon speed`,
@@ -247,6 +475,7 @@ add(20, 22); // 42, native-addon speed`,
     eyebrow: 'Verified evidence',
     title: 'Verified on this Linux, today',
     sub: 'Run on 2026-11-13 on the linux-x64 machine hosting this repository: commands and their actual output, not screenshots.',
+    headerMeta: 'linux-x64 · 6 checks passed · exit 0',
     rows: [
       { cmd: 'bun install && bun run build', out: '13 packages + assembled @unikit-bridge/scriptcable built · exit 0' },
       { cmd: 'file libcalculator.so', out: 'ELF 64-bit LSB shared object, x86-64' },
@@ -308,6 +537,6 @@ export function LangProvider({ children }: { children: ReactNode }) {
 
 export function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error('useI18n must be used inside <LangProvider>');
+  if (!ctx) throw new Error('useI18n must be used inside LangProvider');
   return ctx;
 }

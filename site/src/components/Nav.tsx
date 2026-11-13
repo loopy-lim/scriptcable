@@ -20,8 +20,8 @@ export function Nav() {
   const { colorScheme, toggleColorScheme } = useUnikitTheme();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 web:backdrop-blur">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-3 px-6">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/85 web:backdrop-blur">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-6">
         <a href="#top" className="flex items-center gap-2.5">
           <span className="flex size-6 items-center justify-center rounded-md bg-foreground font-mono text-xs font-semibold text-background">
             sc
@@ -34,15 +34,27 @@ export function Nav() {
         <nav className="flex items-center gap-1">
           <a
             href="#demo"
-            className="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground web:transition-colors web:hover:text-foreground md:inline-block"
+            className="hidden rounded-md px-2.5 py-1.5 text-sm text-muted-foreground web:transition-colors web:hover:text-foreground md:inline-block"
           >
             {t.nav.demo}
+          </a>
+          <a
+            href="#hosts"
+            className="hidden rounded-md px-2.5 py-1.5 text-sm text-muted-foreground web:transition-colors web:hover:text-foreground md:inline-block"
+          >
+            {t.nav.hosts}
+          </a>
+          <a
+            href="#benchmarks"
+            className="hidden rounded-md px-2.5 py-1.5 text-sm text-muted-foreground web:transition-colors web:hover:text-foreground md:inline-block"
+          >
+            {t.nav.bench}
           </a>
           <a
             href={DOCS_URL}
             target="_blank"
             rel="noreferrer"
-            className="hidden rounded-md px-3 py-1.5 text-sm text-muted-foreground web:transition-colors web:hover:text-foreground md:inline-block"
+            className="hidden rounded-md px-2.5 py-1.5 text-sm text-muted-foreground web:transition-colors web:hover:text-foreground md:inline-block"
           >
             {t.nav.docs}
           </a>
