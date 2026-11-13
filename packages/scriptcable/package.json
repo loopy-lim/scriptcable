@@ -1,6 +1,6 @@
 {
   "name": "@unikit-bridge/scriptcable",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "One TypeScript core (compiled by scriptc) → type-safe clients for Bun, Node, Deno, Tauri, React Native, Lynx, Cloudflare Workers, Vite, and Next.js — single package with per-host subpath exports",
   "license": "MIT",
   "type": "module",

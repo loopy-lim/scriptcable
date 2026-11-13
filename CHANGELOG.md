@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Changed
+- **0.1.1** — npm `0.1.0` staged publish wedged (`0.0.0-stage` only; empty `npm stage list`); republish as 0.1.1.
+
 - **npm publish surface → single package `@unikit-bridge/scriptcable@0.1.0` (2026-11-13)** — the 13 monorepo `@scriptcable/*` packages are now `private` and assembled into one publishable package with subpath exports (`/bun`, `/node`, `/vite`, `/next`, …). Generated clients and docs use `@unikit-bridge/scriptcable-client` / `@unikit-bridge/scriptcable/*`. Release workflow, `pack-smoke`, and `check-release-version` gate the one package. Install: `bun add -d @unikit-bridge/scriptcable`.
 
 ### Added
