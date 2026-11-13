@@ -20,23 +20,29 @@ export function BeforeAfter() {
         <Table className="w-full min-w-[720px] text-sm">
           <TableHeader>
             <TableRow className="border-border bg-muted/50 web:hover:bg-muted/50">
-              <TableHead className="h-10 px-4 font-medium">
+              <TableHead className="h-10 flex-none w-[184px] px-4 font-medium">
                 {t.beforeAfter.columns.what}
               </TableHead>
-              <TableHead className="h-10 px-4 font-medium">
+              <TableHead className="h-10 flex-1 min-w-0 px-4 font-medium">
                 {t.beforeAfter.columns.before}
               </TableHead>
-              <TableHead className="h-10 px-4 font-medium">{t.beforeAfter.columns.now}</TableHead>
+              <TableHead className="h-10 flex-1 min-w-0 px-4 font-medium">
+                {t.beforeAfter.columns.now}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {t.beforeAfter.rows.map((row) => (
               <TableRow key={row.what} className="border-border">
-                <TableCell className="px-4 py-3 font-medium">{row.what}</TableCell>
-                <TableCell className="px-4 py-3 text-muted-foreground line-through decoration-muted-foreground/40">
+                <TableCell className="flex-none w-[184px] px-4 py-3 font-medium">
+                  {row.what}
+                </TableCell>
+                <TableCell className="flex-1 min-w-0 px-4 py-3 text-muted-foreground line-through decoration-muted-foreground/40 [&_span]:whitespace-normal">
                   {row.before}
                 </TableCell>
-                <TableCell className="px-4 py-3">{row.now}</TableCell>
+                <TableCell className="flex-1 min-w-0 px-4 py-3 [&_span]:whitespace-normal">
+                  {row.now}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

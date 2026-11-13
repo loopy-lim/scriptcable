@@ -28,16 +28,16 @@ export function Benchmarks() {
 
       <h3 className="mt-14 text-lg font-semibold tracking-tight">{t.bench.boundaryTitle}</h3>
       <div className="mt-4 web:overflow-x-auto rounded-lg border border-border">
-        <Table className="w-full min-w-[600px] text-sm">
+        <Table className="w-full min-w-[760px] text-sm">
           <TableHeader>
             <TableRow className="border-border bg-muted/50 web:hover:bg-muted/50">
-              <TableHead className="h-10 px-4 font-medium">
+              <TableHead className="h-10 flex-none w-[176px] px-4 font-medium">
                 {t.bench.boundaryColumns.op}
               </TableHead>
-              <TableHead className="h-10 px-4 font-medium">
+              <TableHead className="h-10 flex-none w-[156px] px-4 font-medium">
                 {t.bench.boundaryColumns.cost}
               </TableHead>
-              <TableHead className="h-10 px-4 font-medium">
+              <TableHead className="h-10 flex-1 min-w-[428px] px-4 font-medium">
                 {t.bench.boundaryColumns.note}
               </TableHead>
             </TableRow>
@@ -45,9 +45,15 @@ export function Benchmarks() {
           <TableBody>
             {t.bench.boundaryRows.map((row) => (
               <TableRow key={row.op} className="border-border">
-                <TableCell className="px-4 py-3 font-medium">{row.op}</TableCell>
-                <TableCell className="px-4 py-3 font-mono text-xs">{row.cost}</TableCell>
-                <TableCell className="px-4 py-3 text-muted-foreground">{row.note}</TableCell>
+                <TableCell className="flex-none w-[176px] px-4 py-3 font-medium">
+                  {row.op}
+                </TableCell>
+                <TableCell className="flex-none w-[156px] px-4 py-3 font-mono text-xs">
+                  {row.cost}
+                </TableCell>
+                <TableCell className="flex-1 min-w-[428px] px-4 py-3 text-muted-foreground">
+                  {row.note}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

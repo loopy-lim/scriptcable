@@ -10,18 +10,16 @@ export function Hero() {
 
   return (
     <section id="top" className="relative web:overflow-hidden">
-      <div className="dot-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_55%_60%_at_50%_0%,black,transparent)]" />
-      <div className="relative mx-auto w-full max-w-5xl px-6 pb-16 pt-16 text-center md:pb-24 md:pt-28">
+      <div className="dot-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_55%_60%_at_28%_0%,black,transparent)]" />
+      <div className="relative mx-auto w-full max-w-5xl px-6 pb-16 pt-16 md:pb-24 md:pt-28">
         <p className="font-mono text-xs text-muted-foreground md:text-sm">{t.hero.eyebrow}</p>
-        <h1 className="mt-6 text-balance text-4xl font-semibold tracking-tight md:text-6xl">
+        <h1 className="mt-6 text-4xl font-semibold tracking-tight md:text-6xl">
           {t.hero.title1}
           <br />
           {t.hero.title2}
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-balance text-muted-foreground md:text-lg">
-          {t.hero.sub}
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <p className="mt-6 max-w-2xl text-muted-foreground md:text-lg">{t.hero.sub}</p>
+        <div className="mt-8 flex flex-wrap items-center gap-3">
           <a
             href={GITHUB_URL}
             target="_blank"
@@ -40,11 +38,9 @@ export function Hero() {
             {t.hero.ctaSecondary}
           </a>
         </div>
-        <div className="mx-auto mt-14 max-w-xl text-left">
+        <div className="mt-14 max-w-xl">
           <CodeBlock title={t.hero.quickstartLabel} code={t.hero.quickstart} />
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            {t.hero.quickstartNote}
-          </p>
+          <p className="mt-3 text-xs text-muted-foreground">{t.hero.quickstartNote}</p>
         </div>
       </div>
     </section>

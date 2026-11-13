@@ -22,7 +22,7 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 web:backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-3 px-6">
-        <a href="#top" className="flex items-center gap-2">
+        <a href="#top" className="flex items-center gap-2.5">
           <span className="flex size-6 items-center justify-center rounded-md bg-foreground font-mono text-xs font-semibold text-background">
             sc
           </span>
