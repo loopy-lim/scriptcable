@@ -27,7 +27,7 @@
     "@react-native-community/cli": "^20.2.0",
     "@react-native/community-cli-plugin": "^0.88.0",
     "@react-native/metro-config": "^0.88.0",
-    "@scriptc/runtime-android-arm64": "0.4.9",
+    "@scriptc/runtime-android-arm64": "0.4.12",
     "@scriptcable/types": "workspace:*",
     "metro": "^0.87.1"
   }

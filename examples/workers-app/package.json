@@ -9,8 +9,8 @@
   },
   "devDependencies": {
     "@scriptcable/cli": "workspace:*",
-    "scriptc": "^0.4.0",
-    "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+    "scriptc": "^0.4.12",
+    "@scriptc/runtime-wasm32-wasi": "^0.4.12",
     "@scriptcable/core": "workspace:*",
     "@scriptcable/types": "workspace:*",
     "wrangler": "^4.151.3"

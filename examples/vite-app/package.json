@@ -21,8 +21,8 @@
   "devDependencies": {
     "@scriptcable/cli": "workspace:*",
     "@scriptcable/vite": "workspace:*",
-    "scriptc": "^0.4.9",
-    "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+    "scriptc": "^0.4.12",
+    "@scriptc/runtime-wasm32-wasi": "^0.4.12",
     "vite": "^6.0.0"
   }
 }

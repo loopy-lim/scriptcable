@@ -429,7 +429,7 @@ Requires the `NPM_TOKEN` secret (an npm Automation token with `@scriptcable` pub
 - Hosts call **into** your library exports (C ABI); outbound FFI is for scriptc executables, not libraries.
 - String/bytes use `(ptr, len)` in / `(out_ptr, out_len)` out on the native boundary.
 - **clang (or gcc's `cc`)** is required for the default native shared-library link.
-- WASM (`--target wasm`) needs zig **0.13.x** — CI's pinned, verified path (scriptc 0.4.9, 2026-11-07; local zig 0.16.0 also builds and runs) — plus a WASI polyfill in browsers.
+- WASM (`--target wasm`) needs zig **0.13.x** — CI's pinned, verified path (scriptc 0.4.12, 2026-11-13; local zig 0.16.0 also builds and runs) — plus a WASI polyfill in browsers.
 - The **browser drop-in** initializes WASM with top-level await — build for **ES2022+** (Chrome 89+, Safari 15+, Firefox 89+). On stricter targets use `dropin: false` and the async `createClient()`.
 - **Drop-in interception** applies only when the entry's entire runtime export surface is ABI-mappable (named functions); anything else disables it with a printed reason.
 - **Drop-in host matrix** (verified 2026-10-22): Vite 6, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Expo 58 metro config, Electron 33 (main native + renderer WASM drop-in), Astro 5.18, SvelteKit 2, Nuxt 4.6, React Router 8.5, SolidStart 2.0 builds, rollup 4 (resolve redirect; TS transform is the host's) — end-to-end. **Deno 2.9 and Cloudflare Workers (workerd, wrangler 4.151) run the generated clients end-to-end** on the conditions path. Turbopack: entry drop-in unavailable (no resolve hook; see the host table). Rspeedy 0.18 stays on the conditions path. Lynx/TurboModule **on-device** call semantics remain unverified — no device in the loop.

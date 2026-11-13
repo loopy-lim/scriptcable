@@ -10,6 +10,6 @@
     "@scriptcable/cli": "workspace:*",
     "@scriptcable/core": "workspace:*",
     "@scriptcable/bun": "workspace:*",
-    "scriptc": "^0.4.9"
+    "scriptc": "^0.4.12"
   }
 }

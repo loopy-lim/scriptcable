@@ -5,10 +5,10 @@
     "": {
       "name": "scriptcable",
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.12",
         "@types/bun": "^1.3.0",
         "enhanced-resolve": "^5.26.0",
-        "scriptc": "^0.4.9",
+        "scriptc": "^0.4.12",
         "typescript": "^5.9.2",
       },
     },
@@ -33,9 +33,9 @@
         "koffi": "^3.3.3",
       },
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.12",
         "@scriptcable/cli": "workspace:*",
-        "scriptc": "^0.4.9",
+        "scriptc": "^0.4.12",
       },
     },
     "examples/bun-app": {
@@ -50,24 +50,24 @@
       "name": "@scriptcable/example-calculator-core",
       "version": "0.1.0",
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.12",
         "@scriptcable/bun": "workspace:*",
         "@scriptcable/cli": "workspace:*",
         "@scriptcable/core": "workspace:*",
         "@scriptcable/node": "workspace:*",
         "@scriptcable/types": "workspace:*",
-        "scriptc": "^0.4.9",
+        "scriptc": "^0.4.12",
       },
     },
     "examples/deno-app": {
       "name": "@scriptcable/example-deno-app",
       "version": "0.1.0",
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.12",
         "@scriptcable/cli": "workspace:*",
         "@scriptcable/core": "workspace:*",
         "@scriptcable/types": "workspace:*",
-        "scriptc": "^0.4.0",
+        "scriptc": "^0.4.12",
       },
     },
     "examples/dx-app": {
@@ -77,7 +77,7 @@
         "@scriptcable/bun": "workspace:*",
         "@scriptcable/cli": "workspace:*",
         "@scriptcable/core": "workspace:*",
-        "scriptc": "^0.4.9",
+        "scriptc": "^0.4.12",
       },
     },
     "examples/electron-app": {
@@ -117,14 +117,14 @@
         "@scriptcable/types": "workspace:*",
       },
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.12",
         "@scriptcable/cli": "workspace:*",
         "@types/node": "^26.6.5",
         "@types/react": "^19.3.0",
         "next": "^16.4.2",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
-        "scriptc": "^0.4.9",
+        "scriptc": "^0.4.12",
       },
     },
     "examples/node-app": {
@@ -166,7 +166,7 @@
         "@react-native-community/cli": "^20.2.0",
         "@react-native/community-cli-plugin": "^0.88.0",
         "@react-native/metro-config": "^0.88.0",
-        "@scriptc/runtime-android-arm64": "0.4.9",
+        "@scriptc/runtime-android-arm64": "0.4.12",
         "@scriptcable/types": "workspace:*",
         "metro": "^0.87.1",
       },
@@ -237,10 +237,10 @@
         "@scriptcable/types": "workspace:*",
       },
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.12",
         "@scriptcable/cli": "workspace:*",
         "@scriptcable/vite": "workspace:*",
-        "scriptc": "^0.4.9",
+        "scriptc": "^0.4.12",
         "vite": "^6.0.0",
       },
     },
@@ -248,11 +248,11 @@
       "name": "@scriptcable/example-workers-app",
       "version": "0.1.0",
       "devDependencies": {
-        "@scriptc/runtime-wasm32-wasi": "^0.4.9",
+        "@scriptc/runtime-wasm32-wasi": "^0.4.12",
         "@scriptcable/cli": "workspace:*",
         "@scriptcable/core": "workspace:*",
         "@scriptcable/types": "workspace:*",
-        "scriptc": "^0.4.0",
+        "scriptc": "^0.4.12",
         "wrangler": "^4.151.3",
       },
     },
@@ -1195,51 +1195,51 @@
 
     "@rspack/lite-tapable": ["@rspack/lite-tapable@1.1.5", "", {}, "sha512-uzB782zJbFTM3ta+e2Glikx36dca/6Y+DXyvFN+wb0Tx5ItIW+g03A0t3amP3LGzPHSkb0k81VHCm4jxLQwfag=="],
 
-    "@scriptc/cli-darwin-arm64": ["@scriptc/cli-darwin-arm64@0.4.9", "", { "dependencies": { "@scriptc/llvm-darwin-arm64": "0.4.9", "@scriptc/runtime-darwin-arm64": "0.4.9" }, "os": "darwin", "cpu": "arm64" }, "sha512-zXjFG6wKq4hq+usDFDRHAgElbVCM/siNs2Cee245UHkDNB++n6Eo77nLKPAMvNVUHOfluCWm5NQt72znUJej4A=="],
+    "@scriptc/cli-darwin-arm64": ["@scriptc/cli-darwin-arm64@0.4.12", "", { "dependencies": { "@scriptc/llvm-darwin-arm64": "0.4.12", "@scriptc/runtime-darwin-arm64": "0.4.12" }, "os": "darwin", "cpu": "arm64" }, "sha512-OPNccLVp0bcp7LgwEswSZarFSA4qVaE3ktsldykn3m1rJHCf5c5AMDvESb0UuU2opXdWtf9XD0+eEaoG7gDa1g=="],
 
-    "@scriptc/cli-darwin-x64": ["@scriptc/cli-darwin-x64@0.4.9", "", { "dependencies": { "@scriptc/llvm-darwin-x64": "0.4.9", "@scriptc/runtime-darwin-x64": "0.4.9" }, "os": "darwin", "cpu": "x64" }, "sha512-6H48wXeK+fw22dRkJQjeg65EjWXaRfzwskEe28a7FVjxrQQVFwO24TrmJGwa68By9sv9i+jhrW1toABpDm45UA=="],
+    "@scriptc/cli-darwin-x64": ["@scriptc/cli-darwin-x64@0.4.12", "", { "dependencies": { "@scriptc/llvm-darwin-x64": "0.4.12", "@scriptc/runtime-darwin-x64": "0.4.12" }, "os": "darwin", "cpu": "x64" }, "sha512-+zR8mWLWAoOafh92LqaMxuGs/lmCArxvXq00CZ1I/GYTZazQ2xeNQiqT8tvCOcoF6MpEkHMPxOi71nOssgp80Q=="],
 
-    "@scriptc/cli-linux-arm64-gnu": ["@scriptc/cli-linux-arm64-gnu@0.4.9", "", { "dependencies": { "@scriptc/llvm-linux-arm64-gnu": "0.4.9", "@scriptc/runtime-linux-arm64-gnu": "0.4.9" }, "os": "linux", "cpu": "arm64" }, "sha512-ExRxwzzagdZBlw5+JvP/zPTbGvtiHHiZ94NeqSBgunV1pcmbPdP9jq59XxCiTiTiWndtnUq2pPsm0X0w28Bl5Q=="],
+    "@scriptc/cli-linux-arm64-gnu": ["@scriptc/cli-linux-arm64-gnu@0.4.12", "", { "dependencies": { "@scriptc/llvm-linux-arm64-gnu": "0.4.12", "@scriptc/runtime-linux-arm64-gnu": "0.4.12" }, "os": "linux", "cpu": "arm64" }, "sha512-W9+qW4ewh2iUl7T3kzNQT5ck/ElqEXidt134Uj2v7VIKk0AVffY5PmlI8MV9IChnKiMvxlzO+LJGuOn8G+1Zvg=="],
 
-    "@scriptc/cli-linux-arm64-musl": ["@scriptc/cli-linux-arm64-musl@0.4.9", "", { "dependencies": { "@scriptc/llvm-linux-arm64-musl": "0.4.9", "@scriptc/runtime-linux-arm64-musl": "0.4.9" }, "os": "linux", "cpu": "arm64" }, "sha512-bUIABOkwxrW4OFJelnD16O42E2O+4NiHjb5brrQv7T6DntZygnNC3reDKlcuiCO11T9CYwOlLx9eLg/PN32E1w=="],
+    "@scriptc/cli-linux-arm64-musl": ["@scriptc/cli-linux-arm64-musl@0.4.12", "", { "dependencies": { "@scriptc/llvm-linux-arm64-musl": "0.4.12", "@scriptc/runtime-linux-arm64-musl": "0.4.12" }, "os": "linux", "cpu": "arm64" }, "sha512-1PEzzVpokuNFu3NwNL2gLcM514GOZyr7WntjaPoGG4Y2m+jOX2I55YYLpYs+AK0OfvxmFrsuBVmZrjHxG7SXAw=="],
 
-    "@scriptc/cli-linux-x64-gnu": ["@scriptc/cli-linux-x64-gnu@0.4.9", "", { "dependencies": { "@scriptc/llvm-linux-x64-gnu": "0.4.9", "@scriptc/runtime-linux-x64-gnu": "0.4.9" }, "os": "linux", "cpu": "x64" }, "sha512-cg62omP7C0HGYiT9nkHhMW2ST1P7RYxNCXjZrKfvtrrUbqQ4vvyKmyDGx7OTWS/+rZCN9BvcRXzihUDtQ2kysg=="],
+    "@scriptc/cli-linux-x64-gnu": ["@scriptc/cli-linux-x64-gnu@0.4.12", "", { "dependencies": { "@scriptc/llvm-linux-x64-gnu": "0.4.12", "@scriptc/runtime-linux-x64-gnu": "0.4.12" }, "os": "linux", "cpu": "x64" }, "sha512-dTz+X1PblSVwnkQrqH+synRfxXTgzVvPquUnPa92dPBY3prGU0XuVZHR1farl84w3ysQ0Ne4Fpwx9KQ1Kzt7nw=="],
 
-    "@scriptc/cli-linux-x64-musl": ["@scriptc/cli-linux-x64-musl@0.4.9", "", { "dependencies": { "@scriptc/llvm-linux-x64-musl": "0.4.9", "@scriptc/runtime-linux-x64-musl": "0.4.9" }, "os": "linux", "cpu": "x64" }, "sha512-uJAg8Wn69mhD1LZSaF9Hy6MTqM8fEtzKuGMaYHLbYJrlkvLXGNSSkhplp9JpcC0O9lgbEWbgCriIzk/27COU3w=="],
+    "@scriptc/cli-linux-x64-musl": ["@scriptc/cli-linux-x64-musl@0.4.12", "", { "dependencies": { "@scriptc/llvm-linux-x64-musl": "0.4.12", "@scriptc/runtime-linux-x64-musl": "0.4.12" }, "os": "linux", "cpu": "x64" }, "sha512-xd9GtQ3ov3zSMpWY+C9DY1QhWNEvGwRBjiOtGxuPLR7GN0bREjeTd+P5lGgsyXMbpZexGhk3J0hkeVqNl83nrQ=="],
 
-    "@scriptc/cli-win32-x64-msvc": ["@scriptc/cli-win32-x64-msvc@0.4.9", "", { "dependencies": { "@scriptc/llvm-win32-x64-msvc": "0.4.9", "@scriptc/runtime-win32-x64-msvc": "0.4.9" }, "os": "win32", "cpu": "x64" }, "sha512-zYEU4co4vgXxGpag9E9Hhc2ypuud3w7YcvlKxuQ/D2Iz22CDhwIphCqFQoNObl8/Yxmp3AOLG+O8RuMvURYDRA=="],
+    "@scriptc/cli-win32-x64-msvc": ["@scriptc/cli-win32-x64-msvc@0.4.12", "", { "dependencies": { "@scriptc/llvm-win32-x64-msvc": "0.4.12", "@scriptc/runtime-win32-x64-msvc": "0.4.12" }, "os": "win32", "cpu": "x64" }, "sha512-NEmBaqcynJkVWeYJY0cmni0pZtZVVNuS+gTi4p+Dwx5nKFrMc+lMe3SKbHM88MaF8Kl3QMoDV1+thSz44Tmrfg=="],
 
-    "@scriptc/llvm-darwin-arm64": ["@scriptc/llvm-darwin-arm64@0.4.9", "", { "os": "darwin", "cpu": "arm64", "bin": { "scriptc-llvm-codegen": "bin/scriptc-llvm-codegen" } }, "sha512-JrZIkvdAZ5SQNwrQNaZF40KnmxiTMrJUhVU4Ow+LzEmJGqPX/lt1nwp/Da+cph5mT4D+E4p1A2riDGcZAmGKcQ=="],
+    "@scriptc/llvm-darwin-arm64": ["@scriptc/llvm-darwin-arm64@0.4.12", "", { "os": "darwin", "cpu": "arm64", "bin": { "scriptc-comptime": "bin/scriptc-comptime", "scriptc-llvm-codegen": "bin/scriptc-llvm-codegen" } }, "sha512-Jf+BhHaAFVvrquqGfgBvz+kypxYBUgLwmMyf2H9q8zoGxbMQugeLwv1RhC+Wzr9HykgAM/OvSSkmsaa2MM6dNA=="],
 
-    "@scriptc/llvm-darwin-x64": ["@scriptc/llvm-darwin-x64@0.4.9", "", { "os": "darwin", "cpu": "x64", "bin": { "scriptc-llvm-codegen": "bin/scriptc-llvm-codegen" } }, "sha512-75oeihSs7IpMgFSDm0uZNpPyVDixvBx9LunQRINUO3z4ExE+TnKefXedGTD4ASV6yLhggZrnMZrjUrWjgBauzw=="],
+    "@scriptc/llvm-darwin-x64": ["@scriptc/llvm-darwin-x64@0.4.12", "", { "os": "darwin", "cpu": "x64", "bin": { "scriptc-comptime": "bin/scriptc-comptime", "scriptc-llvm-codegen": "bin/scriptc-llvm-codegen" } }, "sha512-PUYQ8NslqYzSW1ZyRi0280KC1YZCrdMhnvKPgO2BZJqUdeXFiPDU4xVgkCIDDuScIpEszmaMEFgP73ZGs8vgvQ=="],
 
-    "@scriptc/llvm-linux-arm64-gnu": ["@scriptc/llvm-linux-arm64-gnu@0.4.9", "", { "os": "linux", "cpu": "arm64", "bin": { "scriptc-llvm-linux-arm64-gnu": "bin/scriptc-llvm-codegen" } }, "sha512-GbBkOOxg3gveXY7pbJod7nhAmEpiwErbrAsnf+OAcIliTlIKndk95vlF95whlOrN1ZmqRTvyzMsy0dHJV9g8HQ=="],
+    "@scriptc/llvm-linux-arm64-gnu": ["@scriptc/llvm-linux-arm64-gnu@0.4.12", "", { "os": "linux", "cpu": "arm64", "bin": { "scriptc-llvm-linux-arm64-gnu": "bin/scriptc-llvm-codegen", "scriptc-comptime-linux-arm64-gnu": "bin/scriptc-comptime" } }, "sha512-U89Rq7tLWwEvlwDk4Bbcp/+YDKHJf3GdDFDblH+t9Vdg6ReCzcVfD5OvfT6Cq4OaemU2iJY0dzwRwRi/GoC7wQ=="],
 
-    "@scriptc/llvm-linux-arm64-musl": ["@scriptc/llvm-linux-arm64-musl@0.4.9", "", { "os": "linux", "cpu": "arm64", "bin": { "scriptc-llvm-linux-arm64-musl": "bin/scriptc-llvm-codegen" } }, "sha512-841O/dheAWNW8UCgYNijhfnrIK/EsEfVAxveB3Rj6/v6yGqbg42FG21Zk7+lbGJF8qwoBlQdTlkgUnFxAlgA3g=="],
+    "@scriptc/llvm-linux-arm64-musl": ["@scriptc/llvm-linux-arm64-musl@0.4.12", "", { "os": "linux", "cpu": "arm64", "bin": { "scriptc-llvm-linux-arm64-musl": "bin/scriptc-llvm-codegen", "scriptc-comptime-linux-arm64-musl": "bin/scriptc-comptime" } }, "sha512-lHDX5fdGQTO3mhuEMS52T2WEXa8pvBs6XDRD4cjkIHDQTx/vPCqiiFub6bJuZ0IP4GUcOLWfWwUBauAADx+U7Q=="],
 
-    "@scriptc/llvm-linux-x64-gnu": ["@scriptc/llvm-linux-x64-gnu@0.4.9", "", { "os": "linux", "cpu": "x64", "bin": { "scriptc-llvm-linux-x64-gnu": "bin/scriptc-llvm-codegen" } }, "sha512-BGAgeGFViOZVIl1mAeZySRuWWz/k0jkMAUWq9iDD83nA5rix2zThpeU41Z88r9GRteur9IGhFiyDMdDTbTAdpQ=="],
+    "@scriptc/llvm-linux-x64-gnu": ["@scriptc/llvm-linux-x64-gnu@0.4.12", "", { "os": "linux", "cpu": "x64", "bin": { "scriptc-llvm-linux-x64-gnu": "bin/scriptc-llvm-codegen", "scriptc-comptime-linux-x64-gnu": "bin/scriptc-comptime" } }, "sha512-SJyS6KE0nx4EAP92Bnr0C8lK2wgi2zmW66D3AjHuiOGrSPdPjmJFbbE/8Q+sTWoohN+YZ5m7lBIRz1J45XQkTw=="],
 
-    "@scriptc/llvm-linux-x64-musl": ["@scriptc/llvm-linux-x64-musl@0.4.9", "", { "os": "linux", "cpu": "x64", "bin": { "scriptc-llvm-linux-x64-musl": "bin/scriptc-llvm-codegen" } }, "sha512-qfaaHBQuqwl7TmyudOWUUoyCm2AR3Dsj5nnMDliaFtC/9bS+AOxJ+Hciamb4me1jTDEXwNWHjIBS+/077Ih1tQ=="],
+    "@scriptc/llvm-linux-x64-musl": ["@scriptc/llvm-linux-x64-musl@0.4.12", "", { "os": "linux", "cpu": "x64", "bin": { "scriptc-llvm-linux-x64-musl": "bin/scriptc-llvm-codegen", "scriptc-comptime-linux-x64-musl": "bin/scriptc-comptime" } }, "sha512-5b7r29PBpMIKOjAesEiXQxmx1/StPu5rEFxD1C1RoPyG1oF1Jb7Xq0sDUFBe8JwK5AJRRfFpiB2EEdInEufjhQ=="],
 
-    "@scriptc/llvm-win32-x64-msvc": ["@scriptc/llvm-win32-x64-msvc@0.4.9", "", { "os": "win32", "cpu": "x64" }, "sha512-Qw6iNORSbJZzZKzQIJ6aqu6LiOFaAkUMwsoZljH2ulzRnXNeTGeskOyahuLb2ekkcOycRw6SZHQIXWz30m4neQ=="],
+    "@scriptc/llvm-win32-x64-msvc": ["@scriptc/llvm-win32-x64-msvc@0.4.12", "", { "os": "win32", "cpu": "x64" }, "sha512-kFHiGHCXGxvhqZNKlg6bgrIZhyxg5xA1Ugwqg0rzK3h7W7oHQWlKK3Rx6lDbGoY5JFzUUHP9fupBVdlWzfHLgQ=="],
 
-    "@scriptc/runtime-android-arm64": ["@scriptc/runtime-android-arm64@0.4.9", "", {}, "sha512-qTULvzLOfnEibDsrJP3Ek+34UZF2wf32xnKP3vvFogmXXBHv2vtIofttcGAnnVPSrBuo+7dFtcP1GQsnAvj1Dw=="],
+    "@scriptc/runtime-android-arm64": ["@scriptc/runtime-android-arm64@0.4.12", "", {}, "sha512-730DtacsK0Y5TlimUM2OuOzTV0Jp8kmXJow7Yz51FKNLjrk9aR+cVuMdF86ccd3gLymiNcAVwyBpXftiCwmh/w=="],
 
-    "@scriptc/runtime-darwin-arm64": ["@scriptc/runtime-darwin-arm64@0.4.9", "", {}, "sha512-rleEY5lDpp39O6jpShOIPt/hOQPVF4jMbKiBBrctXdznv8noFmiVZwYmjAVZrEUo9PdcLLozO30aObeyAK0WtQ=="],
+    "@scriptc/runtime-darwin-arm64": ["@scriptc/runtime-darwin-arm64@0.4.12", "", {}, "sha512-C9bgjZ/Vw1Ydi1T/yBwj6i4pAqObJSdPckvCu2IGh8R1UlU8uQam8mUY50eEtRxqy4ztHC/A3FywnqalSezu0Q=="],
 
-    "@scriptc/runtime-darwin-x64": ["@scriptc/runtime-darwin-x64@0.4.9", "", {}, "sha512-ZPcixH/GPhESDPBbAxvo7Nd8sob6zGix6+MWLdFZsGqWbSKiu22jVO3WjUMdVGjqUYwUONn+bT3n6XiMyRj0GA=="],
+    "@scriptc/runtime-darwin-x64": ["@scriptc/runtime-darwin-x64@0.4.12", "", {}, "sha512-KTl7cFLfK3WfoLGzXNC9sTr1AcbYJNgf9WbkpaGAOscWVB4oq6kS9I7OR0zK34xvKKHWTZ0hvVQk/FT2FXh2xA=="],
 
-    "@scriptc/runtime-linux-arm64-gnu": ["@scriptc/runtime-linux-arm64-gnu@0.4.9", "", {}, "sha512-YjVRkty8OWLhLzua2ex1+wx7NwQiOhofb9UuKQfwHqsa1fIaXI1dogumIm/VPHI4FnhB8PlXLuXEHT22e32w8A=="],
+    "@scriptc/runtime-linux-arm64-gnu": ["@scriptc/runtime-linux-arm64-gnu@0.4.12", "", {}, "sha512-uy8Pa1WzbRHF8HZPR0SKEnQpc0Q0bCFrLeO6Q4bfjrBvSbn8oW9rYskcH4izB542y9nNIjI00qZ+pIO2nQptog=="],
 
-    "@scriptc/runtime-linux-arm64-musl": ["@scriptc/runtime-linux-arm64-musl@0.4.9", "", {}, "sha512-4c9g0zDZE6EyUFgw3DMaxkvyXrpfdj516ej7fNsIrtlxjX/2C0CxpBdo2B1fgx4OJKIdPz0MYH6JLXiKU1n90Q=="],
+    "@scriptc/runtime-linux-arm64-musl": ["@scriptc/runtime-linux-arm64-musl@0.4.12", "", {}, "sha512-wcWjB0Zgsp0GFxTDdBwtdT9Ek9old2YJe9w6xHZTMEcG+B5NFyN0Ig43JJ0zk1OuXVCHqIMIjw31PVHhEJu3Dg=="],
 
-    "@scriptc/runtime-linux-x64-gnu": ["@scriptc/runtime-linux-x64-gnu@0.4.9", "", {}, "sha512-78ea/3d6OBdAejX38d63wd0IoShY6lEpNJns/mUKgS7sOf21y8mhGy6l6YanB6fh4ri5zTkT9lsF630ZcPpEeg=="],
+    "@scriptc/runtime-linux-x64-gnu": ["@scriptc/runtime-linux-x64-gnu@0.4.12", "", {}, "sha512-0YTKmo/o5KFpGYJc3XANVmUPfAwSBdX2z4X1/5ymP1HfuBVcn43tmrGJeDm2+6jIot9owxwLGM3qDIkUfg86ig=="],
 
-    "@scriptc/runtime-linux-x64-musl": ["@scriptc/runtime-linux-x64-musl@0.4.9", "", {}, "sha512-dG4a7X+dKC9tnBeK+/otVHmOlqcc3A8Fb+apf/zr5ioxtwzy3oGCsHwT3e6qcWQsGR8qHyWYXix4gRM7dVvstA=="],
+    "@scriptc/runtime-linux-x64-musl": ["@scriptc/runtime-linux-x64-musl@0.4.12", "", {}, "sha512-n7+WNuOzoH6I1jEmBsThbgzXDVG+0We/TYMmPpSbFB/g9+fI9LfY7LH1juSCVhB7zr7XGx0fs0dA7oTltKjYzw=="],
 
-    "@scriptc/runtime-wasm32-wasi": ["@scriptc/runtime-wasm32-wasi@0.4.9", "", {}, "sha512-9dihVqfsRFapKw9OsyqOCQ+J/8y3kSfGDa2c9ATtJajtCFnCYuoBq5/pOBy3Lih62Sypg0xcQtoHX1AUwNT3ag=="],
+    "@scriptc/runtime-wasm32-wasi": ["@scriptc/runtime-wasm32-wasi@0.4.12", "", {}, "sha512-6kNg06rw+/Utym6lvrrmYh7cH4t2G41rQbmK+Cmb26mkNawefooTNoIFFH8p+Rr5lsIIIo8IPQ4cUasB3u6h7A=="],
 
-    "@scriptc/runtime-win32-x64-msvc": ["@scriptc/runtime-win32-x64-msvc@0.4.9", "", {}, "sha512-/c8yYXaVuWPFu37q4ffz58g9jtV3T65NH+nMfBoJmhRjXVk6mx31VGaCabJBaMei0oEmpTo8a+E9a+oMLEBmdA=="],
+    "@scriptc/runtime-win32-x64-msvc": ["@scriptc/runtime-win32-x64-msvc@0.4.12", "", {}, "sha512-MT9YNT3Zs0pGFcmErDzMoNAHyuQmpf5cVcmhyI9/vpR5A3FSirdQ1rnyiLQ84xxncF62Rysb0AobvSDbN4vR3g=="],
 
     "@scriptcable/bun": ["@scriptcable/bun@workspace:packages/bun"],
 
@@ -3003,7 +3003,7 @@
 
     "schema-utils": ["schema-utils@4.8.1", "", { "dependencies": { "@types/json-schema": "^7.0.15", "ajv": "^8.20.0", "ajv-formats": "^3.0.1", "ajv-keywords": "^5.1.0" }, "peerDependencies": { "webpack": "^5.112.0" }, "optionalPeers": ["webpack"], "bin": { "schema-utils": "bin/schema-utils.js" } }, "sha512-x39pYlJPyH7Uge5QO64B9XGP9zLDc9WNmiQZc+CE3IzZPvMu3lHOuAMGpYNoPixEL7MSWlGhYTg5UlLSL8G6iw=="],
 
-    "scriptc": ["scriptc@0.4.9", "", { "optionalDependencies": { "@scriptc/cli-darwin-arm64": "0.4.9", "@scriptc/cli-darwin-x64": "0.4.9", "@scriptc/cli-linux-arm64-gnu": "0.4.9", "@scriptc/cli-linux-arm64-musl": "0.4.9", "@scriptc/cli-linux-x64-gnu": "0.4.9", "@scriptc/cli-linux-x64-musl": "0.4.9", "@scriptc/cli-win32-x64-msvc": "0.4.9" }, "bin": { "scriptc": "bin/scriptc.exe" } }, "sha512-bn0QVLZrIWnCDS+fSkUZMfY47A0rf7m5s2EnMXmUy2l1n1by6CUGa0BOGsNme4Nh7JmWLOp93FHIFaCEwu+4ZA=="],
+    "scriptc": ["scriptc@0.4.12", "", { "optionalDependencies": { "@scriptc/cli-darwin-arm64": "0.4.12", "@scriptc/cli-darwin-x64": "0.4.12", "@scriptc/cli-linux-arm64-gnu": "0.4.12", "@scriptc/cli-linux-arm64-musl": "0.4.12", "@scriptc/cli-linux-x64-gnu": "0.4.12", "@scriptc/cli-linux-x64-musl": "0.4.12", "@scriptc/cli-win32-x64-msvc": "0.4.12" }, "bin": { "scriptc": "bin/scriptc.exe" } }, "sha512-Z5dtghgVyZ+l0/YVv3JXYQ8kNA7VoFQRyYkqUC3WFa2mzV4tv/bSAM2F4bJUvyX4BAcSC6DjA0M/5fm4V2H2Fw=="],
 
     "scule": ["scule@1.3.0", "", {}, "sha512-6FtHJEvt+pVMIB9IBY+IcCJ6Z5f1iQnytgyfKMhDKgmzYG+TeH/wx1y3l27rshSbLiSanrR9ffZDrEsmjlQF2g=="],
 

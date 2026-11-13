@@ -88,7 +88,7 @@ export default defineConfig({
   const deps: Record<string, string> = {
     // The verified scriptc floor — keep in lockstep with the toolchain pins
     // in @scriptcable/core (auto-install) and this repo's root package.json.
-    scriptc: '^0.4.9',
+    scriptc: '^0.4.12',
     '@scriptcable/cli': '^0.1.0',
     '@scriptcable/core': '^0.1.0',
     // CI-durable client dep — the placeholder manifest written below lets
@@ -127,7 +127,7 @@ client.dispose();
     );
   } else if (host === 'vite') {
     deps['@scriptcable/vite'] = '^0.1.0';
-    deps['@scriptc/runtime-wasm32-wasi'] = '^0.4.9';
+    deps['@scriptc/runtime-wasm32-wasi'] = '^0.4.12';
     scripts.dev = 'scriptcable build --target both && vite';
     scripts['build:web'] = 'scriptcable build --target both && vite build';
     await writeFile(
