@@ -1,0 +1,65 @@
+# Intro site — build + deploy to Cloudflare Pages.
+#
+# One-time setup (repo settings → Secrets and variables → Actions):
+#   - CLOUDFLARE_API_TOKEN   — Pages: Edit permission (Account / Pages / Edit template)
+#   - CLOUDFLARE_ACCOUNT_ID  — dashboard right sidebar
+# Custom domain scriptable.ll3.kr is bound in the Pages dashboard
+# (project → Custom domains); DNS is on Cloudflare already.
+name: site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/site.yml'
+      - 'package.json'
+      - 'bun.lock'
+  pull_request:
+    paths:
+      - 'site/**'
+      - '.github/workflows/site.yml'
+      - 'package.json'
+      - 'bun.lock'
+  workflow_dispatch:
+
+# Secrets-handling workflow: least-privilege GITHUB_TOKEN (same as release.yml).
+permissions:
+  contents: read
+
+# Deploys are not irreversible (unlike npm publish) — a superseded commit's
+# run can be cancelled instead of racing the newer one to production.
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install clang (Linux)
+        run: sudo apt-get update && sudo apt-get install -y clang g++
+      - name: Install zig 0.13 (WASM toolchain — CI's pinned, verified path)
+        run: |
+          curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
+          echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
+      - run: bun install
+      # site depends on the assembled @unikit-bridge/scriptcable workspace package
+      - run: bun run build
+      # bin links are only created when dist/index.js exists — re-link after build
+      - run: bun install
+      - name: Build site + drop-in smoke
+        run: bun run --filter @scriptcable/site verify
+      - name: Deploy to Cloudflare Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: site
+          command: pages deploy

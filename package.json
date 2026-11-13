@@ -11,7 +11,8 @@
   },
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "site"
   ],
   "scripts": {
     "build": "bun run --filter @scriptcable/types --filter @scriptcable/core --filter @scriptcable/node --filter @scriptcable/bun --filter @scriptcable/testing --filter @scriptcable/vite --filter @scriptcable/webpack --filter @scriptcable/next --filter @scriptcable/react-native --filter @scriptcable/tauri --filter @scriptcable/lynx --filter @scriptcable/expo --filter @scriptcable/cli build && bun run --filter '@unikit-bridge/scriptcable' build",

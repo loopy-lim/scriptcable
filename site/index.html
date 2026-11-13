@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>scriptcable — 하나의 TypeScript 코어, 모든 런타임</title>
+    <meta
+      name="description"
+      content="One TypeScript core compiled by scriptc → type-safe clients for Bun, Node, Deno, Tauri, React Native, Lynx, Cloudflare Workers, Vite and Next.js. 이 사이트의 데모 코어도 직접 컴파일되어 브라우저에서 실행됩니다."
+    />
+    <meta property="og:title" content="scriptcable — one TypeScript core, every runtime" />
+    <meta
+      property="og:description"
+      content="Native by default (.so/.dylib/.dll), WASM opt-in for browsers, drop-in imports, CI contracts that block breaking API changes."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://scriptable.ll3.kr" />
+    <script>
+      // Pre-paint: restore the saved color scheme and language so the first
+      // frame already matches what the visitor chose last time.
+      try {
+        if (localStorage.getItem('scriptcable-theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+        var savedLang = localStorage.getItem('scriptcable-lang');
+        var lang = savedLang || (navigator.language.startsWith('ko') ? 'ko' : 'en');
+        document.documentElement.lang = lang;
+      } catch (e) {
+        /* storage unavailable — defaults apply */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

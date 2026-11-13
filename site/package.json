@@ -1,0 +1,37 @@
+{
+  "name": "@scriptcable/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:core": "scriptcable build --target wasm --hosts browser",
+    "dev": "bun run build:core && bun --bun vite",
+    "build": "bun run build:core && bun --bun vite build && node scripts/postbuild.mjs",
+    "verify": "bun run build && bun scripts/assert-dist.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@unikit-bridge/scriptcable": "workspace:*",
+    "@unikit-bridge/ui": "^0.3.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.71.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-hook-form": "^7.92.0",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@fontsource/geist-mono": "^5.1.0",
+    "@fontsource/geist-sans": "^5.1.0",
+    "@scriptc/runtime-wasm32-wasi": "^0.4.12",
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "~19.3.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "scriptc": "^0.4.12",
+    "tailwindcss": "^4.1.0",
+    "typescript": "~5.9.2",
+    "vite": "^6.0.0"
+  }
+}
