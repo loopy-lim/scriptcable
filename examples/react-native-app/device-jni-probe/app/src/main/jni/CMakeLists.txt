@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
-project(scriptcable_probe)
-set(CABLE_ARCHIVE "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../.scriptcable/android-arm64/calculator.lib.a"
+project(scriptca_probe)
+set(CABLE_ARCHIVE "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../.scriptca/android-arm64/calculator.lib.a"
     CACHE STRING "scriptc static archive")
 add_library(calculator_cable SHARED cable_host.cpp cable_jni.cpp)
 add_library(scriptc_core STATIC IMPORTED)

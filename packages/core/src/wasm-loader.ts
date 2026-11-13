@@ -2,8 +2,8 @@
  * Shared WASI Preview 1 reactor loader for scriptc library WASM modules.
  * Works in Node 24+ (node:wasi) and can be adapted for Bun / browsers.
  */
-import type { AbiClass, BatchEntry, CallbackDef, ExportDef, ScriptcableProfile } from '@scriptcable/types';
-import { ScriptcableError } from '@scriptcable/types';
+import type { AbiClass, BatchEntry, CallbackDef, ExportDef, ScriptcaProfile } from '@scriptca/types';
+import { ScriptcaError } from '@scriptca/types';
 
 export type WasmExports = WebAssembly.Exports & {
   memory: WebAssembly.Memory;
@@ -14,7 +14,7 @@ export type WasmExports = WebAssembly.Exports & {
 
 export type LoadedModule = {
   exports: WasmExports;
-  profile: ScriptcableProfile;
+  profile: ScriptcaProfile;
   /** Call a typed export by TypeScript name */
   call: (exportName: string, ...args: unknown[]) => unknown;
   /**
@@ -34,7 +34,7 @@ export type LoadedModule = {
 };
 
 export type LoadWasmOptions = {
-  profile: ScriptcableProfile;
+  profile: ScriptcaProfile;
   /** Pre-compiled module — skips `WebAssembly.compile(wasmBytes)` (use with compileStreaming) */
   module?: WebAssembly.Module;
   /** Host callback implementations keyed by callback name */
@@ -126,7 +126,7 @@ function growScratch(st: WasmState, need: number): void {
   // Retire it: scriptc_free runs when the call ends, in callExport's finally.
   if (st.scratchPtr) st.retired.push(st.scratchPtr);
   const ptr = st.api.scriptc_alloc(cap);
-  if (!ptr) throw new ScriptcableError('ALLOC', 'scriptc_alloc failed');
+  if (!ptr) throw new ScriptcaError('ALLOC', 'scriptc_alloc failed');
   st.scratchPtr = ptr;
   st.scratchCap = cap;
   st.scratchUsed = 0;
@@ -146,7 +146,7 @@ function bumpScratch(st: WasmState, size: number, freeList: number[] | null): nu
     return ptr;
   }
   const ptr = st.api.scriptc_alloc(n);
-  if (!ptr) throw new ScriptcableError('ALLOC', 'scriptc_alloc failed');
+  if (!ptr) throw new ScriptcaError('ALLOC', 'scriptc_alloc failed');
   freeList.push(ptr);
   return ptr;
 }
@@ -232,7 +232,7 @@ function marshalArgs(
         break;
       }
       default:
-        throw new ScriptcableError('ABI', `Unsupported param class: ${cls}`);
+        throw new ScriptcaError('ABI', `Unsupported param class: ${cls}`);
     }
   }
 }
@@ -245,7 +245,7 @@ function callExport(
   const api = st.api;
   const fn = api[def.symbol];
   if (typeof fn !== 'function') {
-    throw new ScriptcableError('MISSING_EXPORT', `Export symbol ${def.symbol} not found in WASM`);
+    throw new ScriptcaError('MISSING_EXPORT', `Export symbol ${def.symbol} not found in WASM`);
   }
 
   // Shared (depth-0) state resets once per top-level call; a re-entrant call
@@ -272,12 +272,12 @@ function callExport(
       if (shared) {
         if (!slots) {
           slots = api.scriptc_alloc(8);
-          if (!slots) throw new ScriptcableError('ALLOC', 'failed to allocate result slots');
+          if (!slots) throw new ScriptcaError('ALLOC', 'failed to allocate result slots');
           st.slotsPtr = slots;
         }
       } else {
         slots = api.scriptc_alloc(8);
-        if (!slots) throw new ScriptcableError('ALLOC', 'failed to allocate result slots');
+        if (!slots) throw new ScriptcaError('ALLOC', 'failed to allocate result slots');
         freeList.push(slots);
       }
       const outPtr = slots;
@@ -361,7 +361,7 @@ function makeDirectWasmFn(
 }
 
 function buildScriptcImports(
-  profile: ScriptcableProfile,
+  profile: ScriptcaProfile,
   getApi: () => WasmExports,
   callbacks: Record<string, (...args: unknown[]) => unknown>,
   onPanic?: (message: string) => void,
@@ -372,7 +372,7 @@ function buildScriptcImports(
       const bytes = new Uint8Array(api.memory.buffer, pointer, length);
       const msg = new TextDecoder().decode(bytes);
       if (onPanic) onPanic(msg);
-      throw new ScriptcableError('PANIC', msg);
+      throw new ScriptcaError('PANIC', msg);
     },
   };
 
@@ -381,7 +381,7 @@ function buildScriptcImports(
       const api = getApi();
       const host = callbacks[cb.name];
       if (!host) {
-        throw new ScriptcableError(
+        throw new ScriptcaError(
           'MISSING_CALLBACK',
           `Host callback "${cb.name}" was not provided`,
           `Pass callbacks: { ${cb.name}: (...) => ... } when loading the module.`,
@@ -485,7 +485,7 @@ export async function loadWasmModule(
     const raw = api[e.symbol];
     if (typeof raw !== 'function') {
       fns[e.export] = () => {
-        throw new ScriptcableError('MISSING_EXPORT', `Export symbol ${e.symbol} not found in WASM`);
+        throw new ScriptcaError('MISSING_EXPORT', `Export symbol ${e.symbol} not found in WASM`);
       };
     } else if (hasDirectWasmSignature(e)) {
       fns[e.export] = makeDirectWasmFn(raw as (...a: number[]) => unknown, e);
@@ -500,7 +500,7 @@ export async function loadWasmModule(
     call(exportName: string, ...args: unknown[]) {
       const def = byName.get(exportName);
       if (!def) {
-        throw new ScriptcableError(
+        throw new ScriptcaError(
           'UNKNOWN_EXPORT',
           `Unknown export "${exportName}"`,
           `Known: ${[...byName.keys()].join(', ')}`,
@@ -512,7 +512,7 @@ export async function loadWasmModule(
       return entries.map((e) => {
         const def = byName.get(e[0]);
         if (!def) {
-          throw new ScriptcableError(
+          throw new ScriptcaError(
             'UNKNOWN_EXPORT',
             `Unknown export "${e[0]}"`,
             `Known: ${[...byName.keys()].join(', ')}`,

@@ -1,14 +1,14 @@
-# scriptcable intro site
+# scriptca intro site
 
-React + Tailwind CSS v4 + [@unikit-bridge/ui](https://github.com/loopy-lim/UniKit) + Vite — and the page dogfoods the product: `src/core.ts` is compiled to WebAssembly by `scriptcable build --target wasm --hosts browser`, and the vite plugin redirects every `../core` import onto the compiled client (the drop-in).
+React + Tailwind CSS v4 + [@unikit-bridge/ui](https://github.com/loopy-lim/UniKit) + Vite — and the page dogfoods the product: `src/core.ts` is compiled to WebAssembly by `scriptca build --target wasm --hosts browser`, and the vite plugin redirects every `../core` import onto the compiled client (the drop-in).
 
 ## Commands
 
 ```bash
 bun install                 # from the repo root
-bun run --filter @scriptcable/site dev      # dev server (builds the core first)
-bun run --filter @scriptcable/site verify   # build + drop-in assertions (the gate)
-bun run --filter @scriptcable/site typecheck
+bun run --filter @scriptca/site dev      # dev server (builds the core first)
+bun run --filter @scriptca/site verify   # build + drop-in assertions (the gate)
+bun run --filter @scriptca/site typecheck
 ```
 
 `verify` asserts the real `vite build` output: the drop-in client is in the bundle, the TS entry source is not, and the `.wasm` asset ships.

@@ -7,11 +7,11 @@
  *   - the drop-in / TurboModule bridge code is in the graph
  *   - the TypeScript entry source is NOT
  *
- * Run after `scriptcable build --hosts react-native` (build:core does it).
+ * Run after `scriptca build --hosts react-native` (build:core does it).
  */
 import Metro from 'metro';
 import { getDefaultConfig } from '@expo/metro-config';
-import { withScriptcableMetro } from '@scriptcable/react-native/metro';
+import { withScriptcaMetro } from '@scriptca/react-native/metro';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { mkdtempSync } from 'node:fs';
@@ -28,11 +28,11 @@ baseConfig.watchFolders = [root, repoRoot];
 // Expo's default polyfills resolve through the root react-native install's
 // rn-get-polyfills — irrelevant for a resolver-level bundle smoke.
 baseConfig.serializer = { ...baseConfig.serializer, getPolyfills: () => [] };
-const config = withScriptcableMetro(baseConfig, {
+const config = withScriptcaMetro(baseConfig, {
   cwd: root,
   entry: '../calculator-core/src/core.ts',
 });
-if (!config.resolver?.resolveRequest) throw new Error('withScriptcableMetro did not wire a resolveRequest');
+if (!config.resolver?.resolveRequest) throw new Error('withScriptcaMetro did not wire a resolveRequest');
 
 const out = join(mkdtempSync(join(tmpdir(), 'sc-expo-')), 'index.bundle');
 const { code } = await Metro.runBuild(config, {

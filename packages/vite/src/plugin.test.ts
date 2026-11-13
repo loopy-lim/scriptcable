@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { scriptcable } from './index.js';
+import { scriptca } from './index.js';
 
 const repoRoot = resolve(import.meta.dir, '../../..'); // packages/vite/src → repo root
 const tmpRoots: string[] = [];
@@ -27,20 +27,20 @@ async function makeProject(withTsConfig: boolean): Promise<string> {
   );
   if (withTsConfig) {
     await writeFile(
-      join(root, 'scriptcable.config.ts'),
+      join(root, 'scriptca.config.ts'),
       `export default { name: 'ts-only', entry: 'src/core.ts' };\n`,
     );
   }
   const nm = join(root, 'node_modules');
   await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptca'), join(nm, '@unikit-bridge', 'scriptca'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/.bin/scriptc'), join(nm, '.bin', 'scriptc'), 'file');
   return root;
 }
 
-function hotEvent(plugin: ReturnType<typeof scriptcable>, file: string) {
+function hotEvent(plugin: ReturnType<typeof scriptca>, file: string) {
   const sent: unknown[] = [];
   const ctx = {
     file,
@@ -50,24 +50,24 @@ function hotEvent(plugin: ReturnType<typeof scriptcable>, file: string) {
 }
 
 describe('vite plugin', () => {
-  it('builds from scriptcable.config.ts (TS config, zero options)', async () => {
+  it('builds from scriptca.config.ts (TS config, zero options)', async () => {
     const root = await makeProject(true);
-    const plugin = scriptcable();
+    const plugin = scriptca();
     plugin.configResolved!({ root });
     await plugin.buildStart!(); // rebuild → profile name must come from the TS config
-    const profile = JSON.parse(await Bun.file(join(root, '.scriptcable', 'profile.json')).text());
+    const profile = JSON.parse(await Bun.file(join(root, '.scriptca', 'profile.json')).text());
     assert.equal(profile.name, 'ts-only');
     assert.equal(profile.exports.length, 1);
   }, 120_000);
 
   it('explicit root survives configResolved (Nuxt points vite root at its srcDir)', async () => {
     const root = await makeProject(false);
-    const plugin = scriptcable({ root });
+    const plugin = scriptca({ root });
     // Nuxt-style: vite's resolved root is a subdirectory (srcDir), not the
     // project root — config discovery must stay on the explicit option.
     plugin.configResolved!({ root: join(root, 'app') });
     await plugin.buildStart!();
-    const profile = JSON.parse(await Bun.file(join(root, '.scriptcable', 'profile.json')).text());
+    const profile = JSON.parse(await Bun.file(join(root, '.scriptca', 'profile.json')).text());
     assert.equal(profile.name, 'vite_plugin_it'); // inferred from the project root's package name
   }, 120_000);
 
@@ -77,7 +77,7 @@ describe('vite plugin', () => {
     const importer = resolve(root, 'src', 'app.ts');
 
     const dropinPathFor = async (command: string | undefined, target: unknown): Promise<string | null> => {
-      const plugin = scriptcable();
+      const plugin = scriptca();
       plugin.configResolved!({ root, publicDir: join(root, 'public'), command, build: { target } });
       await plugin.buildStart!();
       const hook = plugin.resolveId as {
@@ -96,7 +96,7 @@ describe('vite plugin', () => {
 
   it('HMR: rebuilds on entry change, skips unrelated files', async () => {
     const root = await makeProject(false);
-    const plugin = scriptcable();
+    const plugin = scriptca();
     plugin.configResolved!({ root });
     await plugin.buildStart!();
 
@@ -109,8 +109,8 @@ describe('vite plugin', () => {
     assert.equal(entryHits.length, 1, 'entry change must trigger exactly one full-reload');
 
     // Config file change — one full-reload
-    await writeFile(join(root, 'scriptcable.json'), JSON.stringify({ name: 'renamed' }));
-    const configHits = await hotEvent(plugin, join(root, 'scriptcable.json'));
+    await writeFile(join(root, 'scriptca.json'), JSON.stringify({ name: 'renamed' }));
+    const configHits = await hotEvent(plugin, join(root, 'scriptca.json'));
     assert.equal(configHits.length, 1, 'config change must trigger exactly one full-reload');
   }, 180_000);
 });

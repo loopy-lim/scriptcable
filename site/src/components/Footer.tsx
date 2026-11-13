@@ -14,7 +14,7 @@ export function Footer() {
               <span className="flex size-6 items-center justify-center rounded-md bg-foreground font-mono text-xs font-semibold text-background">
                 sc
               </span>
-              <span className="font-semibold tracking-tight">scriptcable</span>
+              <span className="font-semibold tracking-tight">scriptca</span>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">{t.footer.tagline}</p>
           </div>

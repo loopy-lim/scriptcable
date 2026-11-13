@@ -1,14 +1,14 @@
 # Troubleshooting
 
-Every entry here is a real error hit during development of scriptcable itself, with the fix that resolved it.
+Every entry here is a real error hit during development of scriptca itself, with the fix that resolved it.
 
 ---
 
 ## Install / scaffold
 
-### `error: @unikit-bridge/scriptcable@^0.1.0 failed to resolve` (or old `@unikit-bridge/scriptcable/*`)
+### `error: @unikit-bridge/scriptca@^0.1.0 failed to resolve` (or old `@unikit-bridge/scriptca/*`)
 
-Install the single published package **`@unikit-bridge/scriptcable`** (`bun add -d @unikit-bridge/scriptcable`). The old multi-package `@unikit-bridge/scriptcable/*` names are **not** on npm.
+Install the single published package **`@unikit-bridge/scriptca`** (`bun add -d @unikit-bridge/scriptca`). The old multi-package `@unikit-bridge/scriptca/*` names are **not** on npm.
 
 If you are developing against this monorepo before/without a registry install, scaffold from a checkout:
 
@@ -16,7 +16,7 @@ If you are developing against this monorepo before/without a registry install, s
 bun <checkout-path>/packages/cli/dist/index.js init demo --host bun --from <checkout-path>
 ```
 
-`--from` pins `@unikit-bridge/scriptcable` to the checkout's assembled package via `file:` + overrides (see [getting-started.md](./getting-started.md)). Run `bun run build` in the checkout first so `packages/scriptcable/dist` exists.
+`--from` pins `@unikit-bridge/scriptca` to the checkout's assembled package via `file:` + overrides (see [getting-started.md](./getting-started.md)). Run `bun run build` in the checkout first so `packages/scriptca/dist` exists.
 
 ### `Blocked 1 postinstall. Run 'bun pm untrusted' for details.`
 
@@ -45,13 +45,13 @@ sudo apt install clang    # or: gcc (cc) alone is enough
 
 ### No zig? The first wasm/cross build auto-provisions zig 0.13.x
 
-`--target wasm` and `--platform android` need zig (scriptc drives it off PATH). Since 2026-10-23 scriptcable downloads the pinned zig 0.13.0 **once** into the user cache and puts it on the build's PATH — nothing to install by hand:
+`--target wasm` and `--platform android` need zig (scriptc drives it off PATH). Since 2026-10-23 scriptca downloads the pinned zig 0.13.0 **once** into the user cache and puts it on the build's PATH — nothing to install by hand:
 
-- cache location: `~/.cache/scriptcable/zig-0.13.0` (Linux) · `~/Library/Caches/scriptcable` (macOS) · `%LOCALAPPDATA%\scriptcable\cache` (Windows) — override the root with `SCRIPTCABLE_CACHE_DIR`
-- opt out (CI determinism, air-gapped machines): `SCRIPTCABLE_NO_AUTO_TOOLS=1` — builds then fail with the manual-install hint
+- cache location: `~/.cache/scriptca/zig-0.13.0` (Linux) · `~/Library/Caches/scriptca` (macOS) · `%LOCALAPPDATA%\scriptca\cache` (Windows) — override the root with `SCRIPTCA_CACHE_DIR`
+- opt out (CI determinism, air-gapped machines): `SCRIPTCA_NO_AUTO_TOOLS=1` — builds then fail with the manual-install hint
 - bonus: when clang **and** `cc` are both missing, the provisioned `zig cc` links host shared libraries and the static archive too — one zig install covers wasm, cross, and host builds
 
-### `Cannot find module '@unikit-bridge/scriptcable/…'` (or monorepo `@unikit-bridge/scriptcable/*`) right after install
+### `Cannot find module '@unikit-bridge/scriptca/…'` (or monorepo `@unikit-bridge/scriptca/*`) right after install
 
 Published and workspace packages point exports at `./dist/*.js` — nothing is compiled until the first build, and Bun reports a missing exports target as "Cannot find module". In this repo run the build first, then the tests:
 
@@ -59,7 +59,7 @@ Published and workspace packages point exports at `./dist/*.js` — nothing is c
 bun install && bun run build && bun run test
 ```
 
-Consumers of the npm package only need `bun add -d @unikit-bridge/scriptcable` (no monorepo build).
+Consumers of the npm package only need `bun add -d @unikit-bridge/scriptca` (no monorepo build).
 
 ### After upgrading Bun (1.4+), every workspace import fails to resolve
 
@@ -72,45 +72,45 @@ linker = "hoisted"
 
 If you copied the repo without that file (or flipped it), reinstall after restoring it: `rm -rf node_modules packages/*/node_modules examples/*/node_modules && bun install`.
 
-### Electron main fails with `ERR_UNKNOWN_FILE_EXTENSION ".ts"` when importing `@unikit-bridge/scriptcable-client`
+### Electron main fails with `ERR_UNKNOWN_FILE_EXTENSION ".ts"` when importing `@unikit-bridge/scriptca-client`
 
-Electron's embedded Node (20.x) cannot import `.ts` at all. The generated package ships **compiled `.js`** for the `bun`/`node` conditions and the manifest points there — re-run `scriptcable build` (or the bundler plugin) on a checkout older than 2026-10-22 to regenerate `package.json` + `node.js`/`bun.js` in `.scriptcable/generated/`.
+Electron's embedded Node (20.x) cannot import `.ts` at all. The generated package ships **compiled `.js`** for the `bun`/`node` conditions and the manifest points there — re-run `scriptca build` (or the bundler plugin) on a checkout older than 2026-10-22 to regenerate `package.json` + `node.js`/`bun.js` in `.scriptca/generated/`.
 
 ### `error SC4003: … has IR type 'bigint', which does not fit the declared marshalling class 'i64'`
 
-scriptc ≥ 0.4 exposes **i64/u64 as TS `number`** (not `bigint`) — the compiler proves your value range and refuses anything that can't stay within ±(2^53 − 1) (error SC4023). So: declare the export in `scriptcable.json` with `"params": ["i64"]`, keep the TS type `number`, and keep values bounded (`if (n > 94906265) return 0;` makes `n * n` provable). `bigint` stays unsupported — `n * 2^n`-style unbounded math can't ride float64. Narrow classes (`u8/u32/i32`) are param-only; `f64` is the general number.
+scriptc ≥ 0.4 exposes **i64/u64 as TS `number`** (not `bigint`) — the compiler proves your value range and refuses anything that can't stay within ±(2^53 − 1) (error SC4023). So: declare the export in `scriptca.json` with `"params": ["i64"]`, keep the TS type `number`, and keep values bounded (`if (n > 94906265) return 0;` makes `n * n` provable). `bigint` stays unsupported — `n * 2^n`-style unbounded math can't ride float64. Narrow classes (`u8/u32/i32`) are param-only; `f64` is the general number.
 
 ### `error SC0001: Cannot find name 'u32'` (on `type X = u32` alias types)
 
-Alias types like `type Hex = u32` are understood by scriptcable's **inference** but not by **scriptc's compiler** (0.3.x). Use plain `number` (→ f64) in the core.
+Alias types like `type Hex = u32` are understood by scriptca's **inference** but not by **scriptc's compiler** (0.3.x). Use plain `number` (→ f64) in the core.
 
 ### `error SC4001: symbol '…' is declared twice`
 
-Two source functions resolved to the same export symbol — usually a duplicated function or two exports whose names collide after prefixing. Check the `inferred:` / `skipped:` lines `scriptcable build` prints; skipped (unmappable) functions can still collide with scriptc's own scan, so remove or rename them.
+Two source functions resolved to the same export symbol — usually a duplicated function or two exports whose names collide after prefixing. Check the `inferred:` / `skipped:` lines `scriptca build` prints; skipped (unmappable) functions can still collide with scriptc's own scan, so remove or rename them.
 
 ### `  addon: skipped — …` during build
 
-The typed N-API addon failed to compile (missing clang, headers, or platform) — **this is not fatal**. Builds continue with the generic-FFI shared library, and the reason is recorded in `.scriptcable/addon-failed`. After fixing the cause, run `scriptcable build --force` once; a successful build clears the marker.
+The typed N-API addon failed to compile (missing clang, headers, or platform) — **this is not fatal**. Builds continue with the generic-FFI shared library, and the reason is recorded in `.scriptca/addon-failed`. After fixing the cause, run `scriptca build --force` once; a successful build clears the marker.
 
 ---
 
 ## Run
 
-### `Cannot find module '@unikit-bridge/scriptcable-client'`
+### `Cannot find module '@unikit-bridge/scriptca-client'`
 
-The client package is created by a build. Run it (or `scriptcable doctor`, which repairs the link):
+The client package is created by a build. Run it (or `scriptca doctor`, which repairs the link):
 
 ```bash
-scriptcable build     # or: bun run build
+scriptca build     # or: bun run build
 ```
 
-One stale-copy case is also auto-healed since 2026-10-23: if `bun install` ran **before** the first build, bun materializes the declared `file:.scriptcable/generated` dep as a real copied directory (the placeholder) that shadows the generated flavors. `scriptcable build` now replaces that managed copy with the link — no reinstall needed. A `@unikit-bridge/scriptcable-client` directory that package.json does **not** declare as a `file:` dep is treated as your own package and left untouched.
+One stale-copy case is also auto-healed since 2026-10-23: if `bun install` ran **before** the first build, bun materializes the declared `file:.scriptca/generated` dep as a real copied directory (the placeholder) that shadows the generated flavors. `scriptca build` now replaces that managed copy with the link — no reinstall needed. A `@unikit-bridge/scriptca-client` directory that package.json does **not** declare as a `file:` dep is treated as your own package and left untouched.
 
 ### Electron fails to launch on WSL: `error while loading shared libraries: libnss3`
 
-WSL distros ship without the GUI system libraries Electron links. On machines where sudo is available: `sudo apt install libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2`. On sudo-less setups: `apt-get download` the packages and `dpkg -x` them into a user dir, then `export LD_LIBRARY_PATH=<dir>/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH` (the recipe `examples/electron-app` runs with). WSLg provides `DISPLAY=:0`, so no xvfb is needed. `scriptcable doctor` prints this hint when it detects WSL.
+WSL distros ship without the GUI system libraries Electron links. On machines where sudo is available: `sudo apt install libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2`. On sudo-less setups: `apt-get download` the packages and `dpkg -x` them into a user dir, then `export LD_LIBRARY_PATH=<dir>/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH` (the recipe `examples/electron-app` runs with). WSLg provides `DISPLAY=:0`, so no xvfb is needed. `scriptca doctor` prints this hint when it detects WSL.
 
-### `koffi is an optional fallback for running scriptcable native libraries under plain Node.js.`
+### `koffi is an optional fallback for running scriptca native libraries under plain Node.js.`
 
 You're on plain Node without the FFI fallback. Either run under Bun (default engine), or:
 
@@ -122,7 +122,7 @@ Note: with the typed N-API addon built, plain Node works **without** koffi — t
 
 ### `greet`/method returns `1` instead of `true`, or a negative number instead of a large unsigned one
 
-You're on a pre-0.1 generated client — regenerate (`scriptcable build --force`). Current clients return real `boolean` and unwrapped `uint32`.
+You're on a pre-0.1 generated client — regenerate (`scriptca build --force`). Current clients return real `boolean` and unwrapped `uint32`.
 
 ---
 
@@ -140,45 +140,45 @@ Server components / route handlers don't need any of this — the native flavor 
 
 ### Vite: `SyntaxError: Unexpected identifier` for a `.ts` file from the client
 
-A static `public/` copy of `.scriptcable/generated/` shadows Vite's transformed modules. Serve only runtime artifacts (`.wasm`, `profile.json`) from `public/` — the Vite plugin copies the wasm itself; don't publish the generated directory.
+A static `public/` copy of `.scriptca/generated/` shadows Vite's transformed modules. Serve only runtime artifacts (`.wasm`, `profile.json`) from `public/` — the Vite plugin copies the wasm itself; don't publish the generated directory.
 
 ---
 
 ## Drop-in
 
-### `[scriptcable] drop-in disabled — …`
+### `[scriptca] drop-in disabled — …`
 
-Interception is off for this project on purpose: the entry exports something a drop-in can't provide (a non-function value, a class, `default`, a re-export, or an `exports` list pinning a subset). The imports keep resolving to the TypeScript source; switch those call sites to `@unikit-bridge/scriptcable-client`, or make the entry export only ABI-mappable named functions.
+Interception is off for this project on purpose: the entry exports something a drop-in can't provide (a non-function value, a class, `default`, a re-export, or an `exports` list pinning a subset). The imports keep resolving to the TypeScript source; switch those call sites to `@unikit-bridge/scriptca-client`, or make the entry export only ABI-mappable named functions.
 
 ### `next build` (Turbopack): imports still run the TypeScript core
 
-Turbopack has no per-graph resolve hook, and `turbopack.resolveAlias` matches request specifiers — an absolute-path alias key does nothing (verified against Next 16). `withScriptcableAsync()` prints this once and leaves imports alone. Either run `next dev` / `next build --webpack` (drop-in per graph), or import `@unikit-bridge/scriptcable-client` — export conditions deliver the compiled client under Turbopack too.
+Turbopack has no per-graph resolve hook, and `turbopack.resolveAlias` matches request specifiers — an absolute-path alias key does nothing (verified against Next 16). `withScriptcaAsync()` prints this once and leaves imports alone. Either run `next dev` / `next build --webpack` (drop-in per graph), or import `@unikit-bridge/scriptca-client` — export conditions deliver the compiled client under Turbopack too.
 
 ### `Module not found: Can't resolve '../node.js'` (or `'../browser.js'`) in a webpack build
 
-You're on an old build of the plugins: the generated clients import each other via `.js` specifiers (Node convention), and webpack needs `resolve.extensionAlias: { '.js': ['.js', '.ts', '.tsx'] }`. The `@unikit-bridge/scriptcable/next` hook and `@unikit-bridge/scriptcable/webpack` plugin set it for you since 2026-10-21 — update and rebuild.
+You're on an old build of the plugins: the generated clients import each other via `.js` specifiers (Node convention), and webpack needs `resolve.extensionAlias: { '.js': ['.js', '.ts', '.tsx'] }`. The `@unikit-bridge/scriptca/next` hook and `@unikit-bridge/scriptca/webpack` plugin set it for you since 2026-10-21 — update and rebuild.
 
-### Metro bundles the TypeScript core even though `withScriptcableMetro` is registered
+### Metro bundles the TypeScript core even though `withScriptcaMetro` is registered
 
-Check two things. (1) The drop-in must exist: run `scriptcable build --hosts react-native` (or keep `build --watch`) — before that, the resolver declines and imports stay source. (2) On metro ≥ 0.80, make sure you're on a current `@unikit-bridge/scriptcable/react-native`: older versions ran the existing resolver first — Metro's default config ships one, and it resolved the entry before the redirect could apply.
+Check two things. (1) The drop-in must exist: run `scriptca build --hosts react-native` (or keep `build --watch`) — before that, the resolver declines and imports stay source. (2) On metro ≥ 0.80, make sure you're on a current `@unikit-bridge/scriptca/react-native`: older versions ran the existing resolver first — Metro's default config ships one, and it resolved the entry before the redirect could apply.
 
-### Rspeedy / Rspack: `[scriptcable] rspack has no JS resolver hooks — entry drop-in unavailable here`
+### Rspeedy / Rspack: `[scriptca] rspack has no JS resolver hooks — entry drop-in unavailable here`
 
-Not a bug: Rspack's Rust resolver has no `resolve.plugins` in its config schema (a pushed enhanced-resolve plugin is silently ignored — verified against Rspack 2.2.9). The plugin still builds the core, emits artifacts, and links `@unikit-bridge/scriptcable-client`; import the client by name and export conditions pick the compiled flavor.
+Not a bug: Rspack's Rust resolver has no `resolve.plugins` in its config schema (a pushed enhanced-resolve plugin is silently ignored — verified against Rspack 2.2.9). The plugin still builds the core, emits artifacts, and links `@unikit-bridge/scriptca-client`; import the client by name and export conditions pick the compiled flavor.
 
 ## Deno
 
-### `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` for a file inside `@unikit-bridge/scriptcable-client`
+### `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` for a file inside `@unikit-bridge/scriptca-client`
 
-Deno never strips types under `node_modules` — that's why the generated **`deno` flavor ships as compiled `.js`** (the same policy as the `bun`/`node` flavors). If you see this error you're resolving a `.ts` file of the generated package, which means the manifest predates deno support: re-run `scriptcable build --target wasm --hosts deno` (or newer) so the manifest points the `deno` condition at `deno.js`.
+Deno never strips types under `node_modules` — that's why the generated **`deno` flavor ships as compiled `.js`** (the same policy as the `bun`/`node` flavors). If you see this error you're resolving a `.ts` file of the generated package, which means the manifest predates deno support: re-run `scriptca build --target wasm --hosts deno` (or newer) so the manifest points the `deno` condition at `deno.js`.
 
 ### Deno picks the Node (`.so`) flavor instead of the Deno one
 
 Deno enables the `node` export condition itself. The generated manifest therefore lists `deno` **before** `node`, and first-match picks the Deno flavor. If your manifest was generated by an older build it has no `deno` condition at all — rebuild.
 
-### Deno tries to fetch `@unikit-bridge/scriptcable/*` from the npm registry
+### Deno tries to fetch `@unikit-bridge/scriptca/*` from the npm registry
 
-The generated client imports `@unikit-bridge/scriptcable/core/wasm` + `/wasi` by bare specifier, resolved by walking up `node_modules`. Inside this monorepo that resolves via the assembled package / workspace install. In a standalone project, recording `@unikit-bridge/scriptcable-client` as a `file:` dependency (what `scriptcable init` does) is not enough on its own — the `deno.js` flavor itself imports those core subpaths, so **`@unikit-bridge/scriptcable` must also be installed** in the project's `node_modules` (npm after publish, or `--from` / workspace while developing here).
+The generated client imports `@unikit-bridge/scriptca/core/wasm` + `/wasi` by bare specifier, resolved by walking up `node_modules`. Inside this monorepo that resolves via the assembled package / workspace install. In a standalone project, recording `@unikit-bridge/scriptca-client` as a `file:` dependency (what `scriptca init` does) is not enough on its own — the `deno.js` flavor itself imports those core subpaths, so **`@unikit-bridge/scriptca` must also be installed** in the project's `node_modules` (npm after publish, or `--from` / workspace while developing here).
 
 ## Cloudflare Workers
 
@@ -202,7 +202,7 @@ scriptc's Android support is **arm64-only** today (`@scriptc/runtime-android-arm
 
 ### `error SC3003: runtime pack for android-arm64 is not installed`
 
-scriptc ships runtime packs per target. `scriptcable build --platform android` auto-installs `@scriptc/runtime-android-arm64` into the project (same as the wasm pack) — if you hit this, you're invoking `scriptc` directly; add the pack as a devDependency or run through scriptcable.
+scriptc ships runtime packs per target. `scriptca build --platform android` auto-installs `@scriptc/runtime-android-arm64` into the project (same as the wasm pack) — if you hit this, you're invoking `scriptc` directly; add the pack as a devDependency or run through scriptca.
 
 ### `ld.lld: error: relocation R_AARCH64_... cannot be used against symbol 'scr_...'` when linking the android .so
 
@@ -210,7 +210,7 @@ The archive objects use direct PC-relative references; in a shared library every
 
 ### Expo/RN app dies at launch: `'PlatformConstants' could not be found` → `Global was not installed`
 
-An `externalNativeBuild` block in the app gradle replaces the cmake that RN 0.88's gradle plugin injects — that injected build produces `libappmodules.so`, which registers the core TurboModules (`PlatformConstants` among them). scriptcable's config plugin (`@unikit-bridge/scriptcable/expo`) does NOT add one: the bridge `.so` is prebuilt by `scriptcable build --platform android` and ships as a plain jniLib. If you wired things by hand, do the same — jniLibs only, never a second cmake. (Verified by isolation: the identical failure occurs with the scriptcable package removed, as long as the foreign cmake block is present.)
+An `externalNativeBuild` block in the app gradle replaces the cmake that RN 0.88's gradle plugin injects — that injected build produces `libappmodules.so`, which registers the core TurboModules (`PlatformConstants` among them). scriptca's config plugin (`@unikit-bridge/scriptca/expo`) does NOT add one: the bridge `.so` is prebuilt by `scriptca build --platform android` and ships as a plain jniLib. If you wired things by hand, do the same — jniLibs only, never a second cmake. (Verified by isolation: the identical failure occurs with the scriptca package removed, as long as the foreign cmake block is present.)
 
 ### arm64-only APK on an x86_64 ARM-translation emulator: `dlopen failed: ... is for EM_AARCH64` or `cannot locate symbol "stderr"`
 
@@ -218,24 +218,24 @@ Two different layers: (1) SoLoader picks the APK lib dir by the DEVICE's preferr
 
 ### Emulator/app-level verification
 
-`bun run --filter @scriptcable/example-react-native-app test:android` proves the generated dispatch (compiles the generated C++ verbatim on the host, asserts the JSON bridge contract). The full RN app runs on-device too: the config-plugin flow (`expo prebuild` → gradle → install) was verified end-to-end on a local Android 14 emulator — `CABLE_RESULT:{"sum":42}` in logcat (`examples/react-native-app`, `device-jni-probe` for the RN-free variant). CI: `.github/workflows/android-emulator.yml`.
+`bun run --filter @scriptca/example-react-native-app test:android` proves the generated dispatch (compiles the generated C++ verbatim on the host, asserts the JSON bridge contract). The full RN app runs on-device too: the config-plugin flow (`expo prebuild` → gradle → install) was verified end-to-end on a local Android 14 emulator — `CABLE_RESULT:{"sum":42}` in logcat (`examples/react-native-app`, `device-jni-probe` for the RN-free variant). CI: `.github/workflows/android-emulator.yml`.
 
 ## Nuxt
 
 ### `No core entry found: … none of src/core.ts … exist in <project>/app`
 
-Nuxt 4 points vite's root at its `srcDir` (`app/`), so the plugin looked for the config there. Pass the project root explicitly — the one Nuxt-specific option: `scriptcable({ root: import.meta.dirname })` in `nuxt.config.ts`.
+Nuxt 4 points vite's root at its `srcDir` (`app/`), so the plugin looked for the config there. Pass the project root explicitly — the one Nuxt-specific option: `scriptca({ root: import.meta.dirname })` in `nuxt.config.ts`.
 
 ### First `nuxt build` doesn't ship `<name>.wasm` (second build does)
 
-Nuxt snapshots `public/` into `.output/` before the client build runs, and the plugin copies the wasm into `public/` during that build. Since 2026-10-22 the plugin also emits the wasm as a **bundle asset** (same unhashed name), so the first build ships it — update `@unikit-bridge/scriptcable/vite` and rebuild.
+Nuxt snapshots `public/` into `.output/` before the client build runs, and the plugin copies the wasm into `public/` during that build. Since 2026-10-22 the plugin also emits the wasm as a **bundle asset** (same unhashed name), so the first build ships it — update `@unikit-bridge/scriptca/vite` and rebuild.
 
 ---
 
 ## Diagnose everything at once
 
 ```bash
-scriptcable doctor
+scriptca doctor
 ```
 
-reports runtime, scriptc, clang/zig, and the `@unikit-bridge/scriptcable-client` link state (and repairs the link when possible).
+reports runtime, scriptc, clang/zig, and the `@unikit-bridge/scriptca-client` link state (and repairs the link when possible).

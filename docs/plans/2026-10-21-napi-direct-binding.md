@@ -8,7 +8,7 @@
 
 **사용자에게 달라지는 결과**
 
-1. `scriptcable build`가 코어 .lib.a를 링크하면서 **타이핑된 N-API 애드온**(`{name}.node`)을 함께 생성·컴파일한다 — export별 고정 시그니처 C 래퍼.
+1. `scriptca build`가 코어 .lib.a를 링크하면서 **타이핑된 N-API 애드온**(`{name}.node`)을 함께 생성·컴파일한다 — export별 고정 시그니처 C 래퍼.
 2. 생성된 node/bun 클라이언트는 **애드온 우선**: 있으면 직접 호출(호스트 FFI의 동적 변환 생략), 없으면 기존 대로 공유 라이브러리(제네릭 FFI) → WASM 폴백. 앱 코드는 그대로.
 3. Node/Bun 모두 .node를 로드한다(Bun은 N-API 지원). 호출당 비용 목표: ~22-30ns (napi-rs 실측 22ns 대비).
 
@@ -54,7 +54,7 @@
 
 | ID | 관찰할 결과 | 태스크 | 검증 |
 |---|---|---|---|
-| AC-1 | 빌드 후 `{name}.node`가 outDir+generated에 존재하고 Node 서브프로세스가 `@scriptcable/client`로 실호출한다 (스칼라+문자열 모두) | T-1,T-2,T-3 | V-1 |
+| AC-1 | 빌드 후 `{name}.node`가 outDir+generated에 존재하고 Node 서브프로세스가 `@scriptca/client`로 실호출한다 (스칼라+문자열 모두) | T-1,T-2,T-3 | V-1 |
 | AC-2 | Node 호출당 비용이 ~30ns 이하로 측정된다 (제네릭 FFI 72ns 대비) | T-1~T-3 | V-2 |
 | AC-3 | 애드온이 없으면 기존 FFI/WASM 경로로 동작한다 (회귀 없음) | T-2 | V-3 |
 | AC-4 | Bun에서도 .node를 로드해 실호출한다 | T-2 | V-4 |
@@ -76,7 +76,7 @@
 
 | ID | 실제 결과 | 판정 |
 |---|---|---|
-| V-1 | bench-core/next-app 빌드 → `{name}.node`가 outDir와 generated에 생성; Node·Bun 서브프로세스가 `@scriptcable/client`로 add(20,22)=42 + greet 문자열(유니코드 "노마새") 실호출 | PASS |
+| V-1 | bench-core/next-app 빌드 → `{name}.node`가 outDir와 generated에 생성; Node·Bun 서브프로세스가 `@scriptca/client`로 add(20,22)=42 + greet 문자열(유니코드 "노마새") 실호출 | PASS |
 | V-2 | Node 22.21에서 3회 측정: **24.5 / 24.6 / 24.6 ns** (제네릭 FFI 72.6ns 대비 2.95×, napi-rs 참조 22ns와 동급) | PASS |
 | V-3 | 애드온 부재 경로: 기존 40개 테스트 전부 통과(FFI/WASM 폴백 회귀 없음), preferWasm 경로도 유지 | PASS |
 | V-4 | Bun이 .node 로드 → add/greet 실호출 성공 | PASS |

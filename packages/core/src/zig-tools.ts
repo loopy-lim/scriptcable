@@ -2,7 +2,7 @@
  * zig 0.13.x provisioning — wasm32-wasi and android-arm64 builds need zig,
  * and scriptc drives it off PATH. Resolution order: PATH → a machine-level
  * cache under the user's cache dir → a one-time download (opt-out with
- * SCRIPTCABLE_NO_AUTO_TOOLS=1). A cached zig is put on the build
+ * SCRIPTCA_NO_AUTO_TOOLS=1). A cached zig is put on the build
  * subprocess's PATH, so nothing downstream has to know about the cache.
  */
 import { access, constants, mkdir, rename, rm, writeFile } from 'node:fs/promises';
@@ -14,19 +14,19 @@ import { which } from './which.js';
 /** scriptc 0.3.x WASI builds fail under zig 0.14 — this series is pinned. */
 export const ZIG_VERSION = '0.13.0';
 
-/** Machine-level tool cache — override with SCRIPTCABLE_CACHE_DIR. */
+/** Machine-level tool cache — override with SCRIPTCA_CACHE_DIR. */
 export function zigCacheRoot(): string {
-  const override = process.env.SCRIPTCABLE_CACHE_DIR;
+  const override = process.env.SCRIPTCA_CACHE_DIR;
   if (override) return override;
   if (process.platform === 'win32') {
     return join(
       process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'),
-      'scriptcable',
+      'scriptca',
       'cache',
     );
   }
-  if (process.platform === 'darwin') return join(homedir(), 'Library', 'Caches', 'scriptcable');
-  return join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'scriptcable');
+  if (process.platform === 'darwin') return join(homedir(), 'Library', 'Caches', 'scriptca');
+  return join(process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache'), 'scriptca');
 }
 
 export function zigInstallDir(): string {
@@ -103,7 +103,7 @@ export async function findZig(): Promise<string | undefined> {
 }
 
 /**
- * findZig, then — unless SCRIPTCABLE_NO_AUTO_TOOLS=1 — a one-time download of
+ * findZig, then — unless SCRIPTCA_NO_AUTO_TOOLS=1 — a one-time download of
  * the pinned zig into the cache. Returns the zig binary path or undefined
  * (callers keep their manual-install hints). Idempotent: cached installs and
  * concurrent downloads of the same version are single-flight per process.
@@ -114,7 +114,7 @@ export function ensureZig(log: (msg: string) => void = () => {}): Promise<string
     try {
       const found = await findZig();
       if (found) return found;
-      if (process.env.SCRIPTCABLE_NO_AUTO_TOOLS === '1') return undefined;
+      if (process.env.SCRIPTCA_NO_AUTO_TOOLS === '1') return undefined;
 
       const url = zigDownloadUrl();
       const installDir = zigInstallDir();
@@ -123,7 +123,7 @@ export function ensureZig(log: (msg: string) => void = () => {}): Promise<string
         return undefined;
       }
       log(
-        `zig not found — downloading ${basename(url)} to ${installDir} (one-time; SCRIPTCABLE_NO_AUTO_TOOLS=1 disables)`,
+        `zig not found — downloading ${basename(url)} to ${installDir} (one-time; SCRIPTCA_NO_AUTO_TOOLS=1 disables)`,
       );
       let res: Response;
       try {

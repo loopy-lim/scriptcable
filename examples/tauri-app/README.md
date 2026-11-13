@@ -1,6 +1,6 @@
 # Tauri example (native)
 
-`scriptcable build` produces `libcalculator.a` + `libcalculator.dylib`.
+`scriptca build` produces `libcalculator.a` + `libcalculator.dylib`.
 In your own Tauri app, link the archive from a Rust build script and expose
 `#[tauri::command]`s that call the C ABI symbols (`calc_add`, `calc_greet`, …).
 

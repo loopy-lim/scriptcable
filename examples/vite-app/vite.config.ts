@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
-import scriptcable from '@unikit-bridge/scriptcable/vite';
+import scriptca from '@unikit-bridge/scriptca/vite';
 
 export default defineConfig({
-  plugins: [scriptcable()],
+  plugins: [scriptca()],
   build: {
     outDir: 'dist',
     // The drop-in browser client initializes WASM with top-level await —
@@ -13,6 +13,6 @@ export default defineConfig({
   // Avoid prebundling the Node toolchain entries — core and its subpaths
   // must go through vite's normal transform, not the dep optimizer.
   optimizeDeps: {
-    exclude: ['@unikit-bridge/scriptcable/core', '@unikit-bridge/scriptcable/core/wasm', '@unikit-bridge/scriptcable/core/wasi'],
+    exclude: ['@unikit-bridge/scriptca/core', '@unikit-bridge/scriptca/core/wasm', '@unikit-bridge/scriptca/core/wasi'],
   },
 });

@@ -10,8 +10,8 @@ import { mkdtemp, mkdir, writeFile, rm, symlink, access, readFile } from 'node:f
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ScriptcableWebpackPlugin } from './index.js';
-import { ScriptcableDropinResolvePlugin } from '@scriptcable/core';
+import { ScriptcaWebpackPlugin } from './index.js';
+import { ScriptcaDropinResolvePlugin } from '@scriptca/core';
 
 const repoRoot = resolve(import.meta.dir, '../../..'); // packages/webpack/src → repo root
 const tmpRoots: string[] = [];
@@ -36,7 +36,7 @@ async function makeProject(coreSource?: string): Promise<string> {
   await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '@scriptc'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptca'), join(nm, '@unikit-bridge', 'scriptca'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/.bin/scriptc'), join(nm, '.bin', 'scriptc'), 'file');
   await symlink(
@@ -47,8 +47,8 @@ async function makeProject(coreSource?: string): Promise<string> {
   return root;
 }
 
-function runHook(root: string, options: ConstructorParameters<typeof ScriptcableWebpackPlugin>[0] = {}) {
-  const plugin = new ScriptcableWebpackPlugin(options);
+function runHook(root: string, options: ConstructorParameters<typeof ScriptcaWebpackPlugin>[0] = {}) {
+  const plugin = new ScriptcaWebpackPlugin(options);
   const compilerOptions: { resolve?: { plugins?: unknown[] } } = {};
   let hook: (() => Promise<void>) | null = null;
   plugin.apply({
@@ -75,11 +75,11 @@ describe('webpack plugin-only build', () => {
     const { run } = runHook(root);
     await run();
 
-    const genDir = join(root, '.scriptcable', 'generated');
+    const genDir = join(root, '.scriptca', 'generated');
     const nodeSrc = await readFile(join(genDir, 'node.ts'), 'utf8');
     assert.match(nodeSrc, /add\(a: number, b: number\): number/);
     const clientPkg = JSON.parse(await readFile(join(genDir, 'package.json'), 'utf8'));
-    assert.equal(clientPkg.name, '@unikit-bridge/scriptcable-client');
+    assert.equal(clientPkg.name, '@unikit-bridge/scriptca-client');
 
     // Browser wasm ensured + copied to public/ — no manual step
     await access(join(root, 'public', 'webpack_plugin_it.wasm'));
@@ -91,13 +91,13 @@ describe('webpack plugin-only build', () => {
     const { run, resolvePlugins } = runHook(root);
     await run();
 
-    const genDir = join(root, '.scriptcable', 'generated');
+    const genDir = join(root, '.scriptca', 'generated');
     await access(join(genDir, 'dropin', 'browser.ts'));
     await access(join(genDir, 'dropin', 'node.ts'));
 
     const plugins = resolvePlugins();
     assert.equal(plugins.length, 1, 'exactly one drop-in resolve plugin');
-    assert.ok(plugins[0] instanceof ScriptcableDropinResolvePlugin);
+    assert.ok(plugins[0] instanceof ScriptcaDropinResolvePlugin);
 
     // Rebuild (cache hit) must not push a second resolve plugin
     await run();
@@ -110,8 +110,8 @@ describe('webpack plugin-only build', () => {
     assert.equal(client.add(20, 22), 42);
     const dropin = await import(pathToFileURL(join(genDir, 'dropin', 'node.ts')).href);
     assert.equal(dropin.add(20, 22), 42, 'drop-in named export must call the compiled core');
-    assert.equal(dropin.getScriptcableClient(), dropin.getScriptcableClient(), 'module-scope singleton');
-    assert.equal(dropin.getScriptcableClient().add(3, 4), 7);
+    assert.equal(dropin.getScriptcaClient(), dropin.getScriptcaClient(), 'module-scope singleton');
+    assert.equal(dropin.getScriptcaClient().add(3, 4), 7);
   }, 180_000);
 
   it('skips interception when the entry has an unmappable runtime export', async () => {
@@ -123,7 +123,7 @@ describe('webpack plugin-only build', () => {
     await run();
     assert.deepEqual(resolvePlugins(), [], 'unmappable export must disable the drop-in');
     // The build itself still succeeded — correctness over speed, with a warning
-    await access(join(root, '.scriptcable', 'generated', 'node.ts'));
+    await access(join(root, '.scriptca', 'generated', 'node.ts'));
   }, 180_000);
 
   it('dropin:false opts out entirely', async () => {
@@ -131,6 +131,6 @@ describe('webpack plugin-only build', () => {
     const { run, resolvePlugins } = runHook(root, { dropin: false });
     await run();
     assert.deepEqual(resolvePlugins(), []);
-    await access(join(root, '.scriptcable', 'generated', 'dropin', 'browser.ts'));
+    await access(join(root, '.scriptca', 'generated', 'dropin', 'browser.ts'));
   }, 180_000);
 });

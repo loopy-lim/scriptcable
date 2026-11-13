@@ -8,18 +8,18 @@ Every command below was executed end-to-end on 2026-10-21 (macOS, Bun 1.4.3, cla
 
 ## Path A — from a checkout of this repo (works today)
 
-The `@unikit-bridge/scriptcable` package is not on npm yet, so point the scaffold at your checkout with `--from`.
+The `@unikit-bridge/scriptca` package is not on npm yet, so point the scaffold at your checkout with `--from`.
 
 ### 1. Build the toolchain once
 
 ```bash
-git clone https://github.com/loopy-lim/scriptcable
-cd scriptcable
+git clone https://github.com/loopy-lim/scriptca
+cd scriptca
 bun install
 bun run build
 ```
 
-Expected: workspace packages build, then the assembled `@unikit-bridge/scriptcable` package completes with `Exited with code 0`.
+Expected: workspace packages build, then the assembled `@unikit-bridge/scriptca` package completes with `Exited with code 0`.
 
 ### 2. Scaffold an app
 
@@ -37,11 +37,11 @@ Created …/demo (host=bun)
   cd demo && bun install && bun run doctor && bun run build && bun start
 ```
 
-The scaffold pins `@unikit-bridge/scriptcable` to your checkout via a `file:` dependency (plus bun `overrides`), so nothing from npm is needed. `src/core.ts` is your core; `src/main.ts` is the app:
+The scaffold pins `@unikit-bridge/scriptca` to your checkout via a `file:` dependency (plus bun `overrides`), so nothing from npm is needed. `src/core.ts` is your core; `src/main.ts` is the app:
 
 ```ts
 // src/main.ts — created by init
-import { createClient } from '@unikit-bridge/scriptcable-client';
+import { createClient } from '@unikit-bridge/scriptca-client';
 
 const client = await createClient();
 console.log(JSON.stringify({
@@ -68,21 +68,21 @@ Expected from `doctor` (trimmed):
 OK — ready to build native cores.
 ```
 
-(once a build has run, `doctor` also reports `client: @unikit-bridge/scriptcable-client → node_modules ✓`)
+(once a build has run, `doctor` also reports `client: @unikit-bridge/scriptca-client → node_modules ✓`)
 
 Expected from `build` (trimmed):
 
 ```
 Building demo (native)…
-  inferred:  3 exports from src/core.ts (no scriptcable.json exports declared)
-  shared:    …/.scriptcable/libdemo.dylib
-  addon:     …/.scriptcable/demo.node (typed N-API direct binding)
-  generated: …/.scriptcable/generated
-  client:    import { createClient } from '@unikit-bridge/scriptcable-client'
+  inferred:  3 exports from src/core.ts (no scriptca.json exports declared)
+  shared:    …/.scriptca/libdemo.dylib
+  addon:     …/.scriptca/demo.node (typed N-API direct binding)
+  generated: …/.scriptca/generated
+  client:    import { createClient } from '@unikit-bridge/scriptca-client'
   contract:  …
 ```
 
-Two things just happened: the core compiled to a native library **plus a typed N-API addon** (`demo.node` — the ~24 ns call path), and the generated clients were published as `node_modules/@unikit-bridge/scriptcable-client`.
+Two things just happened: the core compiled to a native library **plus a typed N-API addon** (`demo.node` — the ~24 ns call path), and the generated clients were published as `node_modules/@unikit-bridge/scriptca-client`.
 
 ### 4. Run
 
@@ -119,10 +119,10 @@ bun run build && bun start     # {"sum":42,"hi":"hello, bun","mul":440}
 
 ## Path B — from npm (after publish)
 
-Once `@unikit-bridge/scriptcable` is on npm, steps 1–2 collapse to:
+Once `@unikit-bridge/scriptca` is on npm, steps 1–2 collapse to:
 
 ```bash
-bunx @unikit-bridge/scriptcable init demo --host bun
+bunx @unikit-bridge/scriptca init demo --host bun
 cd demo && bun install && bun run doctor && bun run build && bun start
 ```
 
@@ -142,7 +142,7 @@ Same expected outputs as Path A.
 All hosts import the same way:
 
 ```ts
-import { createClient } from '@unikit-bridge/scriptcable-client';
+import { createClient } from '@unikit-bridge/scriptca-client';
 const client = await createClient();
 ```
 
@@ -150,7 +150,7 @@ const client = await createClient();
 
 ## Zero changes: drop-in imports (bundler hosts)
 
-On bundler hosts you don't even write the `@unikit-bridge/scriptcable-client` import. Register the plugin and keep importing the core file — imports that resolve to the core entry are redirected onto a generated drop-in client with the same export names:
+On bundler hosts you don't even write the `@unikit-bridge/scriptca-client` import. Register the plugin and keep importing the core file — imports that resolve to the core entry are redirected onto a generated drop-in client with the same export names:
 
 ```ts
 // vite.config.ts / webpack.config / next.config — just register the plugin
@@ -159,12 +159,12 @@ add(20, 22); // 42
 ```
 
 ```ts
-import scriptcable from '@unikit-bridge/scriptcable/vite'; // or:
-import { ScriptcableWebpackPlugin } from '@unikit-bridge/scriptcable/webpack'; // or:
-import { withScriptcable } from '@unikit-bridge/scriptcable/next'; // next build --webpack
+import scriptca from '@unikit-bridge/scriptca/vite'; // or:
+import { ScriptcaWebpackPlugin } from '@unikit-bridge/scriptca/webpack'; // or:
+import { withScriptca } from '@unikit-bridge/scriptca/next'; // next build --webpack
 ```
 
-Verified end-to-end (2026-10-21): Vite 6 dev+build, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Rspeedy 0.18. Turbopack and Rspack have no JS resolver hooks — there the `@unikit-bridge/scriptcable-client` import from Path A is the way (export conditions still deliver the compiled client). See the README host table for the full matrix.
+Verified end-to-end (2026-10-21): Vite 6 dev+build, Next 16 webpack graph (build + runtime), Metro 0.87 / RN 0.88, Rspeedy 0.18. Turbopack and Rspack have no JS resolver hooks — there the `@unikit-bridge/scriptca-client` import from Path A is the way (export conditions still deliver the compiled client). See the README host table for the full matrix.
 
 ---
 
@@ -173,4 +173,4 @@ Verified end-to-end (2026-10-21): Vite 6 dev+build, Next 16 webpack graph (build
 - [README](../README.md) — architecture, per-host adapters, contract gate (CI)
 - [troubleshooting.md](./troubleshooting.md) — real errors and their fixes
 - [BENCHMARK.md](../BENCHMARK.md) — per-runtime performance and where the numbers come from
-- `scriptcable doctor` — diagnoses toolchain **and** the `@unikit-bridge/scriptcable-client` link (repairs it)
+- `scriptca doctor` — diagnoses toolchain **and** the `@unikit-bridge/scriptca-client` link (repairs it)

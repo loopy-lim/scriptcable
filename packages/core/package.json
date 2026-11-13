@@ -1,18 +1,18 @@
 {
-  "name": "@scriptcable/core",
+  "name": "@scriptca/core",
   "version": "0.1.0",
   "private": true,
-  "description": "scriptcable core — profile generation, scriptc toolchain, WASM loader, contract hashing",
+  "description": "scriptca core — profile generation, scriptc toolchain, WASM loader, contract hashing",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "url": "git+https://github.com/loopy-lim/scriptca.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/loopy-lim/scriptcable/issues"
+    "url": "https://github.com/loopy-lim/scriptca/issues"
   },
-  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
+  "homepage": "https://github.com/loopy-lim/scriptca#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -69,7 +69,7 @@
     "test": "bun test src/"
   },
   "dependencies": {
-    "@scriptcable/types": "workspace:*",
+    "@scriptca/types": "workspace:*",
     "node-api-headers": "^1.9.0",
     "typescript": "^5.9.2",
     "@babel/runtime": "^8.0.0"

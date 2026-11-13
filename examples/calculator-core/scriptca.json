@@ -2,6 +2,6 @@
   "name": "calculator",
   "entry": "src/core.ts",
   "prefix": "calc_",
-  "outDir": ".scriptcable",
+  "outDir": ".scriptca",
   "target": "native"
 }

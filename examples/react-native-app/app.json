@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "scriptcable-rn",
-    "slug": "scriptcable-rn",
+    "name": "scriptca-rn",
+    "slug": "scriptca-rn",
     "version": "1.0.0",
     "android": {
-      "package": "com.scriptcable.rnexample"
+      "package": "com.scriptca.rnexample"
     },
     "plugins": [
-      "@unikit-bridge/scriptcable/expo"
+      "@unikit-bridge/scriptca/expo"
     ]
   }
 }

@@ -1,4 +1,4 @@
-# Cloudflare Pages project for the scriptcable intro site.
+# Cloudflare Pages project for the scriptca intro site.
 # Deploy: `.github/workflows/site.yml` (wrangler-action) — needs the
 # CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID repo secrets.
 # Custom domain (scriptca.ll3.kr) is bound in the Pages dashboard:

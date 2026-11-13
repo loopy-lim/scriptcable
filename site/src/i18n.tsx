@@ -3,11 +3,11 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 export type Lang = 'en' | 'ko';
 export type HostCategory = 'all' | 'dropin' | 'conditions' | 'native';
 
-const STORAGE_KEY = 'scriptcable-lang';
+const STORAGE_KEY = 'scriptca-lang';
 
 const ko = {
   meta: {
-    title: 'scriptcable — 하나의 TypeScript 코어, 모든 런타임',
+    title: 'scriptca — 하나의 TypeScript 코어, 모든 런타임',
   },
   nav: {
     demo: '데모',
@@ -27,7 +27,7 @@ const ko = {
     ctaPrimary: '시작하기',
     ctaSecondary: '라이브 데모 보기',
     quickstartLabel: '빠른 시작',
-    quickstart: `bunx @unikit-bridge/scriptcable init demo --host bun
+    quickstart: `bunx @unikit-bridge/scriptca init demo --host bun
 cd demo
 bun install
 bun run doctor && bun run build && bun start
@@ -39,7 +39,7 @@ bun run doctor && bun run build && bun start
       sourceLabel: '단일 입력 코어',
       sourceFile: 'src/core.ts',
       sourceCode: 'export function add(a: number, b: number): number',
-      compilerLabel: 'scriptc + scriptcable build',
+      compilerLabel: 'scriptc + scriptca build',
       compilerDetail: 'ABI 추론 · 계약 해시 · 호스트별 클라이언트 생성',
       targetLabel: '타깃 호스트 선택',
       artifactLabel: '생성 산출물',
@@ -77,7 +77,7 @@ add(20, 22); // 42`,
           label: 'RN / Expo',
           kind: 'BRIDGE',
           artifact: 'react-native.ts · libcore.a',
-          wiring: 'metro.config.js의 withScriptcableMetro()가 브리지 연결',
+          wiring: 'metro.config.js의 withScriptcaMetro()가 브리지 연결',
           note: '네이티브 아카이브 링크 + JS 스레드 타입 안전 호출.',
         },
       ],
@@ -167,9 +167,9 @@ add(20, 22); // 42`,
       { host: 'Vite', category: 'dropin' as const, how: '자동 드롭인, resolveId가 내장 리졸버보다 먼저 실행', verified: 'Vite 6 dev + build' },
       { host: 'Next.js (webpack)', category: 'dropin' as const, how: '클라이언트 그래프는 브라우저 드롭인, 서버는 node 클라이언트', verified: 'Next 16.4.2' },
       { host: 'Next.js (Turbopack)', category: 'conditions' as const, how: 'resolve 훅이 없어 export 조건 경로 사용', verified: 'Next 16.4.2' },
-      { host: 'React Native / Expo', category: 'dropin' as const, how: 'metro.config.js에 withScriptcableMetro()', verified: 'Metro 0.87 · RN 0.88 · Expo 58' },
+      { host: 'React Native / Expo', category: 'dropin' as const, how: 'metro.config.js에 withScriptcaMetro()', verified: 'Metro 0.87 · RN 0.88 · Expo 58' },
       { host: 'Electron', category: 'dropin' as const, how: '메인은 네이티브, 렌더러는 WASM 드롭인', verified: 'Electron 33 실물 런타임' },
-      { host: 'Astro · SvelteKit · Nuxt · SolidStart', category: 'dropin' as const, how: 'Vite 플러그인 등록 (@unikit-bridge/scriptcable/vite)', verified: 'Astro 5.18 · Nuxt 4.6 등' },
+      { host: 'Astro · SvelteKit · Nuxt · SolidStart', category: 'dropin' as const, how: 'Vite 플러그인 등록 (@unikit-bridge/scriptca/vite)', verified: 'Astro 5.18 · Nuxt 4.6 등' },
       { host: 'Bun · Node', category: 'native' as const, how: '네이티브 공유 라이브러리, bun:ffi / 타입 N-API 애드온', verified: '실물 런타임 호출' },
       { host: 'Deno', category: 'conditions' as const, how: 'deno 플레이버(컴파일된 .js)가 node보다 먼저 해석', verified: 'Deno 2.9' },
       { host: 'Cloudflare Workers', category: 'conditions' as const, how: 'workerd 조건, wasm이 정적 CompiledWasm import로 탑재', verified: 'wrangler 4.151' },
@@ -205,11 +205,11 @@ add(20, 22); // 42`,
   beforeAfter: {
     eyebrow: 'Before → After',
     title: '이제 하나만 알면 됩니다',
-    sub: 'scriptcable build 또는 번들러 플러그인 등록 하나면 충분합니다.',
+    sub: 'scriptca build 또는 번들러 플러그인 등록 하나면 충분합니다.',
     columns: { what: '알아야 했던 것', before: 'Before', now: 'Now' },
     rows: [
-      { what: '설정 파일', before: 'scriptcable.config.ts 필수 (name, entry)', now: '선택 사항, package.json과 표준 위치에서 추론' },
-      { what: '생성물 경로', before: '.scriptcable/generated/ 상대 import', now: '베어 지정자 하나, 또는 없음(드롭인)' },
+      { what: '설정 파일', before: 'scriptca.config.ts 필수 (name, entry)', now: '선택 사항, package.json과 표준 위치에서 추론' },
+      { what: '생성물 경로', before: '.scriptca/generated/ 상대 import', now: '베어 지정자 하나, 또는 없음(드롭인)' },
       { what: '플레이버 선택', before: '호스트별 어댑터/파일 선택', now: '환경별 자동 (export 조건)' },
       { what: '브라우저 WASI', before: 'createMinimalWasi() 구성 후 전달', now: 'createClient() 인자 없음' },
       { what: '번들러 배선', before: '수동 alias/transpile (Next), JSON 전용 플러그인 설정', now: '플러그인이 전부 배선' },
@@ -218,7 +218,7 @@ add(20, 22); // 42`,
     ],
     beforeCodeTitle: '이전: 호스트별 수동 배선',
     beforeCode: `// 호스트마다 다른 어댑터·경로·WASI 인자 필요
-const engine = await createNodeEngine({ outDir: '.scriptcable' });
+const engine = await createNodeEngine({ outDir: '.scriptca' });
 engine.call('add', 20, 22);`,
     codeTitle: '현재: 어느 런타임에서나 동일한 호출부',
     code: `// 변경 없는 앱 코드 — 플러그인이 이 import 뒤의 모듈을 교체합니다
@@ -231,7 +231,7 @@ add(20, 22); // 42, 네이티브 애드온 속도`,
     sub: '2026-11-13 linux-x64 실제 실행 로그.',
     headerMeta: 'linux-x64 · 6개 검증 통과 · exit 0',
     rows: [
-      { cmd: 'bun install && bun run build', out: '13개 패키지 + @unikit-bridge/scriptcable 빌드 · exit 0' },
+      { cmd: 'bun install && bun run build', out: '13개 패키지 + @unikit-bridge/scriptca 빌드 · exit 0' },
       { cmd: 'file libcalculator.so', out: 'ELF 64-bit LSB shared object, x86-64' },
       { cmd: 'calculator.node', out: '타입 N-API 애드온 · exports 3개 추론 · 계약 412b2913f2714496' },
       { cmd: 'bun start (bun-app)', out: '{"sum":42,"product":42,"hi":"hello, bun"}' },
@@ -254,7 +254,7 @@ export type Dict = typeof ko;
 
 const en: Dict = {
   meta: {
-    title: 'scriptcable — one TypeScript core, every runtime',
+    title: 'scriptca — one TypeScript core, every runtime',
   },
   nav: {
     demo: 'Demo',
@@ -270,11 +270,11 @@ const en: Dict = {
     eyebrow: 'Bun · Node · Deno · Tauri · React Native · Lynx · Workers · Vite · Next',
     title1: 'One TypeScript core.',
     title2: 'Every runtime.',
-    sub: 'scriptc compiles TypeScript into native libraries (.so/.dylib/.dll) and WASM; scriptcable emits type-safe clients for every host.',
+    sub: 'scriptc compiles TypeScript into native libraries (.so/.dylib/.dll) and WASM; scriptca emits type-safe clients for every host.',
     ctaPrimary: 'Get started',
     ctaSecondary: 'Try the live demo',
     quickstartLabel: 'Quickstart',
-    quickstart: `bunx @unikit-bridge/scriptcable init demo --host bun
+    quickstart: `bunx @unikit-bridge/scriptca init demo --host bun
 cd demo
 bun install
 bun run doctor && bun run build && bun start
@@ -286,7 +286,7 @@ bun run doctor && bun run build && bun start
       sourceLabel: 'Single input core',
       sourceFile: 'src/core.ts',
       sourceCode: 'export function add(a: number, b: number): number',
-      compilerLabel: 'scriptc + scriptcable build',
+      compilerLabel: 'scriptc + scriptca build',
       compilerDetail: 'ABI inferred · contract hash · per-host client emit',
       targetLabel: 'Select target host',
       artifactLabel: 'Emitted artifact',
@@ -324,7 +324,7 @@ add(20, 22); // 42`,
           label: 'RN / Expo',
           kind: 'BRIDGE',
           artifact: 'react-native.ts · libcore.a',
-          wiring: 'withScriptcableMetro() in metro.config.js wires the bridge',
+          wiring: 'withScriptcaMetro() in metro.config.js wires the bridge',
           note: 'Links native archive; type-safe calls from JS.',
         },
       ],
@@ -414,9 +414,9 @@ add(20, 22); // 42`,
       { host: 'Vite', category: 'dropin' as const, how: 'automatic drop-in: resolveId runs before the builtin resolver', verified: 'Vite 6 dev + build' },
       { host: 'Next.js (webpack)', category: 'dropin' as const, how: 'client graphs get the browser drop-in, server the node client', verified: 'Next 16.4.2' },
       { host: 'Next.js (Turbopack)', category: 'conditions' as const, how: 'no resolve hook, conditions path', verified: 'Next 16.4.2' },
-      { host: 'React Native / Expo', category: 'dropin' as const, how: 'withScriptcableMetro() in metro.config.js', verified: 'Metro 0.87 · RN 0.88 · Expo 58' },
+      { host: 'React Native / Expo', category: 'dropin' as const, how: 'withScriptcaMetro() in metro.config.js', verified: 'Metro 0.87 · RN 0.88 · Expo 58' },
       { host: 'Electron', category: 'dropin' as const, how: 'main runs native, renderer gets the WASM drop-in', verified: 'Electron 33 real runtime' },
-      { host: 'Astro · SvelteKit · Nuxt · SolidStart', category: 'dropin' as const, how: 'register the Vite plugin (@unikit-bridge/scriptcable/vite)', verified: 'Astro 5.18 · Nuxt 4.6 …' },
+      { host: 'Astro · SvelteKit · Nuxt · SolidStart', category: 'dropin' as const, how: 'register the Vite plugin (@unikit-bridge/scriptca/vite)', verified: 'Astro 5.18 · Nuxt 4.6 …' },
       { host: 'Bun · Node', category: 'native' as const, how: 'native shared library: bun:ffi / typed N-API addon', verified: 'real runtime calls' },
       { host: 'Deno', category: 'conditions' as const, how: 'deno flavor (compiled .js) resolves ahead of node', verified: 'Deno 2.9' },
       { host: 'Cloudflare Workers', category: 'conditions' as const, how: 'workerd condition: wasm rides a static CompiledWasm import', verified: 'wrangler 4.151' },
@@ -452,11 +452,11 @@ add(20, 22); // 42`,
   beforeAfter: {
     eyebrow: 'Before → After',
     title: 'One thing to know',
-    sub: 'Run scriptcable build, or register a bundler plugin that runs it.',
+    sub: 'Run scriptca build, or register a bundler plugin that runs it.',
     columns: { what: 'You had to know', before: 'Before', now: 'Now' },
     rows: [
-      { what: 'Config file', before: 'scriptcable.config.ts required (name, entry)', now: 'optional, inferred from package.json + standard locations' },
-      { what: 'Artifact paths', before: 'relative imports into .scriptcable/generated/', now: 'one bare specifier, or none at all (drop-in)' },
+      { what: 'Config file', before: 'scriptca.config.ts required (name, entry)', now: 'optional, inferred from package.json + standard locations' },
+      { what: 'Artifact paths', before: 'relative imports into .scriptca/generated/', now: 'one bare specifier, or none at all (drop-in)' },
       { what: 'Flavor selection', before: 'per-host adapter/file choice', now: 'automatic per environment (export conditions)' },
       { what: 'Browser WASI adapter', before: 'construct & pass createMinimalWasi()', now: 'createClient() takes no args' },
       { what: 'Bundler wiring', before: 'manual alias/transpile (Next), JSON-only plugin config', now: 'plugins wire everything' },
@@ -465,7 +465,7 @@ add(20, 22); // 42`,
     ],
     beforeCodeTitle: 'Before: manual per-host wiring',
     beforeCode: `// per-host imports, paths, and WASI adapters
-const engine = await createNodeEngine({ outDir: '.scriptcable' });
+const engine = await createNodeEngine({ outDir: '.scriptca' });
 engine.call('add', 20, 22);`,
     codeTitle: 'Now: identical call sites in every runtime',
     code: `// unchanged app code — the plugin swaps the module behind this import
@@ -478,7 +478,7 @@ add(20, 22); // 42, native-addon speed`,
     sub: '2026-11-13 linux-x64 live command log.',
     headerMeta: 'linux-x64 · 6 checks passed · exit 0',
     rows: [
-      { cmd: 'bun install && bun run build', out: '13 packages + @unikit-bridge/scriptcable built · exit 0' },
+      { cmd: 'bun install && bun run build', out: '13 packages + @unikit-bridge/scriptca built · exit 0' },
       { cmd: 'file libcalculator.so', out: 'ELF 64-bit LSB shared object, x86-64' },
       { cmd: 'calculator.node', out: 'typed N-API addon · 3 exports inferred · contract 412b2913f2714496' },
       { cmd: 'bun start (bun-app)', out: '{"sum":42,"product":42,"hi":"hello, bun"}' },

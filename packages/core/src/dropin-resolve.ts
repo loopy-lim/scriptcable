@@ -29,8 +29,8 @@ export type DropinResolveRequest = {
   [key: string]: unknown;
 };
 
-export class ScriptcableDropinResolvePlugin {
-  readonly name = 'ScriptcableDropinResolvePlugin';
+export class ScriptcaDropinResolvePlugin {
+  readonly name = 'ScriptcaDropinResolvePlugin';
 
   constructor(
     private readonly entryAbs: string,
@@ -73,7 +73,7 @@ export class ScriptcableDropinResolvePlugin {
         const base = resolvePath(request.path ?? process.cwd(), req);
         if (!this.matches(base)) return cb();
         const redirected: DropinResolveRequest = { ...request, request: this.dropinPath };
-        return resolver.doResolve(target, redirected, 'scriptcable drop-in', resolveContext, cb);
+        return resolver.doResolve(target, redirected, 'scriptca drop-in', resolveContext, cb);
       } catch {
         // Never break resolution over the redirect — fall through to default.
         return cb();
@@ -82,6 +82,6 @@ export class ScriptcableDropinResolvePlugin {
   }
 }
 
-export function createDropinResolvePlugin(entryAbs: string, dropinPath: string): ScriptcableDropinResolvePlugin {
-  return new ScriptcableDropinResolvePlugin(entryAbs, dropinPath);
+export function createDropinResolvePlugin(entryAbs: string, dropinPath: string): ScriptcaDropinResolvePlugin {
+  return new ScriptcaDropinResolvePlugin(entryAbs, dropinPath);
 }

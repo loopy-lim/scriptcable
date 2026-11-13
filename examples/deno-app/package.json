@@ -1,15 +1,15 @@
 {
-  "name": "@scriptcable/example-deno-app",
+  "name": "@scriptca/example-deno-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "scriptcable build --target wasm --hosts deno",
+    "build:core": "scriptca build --target wasm --hosts deno",
     "test": "bun run build:core && deno run -A src/main.ts"
   },
   "devDependencies": {
     "scriptc": "^0.4.12",
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

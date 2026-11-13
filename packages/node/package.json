@@ -1,18 +1,18 @@
 {
-  "name": "@scriptcable/node",
+  "name": "@scriptca/node",
   "version": "0.1.0",
   "private": true,
   "description": "Node.js adapter (native shared library by default; WASM opt-in)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "url": "git+https://github.com/loopy-lim/scriptca.git",
     "directory": "packages/node"
   },
   "bugs": {
-    "url": "https://github.com/loopy-lim/scriptcable/issues"
+    "url": "https://github.com/loopy-lim/scriptca/issues"
   },
-  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
+  "homepage": "https://github.com/loopy-lim/scriptca#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -33,8 +33,8 @@
     "test": "bun test src/"
   },
   "dependencies": {
-    "@scriptcable/core": "workspace:*",
-    "@scriptcable/types": "workspace:*"
+    "@scriptca/core": "workspace:*",
+    "@scriptca/types": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.3.0"

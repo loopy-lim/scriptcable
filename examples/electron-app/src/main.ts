@@ -1,19 +1,19 @@
 /**
  * Electron main process — the desktop host smoke:
  *
- *   1. `createClient()` from `@unikit-bridge/scriptcable-client` — export conditions pick
+ *   1. `createClient()` from `@unikit-bridge/scriptca-client` — export conditions pick
  *      the node flavor, which loads the compiled core inside Electron's own
  *      Node runtime (typed N-API addon first, shared-library fallback).
  *   2. The renderer, built by vite, runs the browser drop-in (WASM). Its
- *      result is polled off `window.__scriptcableResult`.
+ *      result is polled off `window.__scriptcaResult`.
  *
- * dist/ is served over a custom `scriptcable://` protocol — fetch() on a
+ * dist/ is served over a custom `scriptca://` protocol — fetch() on a
  * file:// page would be CORS-blocked. Exit code 0 only when BOTH flavors
  * return 42.
  */
 import { app, BrowserWindow, protocol } from 'electron';
 import { readFile } from 'node:fs/promises';
-import { createClient } from '@unikit-bridge/scriptcable-client';
+import { createClient } from '@unikit-bridge/scriptca-client';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,7 +32,7 @@ app.commandLine.appendSwitch('disable-gpu');
 // (and standard, so relative URLs resolve) fetch() rejects the custom scheme.
 // Must be called before app ready.
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'scriptcable', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+  { scheme: 'scriptca', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
 
 const MIME: Record<string, string> = {
@@ -66,7 +66,7 @@ async function main(): Promise<number> {
   }
 
   // --- 2. renderer: the vite-built browser drop-in (WASM) ---
-  protocol.handle('scriptcable', async (request) => {
+  protocol.handle('scriptca', async (request) => {
     const url = new URL(request.url);
     const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '') || 'index.html';
     const file = path.join(distDir, rel);
@@ -86,16 +86,16 @@ async function main(): Promise<number> {
   let rendererOk = false;
   try {
     const win = new BrowserWindow({ show: false });
-    await win.loadURL('scriptcable://app/index.html');
+    await win.loadURL('scriptca://app/index.html');
     // The drop-in initializes WASM via top-level await right after the
     // module executes — poll until the renderer sets its result.
     let value: number | null = null;
     for (let i = 0; i < 50 && value === null; i++) {
-      value = await win.webContents.executeJavaScript('window.__scriptcableResult ?? null', true);
+      value = await win.webContents.executeJavaScript('window.__scriptcaResult ?? null', true);
       if (value === null) await new Promise((resolve) => setTimeout(resolve, 100));
     }
     win.destroy();
-    if (value === null) console.log('electron renderer: no result — the drop-in module never set __scriptcableResult');
+    if (value === null) console.log('electron renderer: no result — the drop-in module never set __scriptcaResult');
     rendererOk = value !== null && check('renderer add(20, 22)', value);
   } catch (err) {
     console.log(`electron renderer: threw — ${err instanceof Error ? err.message : String(err)}`);

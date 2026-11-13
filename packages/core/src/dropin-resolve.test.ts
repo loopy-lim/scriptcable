@@ -8,19 +8,19 @@ import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { ScriptcableDropinResolvePlugin } from './dropin-resolve.js';
+import { ScriptcaDropinResolvePlugin } from './dropin-resolve.js';
 
 // Real (per-platform) absolute paths: on Windows, path.resolve() rewrites
 // fake POSIX absolutes like /proj/... onto the current drive, which would
 // break the plugin's comparison against the entry.
 const PROJ = resolve(tmpdir(), 'sc-dropin-resolve-stub');
 const ENTRY = join(PROJ, 'src', 'core.ts');
-const DROPIN = join(PROJ, '.scriptcable', 'generated', 'dropin', 'browser.ts');
+const DROPIN = join(PROJ, '.scriptca', 'generated', 'dropin', 'browser.ts');
 
 type Captured = { redirected: (string | undefined)[]; delegated: string[] };
 
 /** Stub resolver with the enhanced-resolve hook surface the plugin uses. */
-function stubResolver(): { resolver: Parameters<ScriptcableDropinResolvePlugin['apply']>[0]; captured: Captured } {
+function stubResolver(): { resolver: Parameters<ScriptcaDropinResolvePlugin['apply']>[0]; captured: Captured } {
   const captured: Captured = { redirected: [], delegated: [] };
   const hook = {
     tapAsync: (_name: string, fn: (request: any, ctx: any, cb: any) => void) => {
@@ -36,10 +36,10 @@ function stubResolver(): { resolver: Parameters<ScriptcableDropinResolvePlugin['
       cb(null, { redirectedTo: request.request });
     },
   };
-  return { resolver: resolver as unknown as Parameters<ScriptcableDropinResolvePlugin['apply']>[0], captured, hook };
+  return { resolver: resolver as unknown as Parameters<ScriptcaDropinResolvePlugin['apply']>[0], captured, hook };
 }
 
-function run(plugin: ScriptcableDropinResolvePlugin, request: { path: string; request: string }): Captured {
+function run(plugin: ScriptcaDropinResolvePlugin, request: { path: string; request: string }): Captured {
   const { resolver, captured, hook } = stubResolver();
   plugin.apply(resolver);
   assert.ok(hook.fn, 'plugin never tapped the resolve hook');
@@ -51,8 +51,8 @@ function run(plugin: ScriptcableDropinResolvePlugin, request: { path: string; re
   return captured;
 }
 
-describe('ScriptcableDropinResolvePlugin', () => {
-  const plugin = new ScriptcableDropinResolvePlugin(ENTRY, DROPIN);
+describe('ScriptcaDropinResolvePlugin', () => {
+  const plugin = new ScriptcaDropinResolvePlugin(ENTRY, DROPIN);
 
   it('redirects a relative import that resolves to the entry', () => {
     const captured = run(plugin, { path: join(PROJ, 'src'), request: './core' });
@@ -105,14 +105,14 @@ describe('ScriptcableDropinResolvePlugin', () => {
     await mkdir(join(proj, 'src'), { recursive: true });
     await writeFile(join(proj, 'src', 'core.ts'), 'export function add(a: number, b: number) { return a + b; }\n');
     await writeFile(join(proj, 'src', 'other.ts'), 'export const other = 1;\n');
-    const dropin = join(proj, '.scriptcable', 'generated', 'dropin', 'browser.ts');
-    await mkdir(join(proj, '.scriptcable', 'generated', 'dropin'), { recursive: true });
+    const dropin = join(proj, '.scriptca', 'generated', 'dropin', 'browser.ts');
+    await mkdir(join(proj, '.scriptca', 'generated', 'dropin'), { recursive: true });
     await writeFile(dropin, 'export const dropin = true;\n');
 
     const resolver = enhanced.ResolverFactory.createResolver({
       fileSystem: await import('node:fs'),
       extensions: ['.ts', '.js'],
-      plugins: [new ScriptcableDropinResolvePlugin(join(proj, 'src', 'core.ts'), dropin)],
+      plugins: [new ScriptcaDropinResolvePlugin(join(proj, 'src', 'core.ts'), dropin)],
     });
     const resolveIt = (context: string, request: string) =>
       new Promise<string | false>((done, reject) => {

@@ -15,9 +15,9 @@ import { createRequire } from 'node:module';
 import { Worker } from 'node:worker_threads';
 import { buildNodeAddon, BATCH_SYMBOL } from './napi-addon.js';
 import { createBatchWire } from './batch-wire.js';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import type { ScriptcaProfile } from '@scriptca/types';
 
-const PROFILE: ScriptcableProfile = {
+const PROFILE: ScriptcaProfile = {
   profile_format: 2,
   name: 'probe',
   entry: 'native.c',

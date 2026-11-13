@@ -9,18 +9,18 @@ import {
   markBuildDone,
   collectSourceGraph,
 } from './build-cache.js';
-import type { ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
+import type { ScriptcaConfig, ScriptcaProfile } from '@scriptca/types';
 
 let workDir: string;
 
-const config: ScriptcableConfig = {
+const config: ScriptcaConfig = {
   name: 'cachetest',
   entry: 'src/core.ts',
   prefix: 'cachetest_',
   exports: [{ name: 'add', params: ['f64', 'f64'], returns: 'f64' }],
 };
 
-const profile: ScriptcableProfile = {
+const profile: ScriptcaProfile = {
   profile_format: 1,
   name: 'cachetest',
   entry: 'src/core.ts',
@@ -31,7 +31,7 @@ const profile: ScriptcableProfile = {
 
 describe('build cache', () => {
   beforeAll(async () => {
-    workDir = await mkdtemp(join(tmpdir(), 'scriptcable-cache-'));
+    workDir = await mkdtemp(join(tmpdir(), 'scriptca-cache-'));
     await mkdir(join(workDir, 'src'), { recursive: true });
     await writeFile(join(workDir, 'src/core.ts'), 'export function add(a: number, b: number) { return a + b; }\n');
   });
@@ -47,7 +47,7 @@ describe('build cache', () => {
   });
 
   it('tracks the import graph: a nested import invalidates, an unimported sibling does not', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'scriptcable-graph-'));
+    const root = await mkdtemp(join(tmpdir(), 'scriptca-graph-'));
     try {
       await mkdir(join(root, 'src', 'nested'), { recursive: true });
       await writeFile(
@@ -106,7 +106,7 @@ describe('build cache', () => {
   });
 
   it('miss → mark → hit lifecycle, and artifact presence is required', async () => {
-    const outDir = join(workDir, '.scriptcable');
+    const outDir = join(workDir, '.scriptca');
     await mkdir(outDir, { recursive: true });
     const hash = await computeBuildHash({ cwd: workDir, config, profile, target: 'native' });
     const artifact = join(outDir, 'libcachetest.dylib');

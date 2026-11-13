@@ -1,16 +1,16 @@
 /**
- * Integration test: the Next.js plugin path ALONE (no `scriptcable build`
+ * Integration test: the Next.js plugin path ALONE (no `scriptca build`
  * CLI run, no config file — exports inferred from src/core.ts). Guards the
  * plugin-only failure modes: inferred exports must reach the generated
  * clients, and the native shared library must be loadable through
- * `@unikit-bridge/scriptcable-client`.
+ * `@unikit-bridge/scriptca-client`.
  */
 import { describe, it, afterAll } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm, symlink, readFile, lstat, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { scriptcableBuild, withScriptcable, withScriptcableAsync } from './index.js';
+import { scriptcaBuild, withScriptca, withScriptcaAsync } from './index.js';
 
 const repoRoot = resolve(import.meta.dir, '../../..'); // packages/next/src → repo root
 const tmpRoots: string[] = [];
@@ -31,7 +31,7 @@ async function makeProject(): Promise<string> {
   await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '@scriptc'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptca'), join(nm, '@unikit-bridge', 'scriptca'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/.bin/scriptc'), join(nm, '.bin', 'scriptc'), 'file');
   await symlink(
@@ -47,9 +47,9 @@ afterAll(async () => {
 });
 
 describe('next plugin-only build (integration)', () => {
-  it('infers exports, copies the native artifact, and serves @unikit-bridge/scriptcable-client', async () => {
+  it('infers exports, copies the native artifact, and serves @unikit-bridge/scriptca-client', async () => {
     const project = await makeProject();
-    const genDir = await scriptcableBuild({ cwd: project });
+    const genDir = await scriptcaBuild({ cwd: project });
 
     // F-1: exports inferred from TS — methods must exist in the client
     const nodeSrc = await readFile(join(genDir, 'node.ts'), 'utf8');
@@ -73,8 +73,8 @@ describe('next plugin-only build (integration)', () => {
 
     // Package manifest + node_modules link
     const clientPkg = JSON.parse(await readFile(join(genDir, 'package.json'), 'utf8'));
-    assert.equal(clientPkg.name, '@unikit-bridge/scriptcable-client');
-    const linkPath = join(project, 'node_modules', '@unikit-bridge', 'scriptcable-client');
+    assert.equal(clientPkg.name, '@unikit-bridge/scriptca-client');
+    const linkPath = join(project, 'node_modules', '@unikit-bridge', 'scriptca-client');
     assert.equal((await lstat(linkPath)).isSymbolicLink(), true, 'no node_modules link');
 
     // Bare specifier resolves and calls the real core — the exact flow a
@@ -83,7 +83,7 @@ describe('next plugin-only build (integration)', () => {
       cmd: [
         'bun',
         '-e',
-        `const m = await import('@unikit-bridge/scriptcable-client');
+        `const m = await import('@unikit-bridge/scriptca-client');
 const c = await m.createClient();
 console.log(JSON.stringify({ add: c.add(2, 3) }));`,
       ],
@@ -103,14 +103,14 @@ console.log(JSON.stringify({ add: c.add(2, 3) }));`,
     const project = await makeProject();
 
     // Run the real build once so both graphs' drop-ins exist on disk.
-    await scriptcableBuild({ cwd: project });
-    const genDir = join(project, '.scriptcable', 'generated');
+    await scriptcaBuild({ cwd: project });
+    const genDir = join(project, '.scriptca', 'generated');
     await access(join(genDir, 'dropin', 'browser.ts'));
     await access(join(genDir, 'dropin', 'node.ts'));
 
     const gates: Record<string, { apply: (resolver: unknown) => void }> = {};
     for (const isServer of [false, true]) {
-      const cfg = withScriptcable({});
+      const cfg = withScriptca({});
       const webpackConfig: { plugins: unknown[]; resolve?: { plugins?: unknown[]; extensionAlias?: Record<string, string[]> } } = {
         plugins: [],
       };
@@ -140,7 +140,7 @@ console.log(JSON.stringify({ add: c.add(2, 3) }));`,
 
     // Run the client-graph build hook — the same gate now wires the redirect.
     for (const isServer of [false, true]) {
-      const cfg = withScriptcable({});
+      const cfg = withScriptca({});
       const webpackConfig: { plugins: Array<{ apply: (compiler: unknown) => void }>; resolve?: { plugins?: unknown[] } } = {
         plugins: [],
       };
@@ -159,18 +159,18 @@ console.log(JSON.stringify({ add: c.add(2, 3) }));`,
     }
   }, 180_000);
 
-  it('withScriptcableAsync does not set a turbopack resolveAlias (absolute-path keys are inert in Turbopack)', async () => {
+  it('withScriptcaAsync does not set a turbopack resolveAlias (absolute-path keys are inert in Turbopack)', async () => {
     const project = await makeProject();
-    await scriptcableBuild({ cwd: project });
+    await scriptcaBuild({ cwd: project });
 
-    const cfg = await withScriptcableAsync({ reactStrictMode: true }, { cwd: project });
+    const cfg = await withScriptcaAsync({ reactStrictMode: true }, { cwd: project });
     // Verified against Next 16: turbopack.resolveAlias matches request
     // specifiers, so an absolute-path key silently does nothing — setting it
     // would falsely advertise drop-in under Turbopack.
     assert.equal(cfg.turbopack?.resolveAlias, undefined);
     // The rest of the wiring stays: the compiled client package works under
     // Turbopack via export conditions.
-    assert.ok(cfg.transpilePackages?.includes('@unikit-bridge/scriptcable-client'));
+    assert.ok(cfg.transpilePackages?.includes('@unikit-bridge/scriptca-client'));
     assert.equal(typeof cfg.webpack, 'function');
   }, 120_000);
 });

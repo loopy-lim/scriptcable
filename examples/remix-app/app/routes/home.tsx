@@ -6,7 +6,7 @@ export default function Home() {
   const sum = add(20, 22);
   return (
     <main>
-      <h1>scriptcable react-router</h1>
+      <h1>scriptca react-router</h1>
       <p>
         add(20, 22) = {sum} · greet = {greet('router')}
       </p>

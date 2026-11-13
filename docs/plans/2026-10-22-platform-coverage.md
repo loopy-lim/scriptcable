@@ -2,7 +2,7 @@
 
 - 날짜: 2026-10-22
 - 기준 리비전: main @ 5f417ea (작업 트리 clean)
-- 원 요청: "typescript를 사용하는 대부분의 프로젝트에서 이거 scriptable만 추가하면 알아서 모든것들이 잘 되는 수준" + "다양한 것들을 조사하고 모든 곳에서 지원" + "특히 모바일, 데스크탑 앱 부분에서와 웹부분을 위주로"
+- 원 요청: "typescript를 사용하는 대부분의 프로젝트에서 이거 scriptca만 추가하면 알아서 모든것들이 잘 되는 수준" + "다양한 것들을 조사하고 모든 곳에서 지원" + "특히 모바일, 데스크탑 앱 부분에서와 웹부분을 위주로"
 - 선행: [[auto-apply-dx-north-star]] 3차(drop-in)까지 완료 — Vite/Next(webpack)/Webpack/Metro 실호스트 검증済
 
 ## G0 intake (validate-plan intake 모드 — PASS)
@@ -23,7 +23,7 @@
 |---|---|
 | `README.md:109` 호스트 표 | Electron 행의 Verified 칸이 `—` — 레시피(`README.md:251-259`)만 있고 실제 Electron 런타임 검증 없음 |
 | `README.md:287` | Expo는 "your Expo module (Xcode / NDK CMake)" 언급만 — Expo의 metro 번들러 위 drop-in 검증 없음 |
-| `examples/react-native-app/scripts/metro-bundle.mjs` | 실제 Metro 0.87 번들 스모크 패턴 — `getDefaultConfig` + `withScriptcableMetro` + `Metro.runBuild` 후 번들 문자열 단언 (drop-in 코드 포함/원본 TS 소스 배제). Expo는 `@expo/metro-config`로 동일 패턴 재현 가능 |
+| `examples/react-native-app/scripts/metro-bundle.mjs` | 실제 Metro 0.87 번들 스모크 패턴 — `getDefaultConfig` + `withScriptcaMetro` + `Metro.runBuild` 후 번들 문자열 단언 (drop-in 코드 포함/원본 TS 소스 배제). Expo는 `@expo/metro-config`로 동일 패턴 재현 가능 |
 | `packages/vite/src/index.ts` | 플러그인 훅: `configResolved`(vite 전용, rollup에 없음), `buildStart`, `resolveId` 객체형(`order:'pre'` — rollup 표준 지원), `handleHotUpdate`(vite 전용). rollup에서 configResolved 미호출 → `publicDir=''` 초기값 → wasm 복사 경로 미정. `this.resolve`는 rollup 표준. 즉 rollup 호환은 대체로 성립하나 **빌드 게이트가 serve 기정사실**로 통과되고 publicDir 폴백 필요 |
 | `examples/vite-app` | 플러그인 스모크 예제 패턴: `test:*` 스크립트 + src/*.ts 스모크 |
 | `examples/calculator-core` | 모든 예제가 재사용하는 공유 코어 — `build --hosts node,bun,browser,tauri,react-native,lynx` |
@@ -36,31 +36,31 @@
 
 | ID | 관찰할 결과와 적용 조건 | 담당 태스크 | 검증 ID |
 |---|---|---|---|
-| AC-1 | `examples/electron-app`에서 (a) 실제 Electron 런타임의 main 프로세스가 `@scriptcable/client`(node conditions)로 네이티브 코어를 호출해 `add(20,22)===42`를 얻는다 (b) renderer(vite 빌드)가 drop-in 브라우저 클라이언트로 WASM 코어를 호출해 동일 결과를 얻는다. README 호스트 표의 `—`가 실측으로 대체된다 | T-1 | V-1 |
-| AC-2 | Expo의 실제 metro 기본 설정(`@expo/metro-config`의 `getDefaultConfig`) 위에서 `withScriptcableMetro`가 엔트리 import를 RN drop-in으로 리다이렉트한 번들을 만든다 — 번들에 drop-in 브리지 코드 포함, 원본 TS 엔트리 소스 배제. README에 Expo 레시피가 있다 | T-2 | V-2 |
+| AC-1 | `examples/electron-app`에서 (a) 실제 Electron 런타임의 main 프로세스가 `@scriptca/client`(node conditions)로 네이티브 코어를 호출해 `add(20,22)===42`를 얻는다 (b) renderer(vite 빌드)가 drop-in 브라우저 클라이언트로 WASM 코어를 호출해 동일 결과를 얻는다. README 호스트 표의 `—`가 실측으로 대체된다 | T-1 | V-1 |
+| AC-2 | Expo의 실제 metro 기본 설정(`@expo/metro-config`의 `getDefaultConfig`) 위에서 `withScriptcaMetro`가 엔트리 import를 RN drop-in으로 리다이렉트한 번들을 만든다 — 번들에 drop-in 브리지 코드 포함, 원본 TS 엔트리 소스 배제. README에 Expo 레시피가 있다 | T-2 | V-2 |
 | AC-3 | Vite 기반 프레임워크에서 drop-in이 동작한다 — Astro는 실제 `astro build` 산출물로 검증(번들에 drop-in 클라이언트 포함, 원본 엔트리 소스 배제, WASM 정적 산출 포함). SvelteKit/Nuxt/Remix(React Router)/SolidStart는 조사 기반 레시피로 README에 기재 | T-3 | V-3 |
-| AC-4 | `@scriptcable/vite` 플러그인의 Rollup 호환이 확인된다 — 실제 rollup 빌드에서 엔트리 import가 drop-in으로 리다이렉트된다(필요한 최소 수정: publicDir·게이트 폴백). 불가한 부분은 이유와 함께 문서화 | T-4 | V-4 |
+| AC-4 | `@scriptca/vite` 플러그인의 Rollup 호환이 확인된다 — 실제 rollup 빌드에서 엔트리 import가 drop-in으로 리다이렉트된다(필요한 최소 수정: publicDir·게이트 폴백). 불가한 부분은 이유와 함께 문서화 | T-4 | V-4 |
 | AC-5 | 회귀 없음 — 전 패키지 test/typecheck/build 통과, 기존 예제(vite/next/lynx/rn/node/bun) 회귀 통과, CHANGELOG 갱신, 신규 예제 검증이 CI에 연결됨 | T-5 | V-5 |
 
 ## 설계
 
 **T-1 Electron (`examples/electron-app`)**
 - 구성: `main.ts`(Electron main — `createClient()` node conditions → 네이티브), `renderer/`(vite 빌드 — `import { add } from '../calculator-core/src/core'` → vite 플러그인 drop-in), `electron.vite` 대신 순수 electron+vite로 최소 의존.
-- renderer 서빙: `protocol.handle('scriptcable', …)`로 dist 서빙(커스텀 프로토콜이 Electron 권장 방식) — file:// fetch CORS 회피. 브라우저 클라이언트의 `compileStreaming` 폴백(CHANGELOG 확인됨)이 mime 불일치를 흡수.
+- renderer 서빙: `protocol.handle('scriptca', …)`로 dist 서빙(커스텀 프로토콜이 Electron 권장 방식) — file:// fetch CORS 회피. 브라우저 클라이언트의 `compileStreaming` 폴백(CHANGELOG 확인됨)이 mime 불일치를 흡수.
 - main 프로세스 검증 포인트: Electron의 Node ABI에서 N-API 애드온(`{name}.node`) 로드 — N-API는 ABI 안정이라 호환 기대, 실패 시 공유 라이브러리 FFI 폴백. 이 동선 자체가 검증 내용.
 - 헤드리스 CI: `xvfb-run -a` (ubuntu CI), 로컬은 WSLg DISPLAY=:0.
 - 단언: main `add(20,22)===42` + renderer 결과를 `ipcMain.handle`/executeJavaScript로 회수 → 프로세스 exit code.
 
 **T-2 Expo (`examples/react-native-app/scripts/expo-bundle.mjs`)**
-- `@expo/metro-config`의 `getDefaultConfig`로 Expo의 진짜 기본 설정을 얻어 `withScriptcableMetro` 적용 → `Metro.runBuild` → 기존 metro-bundle.mjs와 동일 단언(drop-in 브리지 포함, 원본 TS 소스 배제).
+- `@expo/metro-config`의 `getDefaultConfig`로 Expo의 진짜 기본 설정을 얻어 `withScriptcaMetro` 적용 → `Metro.runBuild` → 기존 metro-bundle.mjs와 동일 단언(drop-in 브리지 포함, 원본 TS 소스 배제).
 - expo SDK 전체 설치는 의존성 대비 검증 증분이 없어 `@expo/metro-config`만 설치(Expo 프로젝트의 metro 계층 = 이 설정).
 
 **T-3 Astro (`examples/astro-app`)**
-- `astro.config.mjs`의 `vite: { plugins: [scriptcable()] }` — Astro는 Vite 위이므로 플러그인 무수정 기대. `astro build` 후 dist 산출물 단언: drop-in 클라이언트 참조 포함, calculator-core 원본 소스 문자열 배제, `<name>.wasm` 정적 산출 포함.
+- `astro.config.mjs`의 `vite: { plugins: [scriptca()] }` — Astro는 Vite 위이므로 플러그인 무수정 기대. `astro build` 후 dist 산출물 단언: drop-in 클라이언트 참조 포함, calculator-core 원본 소스 문자열 배제, `<name>.wasm` 정적 산출 포함.
 - SvelteKit/Nuxt/Remix/SolidStart: 각각 Vite 위 → 동일 플러그인 삽입 지점 문서화(조사 기반, 설치 검증은 범위 밖 표기).
 
 **T-4 Rollup**
-- 스모크: rollup으로 node 번들 빌드(`@scriptcable/vite` 플러그인 재사용) → 번들에 drop-in(node flavor는 옵션 과제 — vite 플러그인 drop-in은 browser 고정이므로 rollup용 flavor 옵션 추가 검토: `dropin: 'browser' | 'node'`).
+- 스모크: rollup으로 node 번들 빌드(`@scriptca/vite` 플러그인 재사용) → 번들에 drop-in(node flavor는 옵션 과제 — vite 플러그인 drop-in은 browser 고정이므로 rollup용 flavor 옵션 추가 검토: `dropin: 'browser' | 'node'`).
 - 최소 수정: `configResolved` 미호출(rollup) 시 `publicDir` 폴백(root/public)과 build 게이트 기본값 정리. rollup은 브라우저 target 미지정이므로 TLA 게이트를 rollup 컨텍스트에서 강제하지 않도록.
 
 **T-5 문서·CI·회귀**
@@ -89,17 +89,17 @@
 
 | ID | 방법 | 기대 | 실제 결과 | 판정 |
 |---|---|---|---|---|
-| V-1 | `bun run --filter @scriptcable/example-electron-app start` (xvfb-run 폴백, WSLg DISPLAY=:0) — 실제 electron 실행 | exit 0, main+renderer 42 | electron main add(20,22): 42 OK / greet 42 OK, renderer add(20,22): 42 OK, "electron smoke OK", exit 0 (Electron 33, 실제 Electron Node 런타임에서 N-API 애드온 로드 포함) | PASS |
-| V-2 | `bun run --filter @scriptcable/example-react-native-app test:expo` — Expo 58 `getDefaultConfig` 위 withScriptcableMetro + Metro.runBuild 단언 | 번들에 브리지 포함/원본 소스 배제 | "expo drop-in smoke OK — bundle includes the RN drop-in bridge, 2248946 bytes", exit 0 (스크립트 전체: build:core → build:hosts → 번들 단언) | PASS |
-| V-3 | `bun run --filter @scriptcable/example-astro-app test` — astro build 산출물 단언 (profile_format 포함/원본 소스 배제/wasm 산출 — minify-safe 문자열) | drop-in·wasm 포함, 원본 배제 | "astro drop-in smoke OK — bundle uses the drop-in, calculator.wasm shipped" (Astro 5.18 실빌드) | PASS |
-| V-4 | `bun run --filter @scriptcable/vite test` — rollup.test.ts (실제 rollup() 빌드 2건) | 리다이렉트 성립, dropin:false 원본 유지 | 5 pass / 0 fail (plugin.test 3 + rollup.test 2 — drop-in-only export import로 트리셰이크 방지 단언) | PASS |
+| V-1 | `bun run --filter @scriptca/example-electron-app start` (xvfb-run 폴백, WSLg DISPLAY=:0) — 실제 electron 실행 | exit 0, main+renderer 42 | electron main add(20,22): 42 OK / greet 42 OK, renderer add(20,22): 42 OK, "electron smoke OK", exit 0 (Electron 33, 실제 Electron Node 런타임에서 N-API 애드온 로드 포함) | PASS |
+| V-2 | `bun run --filter @scriptca/example-react-native-app test:expo` — Expo 58 `getDefaultConfig` 위 withScriptcaMetro + Metro.runBuild 단언 | 번들에 브리지 포함/원본 소스 배제 | "expo drop-in smoke OK — bundle includes the RN drop-in bridge, 2248946 bytes", exit 0 (스크립트 전체: build:core → build:hosts → 번들 단언) | PASS |
+| V-3 | `bun run --filter @scriptca/example-astro-app test` — astro build 산출물 단언 (profile_format 포함/원본 소스 배제/wasm 산출 — minify-safe 문자열) | drop-in·wasm 포함, 원본 배제 | "astro drop-in smoke OK — bundle uses the drop-in, calculator.wasm shipped" (Astro 5.18 실빌드) | PASS |
+| V-4 | `bun run --filter @scriptca/vite test` — rollup.test.ts (실제 rollup() 빌드 2건) | 리다이렉트 성립, dropin:false 원본 유지 | 5 pass / 0 fail (plugin.test 3 + rollup.test 2 — drop-in-only export import로 트리셰이크 방지 단언) | PASS |
 | V-5 | `bun run test && bun run typecheck && bun run build` + 기존 예제 회귀 | 전부 성공 | 전 패키지 test/typecheck/build exit 0 (fail 0); vite-app 4단계·next-app(node drop-in 런타임)·node-app·bun-app 전부 exit 0 | PASS |
 
 ## 구현 중 발견·해결한 저장소 결함/환경 이슈 (계획 밖)
 
 | 항목 | 내용 | 해결 |
 |---|---|---|
-| Electron .ts 로드 | Electron의 Node 20은 ESM `.ts`를 로드 불가 — `@scriptcable/client`의 node conditions가 `.ts`를 직접 가리켜 main이 즉시 실패(ERR_UNKNOWN_FILE_EXTENSION) | `writeGeneratedClients`가 bun/node 플레이버의 `.js`를 `transpileModule`로 함께 emit하고 manifest conditions을 `.js`로 전환(브라우저/RN/lynx/tauri와 drop-in은 번들러가 TS 처리하므로 `.ts` 유지) — client-package.test.ts 갱신+케이스 추가 |
+| Electron .ts 로드 | Electron의 Node 20은 ESM `.ts`를 로드 불가 — `@scriptca/client`의 node conditions가 `.ts`를 직접 가리켜 main이 즉시 실패(ERR_UNKNOWN_FILE_EXTENSION) | `writeGeneratedClients`가 bun/node 플레이버의 `.js`를 `transpileModule`로 함께 emit하고 manifest conditions을 `.js`로 전환(브라우저/RN/lynx/tauri와 drop-in은 번들러가 TS 처리하므로 `.ts` 유지) — client-package.test.ts 갱신+케이스 추가 |
 | Linux 링크 게이트 불일치 | toolchain 게이트는 clang만 요구하는데 실제 링커(`linkSharedLibrary`)는 `clang ?? cc` 허용 — cc-only 머신에서 게이트가 링커보다 엄격(버그) | 게이트를 clang-or-cc로 완화, ToolchainInfo에 hasCc/ccPath 추가, 힌트 갱신 |
 | bun 1.4 isolated linker | bun 1.4 기본 linker가 isolated로 바뀌며 워크스페이스 해석 전반이 깨짐(재현: 모든 패키지 import 실패) | `bunfig.toml`에 `linker = "hoisted"` 고정 + 전면 재설치 |
 | rollup 확장자 없는 상대 import | rollup 기본 해석기는 './core' 확장자 생략을 해석하지 않음(node-resolve 역할) | 테스트 보조 플러그인에 .ts 매핑 제공 + 문서화("TS 변환과 형제 해석은 호스트 몫") |
@@ -124,8 +124,8 @@
 
 ## G5 후 웹 커버리지 보강 — SvelteKit 실검증 (2026-10-22)
 
-- **AC-3 확장**: SvelteKit을 레시피-only에서 실빌드 검증으로 상향. `examples/sveltekit-app` — adapter-static + `export const ssr = false`(client-only 페이지, 클라이언트 그래프가 drop-in 서비스 대상), `sveltekit()` 옆에 `@scriptcable/vite` 등록.
-- 검증: `bun run --filter @scriptcable/example-sveltekit-app test` → 실제 `vite build`(sveltekit()) + 어댑터 산출(build/) 단언 — "sveltekit drop-in smoke OK — bundle uses the drop-in, calculator.wasm shipped". **플러그인 코드 무수정** — Astro와 동일하게 표준 resolveId 훅으로 성립.
+- **AC-3 확장**: SvelteKit을 레시피-only에서 실빌드 검증으로 상향. `examples/sveltekit-app` — adapter-static + `export const ssr = false`(client-only 페이지, 클라이언트 그래프가 drop-in 서비스 대상), `sveltekit()` 옆에 `@scriptca/vite` 등록.
+- 검증: `bun run --filter @scriptca/example-sveltekit-app test` → 실제 `vite build`(sveltekit()) + 어댑터 산출(build/) 단언 — "sveltekit drop-in smoke OK — bundle uses the drop-in, calculator.wasm shipped". **플러그인 코드 무수정** — Astro와 동일하게 표준 resolveId 훅으로 성립.
 - 문서·CI: README(영/한) 호스트 표·어댑터 절, CHANGELOG, ci.yml에 SvelteKit 스텝 추가.
 - Nuxt/Remix/SolidStart는 레시피 유지(같은 Vite 훅 경로 — 두 프레임워크에서 무수정 실증됨).
 

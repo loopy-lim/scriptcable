@@ -1,5 +1,5 @@
 /**
- * @scriptcable/tauri — Tauri 2 adapter (native-first).
+ * @scriptca/tauri — Tauri 2 adapter (native-first).
  *
  * Preferred: link scriptc `.lib.a` inside your own Tauri Rust shell
  * (build script / cc crate) and expose commands via `invoke`.
@@ -7,26 +7,26 @@
  *
  * Opt-in: load WASM in the webview only when native linking is unavailable.
  */
-import type { EngineClient, ScriptcableProfile } from '@scriptcable/types';
-import { ScriptcableError } from '@scriptcable/types';
+import type { EngineClient, ScriptcaProfile } from '@scriptca/types';
+import { ScriptcaError } from '@scriptca/types';
 
 export type TauriInvoke = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 
 export type TauriBridgeOptions = {
   invoke: TauriInvoke;
   prefix?: string;
-  profile: ScriptcableProfile;
+  profile: ScriptcaProfile;
 };
 
 /** Native IPC bridge — each export becomes invoke(`${prefix}${name}`, { args }). */
 export function createTauriSidecarEngine(options: TauriBridgeOptions): EngineClient {
-  const prefix = options.prefix ?? 'scriptcable_';
+  const prefix = options.prefix ?? 'scriptca_';
   const known = new Set(options.profile.exports.map((e) => e.export));
   return {
     supports: { sync: false },
     async invoke(command: string, args?: unknown) {
       if (!known.has(command)) {
-        throw new ScriptcableError('UNKNOWN_EXPORT', `Unknown export ${command}`);
+        throw new ScriptcaError('UNKNOWN_EXPORT', `Unknown export ${command}`);
       }
       const list = Array.isArray(args) ? args : args === undefined ? [] : [args];
       return options.invoke(`${prefix}${command}`, { args: list });
@@ -34,4 +34,4 @@ export function createTauriSidecarEngine(options: TauriBridgeOptions): EngineCli
   };
 }
 
-export { loadWasmModule } from '@scriptcable/core/wasm';
+export { loadWasmModule } from '@scriptca/core/wasm';

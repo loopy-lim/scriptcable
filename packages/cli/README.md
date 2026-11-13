@@ -1,8 +1,8 @@
-# @scriptcable/cli
+# @scriptca/cli
 
 ```bash
-bunx @scriptcable/cli init my-app
-cd my-app && bun install && bunx scriptcable build && bun start
+bunx @scriptca/cli init my-app
+cd my-app && bun install && bunx scriptca build && bun start
 ```
 
 Commands: `init`, `build`, `diff`, `doctor`.

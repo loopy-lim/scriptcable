@@ -1,6 +1,6 @@
 /**
  * Renderer source: imports the core entry directly — the TS source, not
- * `@unikit-bridge/scriptcable-client`. With the scriptcable vite plugin registered, this
+ * `@unikit-bridge/scriptca-client`. With the scriptca vite plugin registered, this
  * import is redirected onto the compiled browser drop-in (WASM) at bundle
  * time; the code below never changes.
  */
@@ -13,4 +13,4 @@ el.textContent = `add(20, 22) = ${sum} · greet = ${hi}`;
 
 // The main process polls this after did-finish-load (the drop-in's
 // top-level await init finishes shortly after the module executes).
-(window as { __scriptcableResult?: number }).__scriptcableResult = sum;
+(window as { __scriptcaResult?: number }).__scriptcaResult = sum;

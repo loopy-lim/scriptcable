@@ -1,8 +1,8 @@
 /**
- * The scriptcable site's own core.
+ * The scriptca site's own core.
  *
  * Dogfood: `bun run build:core` compiles exactly this file to WebAssembly
- * (`scriptcable build --target wasm --hosts browser`), and the vite plugin
+ * (`scriptca build --target wasm --hosts browser`), and the vite plugin
  * redirects every `../core` import in the app onto the compiled client —
  * the Live demo section below runs these exports as native-speed WASM in
  * your browser, with zero call-site ceremony.

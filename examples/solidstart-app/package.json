@@ -1,21 +1,21 @@
 {
-  "name": "@scriptcable/example-solidstart-app",
+  "name": "@scriptca/example-solidstart-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "build:core": "bun run --filter @scriptca/example-calculator-core build",
     "build": "bun run build:core && bunx --bun vite build",
     "test": "bun run build && bun scripts/assert-output.mjs"
   },
   "dependencies": {
     "@solidjs/router": "^0.16.0",
     "solid-js": "^1.9.0",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "@solidjs/start": "^2.0.6",
     "vite": "^8.3.5",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

@@ -1,13 +1,13 @@
 {
-  "name": "@scriptcable/example-dx-app",
+  "name": "@scriptca/example-dx-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "scriptcable build"
+    "build": "scriptca build"
   },
   "devDependencies": {
     "scriptc": "^0.4.12",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

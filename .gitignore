@@ -3,7 +3,7 @@ dist/
 build/
 dist-ts/
 .scriptc/
-.scriptcable/
+.scriptca/
 *.lib.a
 *.o
 *.wasm
@@ -36,10 +36,10 @@ packages/*/dist/
 *.so
 *.dylib
 *.dll
-scriptcable-stubs.*
+scriptca-stubs.*
 dist-test/
-.scriptcable-static-work/
+.scriptca-static-work/
 lib*.a
-public/.scriptcable/
+public/.scriptca/
 .gradle/
 .cxx/

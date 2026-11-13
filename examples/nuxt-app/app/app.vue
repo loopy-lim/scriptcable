@@ -9,7 +9,7 @@ const message = `add(20, 22) = ${sum} · greet = ${greet('nuxt')}`;
 
 <template>
   <main>
-    <h1>scriptcable nuxt</h1>
+    <h1>scriptca nuxt</h1>
     <p>{{ message }}</p>
   </main>
 </template>

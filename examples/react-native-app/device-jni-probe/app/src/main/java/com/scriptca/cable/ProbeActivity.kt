@@ -1,4 +1,4 @@
-package com.scriptcable.cable
+package com.scriptca.cable
 
 import android.app.Activity
 import android.os.Bundle

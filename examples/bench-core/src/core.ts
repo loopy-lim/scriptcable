@@ -1,4 +1,4 @@
-/** scriptcable bench core — workloads used by the performance benchmark suite. */
+/** scriptca bench core — workloads used by the performance benchmark suite. */
 
 export function add(a: number, b: number): number {
   return a + b;

@@ -9,8 +9,8 @@
 **사용자에게 달라지는 결과**
 
 1. **F-1 브라우저 WASM 자동 적용**: Next 클라이언트 그래프에서 `createClient()`가 인자 없이 동작한다. next/webpack 플러그인이 빌드 시 `<name>.wasm`을 `public/`에 자동 복사하고, 생성된 browser 클라이언트가 URL 후보(모듈 상대 → 오리진 루트)를 HEAD 프로브로 자동 선택한다. README의 "copy `<name>.wasm` to your static directory" 수동 단계와 vite 예제의 `sync-public.mjs` 수동 스크립트가 사라진다. vite `build`(dist)에서도 브라우저 wasm이 동작한다(기존에는 모듈 상대 URL만 있어 dist에서 404).
-2. **F-2 `scriptcable build --watch`**: Vite 외 호스트(Next Turbopack predev, Bun/Node 앱)에서 core.ts 수정이 자동 재빌드된다. 빌드 캐시 해시와 동일한 입력 세트(엔트리 + 같은 디렉터리 형제 .ts + 설정 파일)의 mtime을 폴링해 변경 시 빌드+코드젠을 재실행한다.
-3. **F-3 CI 내구성 자동화(init)**: `scriptcable init`이 `.scriptcable/generated/`에 `@scriptcable/client` 플레이스홀더 매니페스트를 미리 쓰고, package.json에 `"@scriptcable/client": "file:.scriptcable/generated"`를 기록하며, 프로젝트 .gitignore에 플레이스홀더 2파일의 부정 패턴을 넣는다 → fresh clone에서 `bun install`이 실패하지 않고 링크가 유지된다. doctor는 dep 누락 시 정확한 스니펫을 안내한다(기존 프로젝트 package.json 자동 수정은 fresh-clone 설치 실패 함정 때문에 하지 않음).
+2. **F-2 `scriptca build --watch`**: Vite 외 호스트(Next Turbopack predev, Bun/Node 앱)에서 core.ts 수정이 자동 재빌드된다. 빌드 캐시 해시와 동일한 입력 세트(엔트리 + 같은 디렉터리 형제 .ts + 설정 파일)의 mtime을 폴링해 변경 시 빌드+코드젠을 재실행한다.
+3. **F-3 CI 내구성 자동화(init)**: `scriptca init`이 `.scriptca/generated/`에 `@scriptca/client` 플레이스홀더 매니페스트를 미리 쓰고, package.json에 `"@scriptca/client": "file:.scriptca/generated"`를 기록하며, 프로젝트 .gitignore에 플레이스홀더 2파일의 부정 패턴을 넣는다 → fresh clone에서 `bun install`이 실패하지 않고 링크가 유지된다. doctor는 dep 누락 시 정확한 스니펫을 안내한다(기존 프로젝트 package.json 자동 수정은 fresh-clone 설치 실패 함정 때문에 하지 않음).
 4. **F-4 webpack 플러그인 테스트**: vite/next에는 플러그인 테스트가 있지만 webpack에는 없다 — 동일 패턴으로 추가.
 
 **제외 범위**
@@ -26,13 +26,13 @@
 |---|---|
 | `packages/core/src/codegen.ts:251` | browser 클라이언트 `DEFAULT_URL = new URL(wasmRel, import.meta.url)` 단일 후보 — Next 클라이언트 그래프(청크 URL로 rewrite)·vite build(assets 하위)에서 404 |
 | `packages/next/src/index.ts:26` | `buildCore(target:'native')` 하드코딩 — wasm 산출물 없음, README가 수동 public/ 복사 요구 |
-| `examples/vite-app/scripts/sync-public.mjs` | 수동 public/.scriptcable/ 동기화 스크립트(빌드 스크립트에 `&&`로 결합) |
+| `examples/vite-app/scripts/sync-public.mjs` | 수동 public/.scriptca/ 동기화 스크립트(빌드 스크립트에 `&&`로 결합) |
 | `packages/vite/src/index.ts:38` | target 'both'로 wasm 생성하지만 public 복사 없음 — vite build 브라우저 404 |
 | `packages/core/src/build-cache.ts:46-82` | `collectSourceHashes` — 엔트리+같은 디렉터리 형제 .ts 해시. watch가 이 입력 세트를 그대로 폴링하면 캐시와 일치 |
 | `packages/core/src/config-loader.ts:50,74` | `?t=${Date.now()}` 캐시 버스트 import — watch 루프에서 설정 재해석 가능 |
 | `bun install` 실증 (2026-10-21) | `file:` 대상 디렉터리에 package.json이 없으면 **설치 실패**("Could not find package.json") — dep 자동 기록은 플레이스홀더가 전제 |
-| `.gitignore` (루트) | `.scriptcable/` 전체 무시 — 플레이스홀더 커밋엔 부정 패턴 필요 |
-| `packages/cli/src/commands/init.ts:196-199` | `--from` 오버라이드 루프가 `@scriptcable/client`를 체크아웃 packages에서 찾아 실패할 것 → client는 건너뛰도록 수정 필요 |
+| `.gitignore` (루트) | `.scriptca/` 전체 무시 — 플레이스홀더 커밋엔 부정 패턴 필요 |
+| `packages/cli/src/commands/init.ts:196-199` | `--from` 오버라이드 루프가 `@scriptca/client`를 체크아웃 packages에서 찾아 실패할 것 → client는 건너뛰도록 수정 필요 |
 | `packages/webpack/src/index.ts` | 플러그인 클래스, beforeCompile 훅 — 테스트 부재 |
 
 **환경·도구**: Bun 1.4.x, bun:test, scriptc 0.3.6 + clang + zig 0.13 로컬 검증됨. 폴링 watch는 의존성 추가 없이 mtime stat으로 구현.
@@ -44,8 +44,8 @@
 | AC-1 | 생성 browser 클라이언트에 (a) 모듈 상대, (b) 오리진 루트 후보와 HEAD 프로브, (c) 명시적 `wasmUrl` 우선이 존재한다. 어느 후보도 HEAD로 확인 안 되면 첫 후보로 기존 동작(오류 노출) 유지 | T-1 | V-1 |
 | AC-2 | next 플러그인 빌드 후 `public/<name>.wasm`이 존재하고, wasm이 없으면 자동으로 wasm 타깃을 빌드한다(zig 부재 등 실패 시 경고 1줄 + 네이티브만으로 계속). webpack 플러그인도 동일 | T-2 | V-2 |
 | AC-3 | vite 플러그인이 `publicDir`(기본 `<root>/public`)에 wasm을 복사한다 — vite build 산출물 dist에서 브라우저가 `/<name>.wasm`으로 로드 가능 | T-3 | V-3 |
-| AC-4 | `scriptcable build --watch`가 초기 빌드 후 core.ts 변경을 감지해 재빌드하고, 빌드 오류 시에도 감시를 유지한다. Ctrl+C로 종료 | T-4, T-5 | V-4 |
-| AC-5 | `init` 산출 프로젝트에서 (a) package.json에 client file: dep, (b) 플레이스홀더 매니페스트, (c) .gitignore 부정 패턴이 있고, `bun install`이 fresh 상태에서 성공하며 `@scriptcable/client`가 해석된다 | T-6 | V-5 |
+| AC-4 | `scriptca build --watch`가 초기 빌드 후 core.ts 변경을 감지해 재빌드하고, 빌드 오류 시에도 감시를 유지한다. Ctrl+C로 종료 | T-4, T-5 | V-4 |
+| AC-5 | `init` 산출 프로젝트에서 (a) package.json에 client file: dep, (b) 플레이스홀더 매니페스트, (c) .gitignore 부정 패턴이 있고, `bun install`이 fresh 상태에서 성공하며 `@scriptca/client`가 해석된다 | T-6 | V-5 |
 | AC-6 | doctor가 client dep 누락 시 스니펫을 안내한다 (기존 검사 회귀 없음) | T-7 | V-6 |
 | AC-7 | 전체 회귀(test/typecheck/build + vite·next 예제) 통과, README/README.ko/CHANGELOG 갱신 | T-8, T-9 | V-7 |
 
@@ -55,7 +55,7 @@
 
 - `genBrowserClient`: `RELATIVE_URL`(import.meta.url 기준) + `rootUrl()`(document.baseURI / location.href 기준 `/{name}.wasm`, DOM·location 없으면 null) 후보 배열. `resolveWasmUrl(explicit)`: explicit 우선 → HEAD `{ok}` 프로브로 첫 도달 후보 → 모두 실패 시 `CANDIDATES[0]`(기존 동작 — 컴파일 오류가 그대로 노출). 모듈 스코프에 해석 결과 캐시(재호출 프로브 생략). Lynx/Tauri 클라이언트는 browser 템플릿 재사용이므로 자동 수혜.
 - `client-package.ts`에 `copyWasmToPublicDir({publicDir, wasmPath, wasmName?}) → 'written'|'unchanged'|'skipped'` — skip-identical(기존 `copyIfChanged`와 같은 규약), 실패는 치명 아님.
-- `toolchain.ts`에 `ensureWasmArtifact(config, {cwd, outDir?}) → string|undefined` — 기존 `.scriptcable/<name>.wasm` 재사용 → 없으면 `buildCore(target:'wasm')`(캐시 적용) → 실패 시 경고 1~2줄 + undefined. 네이티브 빌드를 절대 망가뜨리지 않는 소프트 보조.
+- `toolchain.ts`에 `ensureWasmArtifact(config, {cwd, outDir?}) → string|undefined` — 기존 `.scriptca/<name>.wasm` 재사용 → 없으면 `buildCore(target:'wasm')`(캐시 적용) → 실패 시 경고 1~2줄 + undefined. 네이티브 빌드를 절대 망가뜨리지 않는 소프트 보조.
 
 **F-2 (CLI watch)**
 
@@ -64,7 +64,7 @@
 
 **F-3 (init/doctor)**
 
-- init: (1) `<root>/.scriptcable/generated/package.json` 플레이스홀더(`.` → `./placeholder.ts`, `@scriptcable/client` 이름 유지 — 첫 빌드의 `writeClientPackage`가 내용이 달라지면 덮어씀) + `placeholder.ts`(실행 시 "scriptcable build를 먼저 돌리라"는 오류), (2) deps에 `@scriptcable/client: file:.scriptcable/generated`(`--from` 오버라이드 루프는 client를 건너뛰게 수정), (3) `.gitignore` — `.scriptcable/*` + `!.scriptcable/generated/` + 내용 무시 + 플레이스홀더 2파일 재포함.
+- init: (1) `<root>/.scriptca/generated/package.json` 플레이스홀더(`.` → `./placeholder.ts`, `@scriptca/client` 이름 유지 — 첫 빌드의 `writeClientPackage`가 내용이 달라지면 덮어씀) + `placeholder.ts`(실행 시 "scriptca build를 먼저 돌리라"는 오류), (2) deps에 `@scriptca/client: file:.scriptca/generated`(`--from` 오버라이드 루프는 client를 건너뛰게 수정), (3) `.gitignore` — `.scriptca/*` + `!.scriptca/generated/` + 내용 무시 + 플레이스홀더 2파일 재포함.
 - doctor: 링크가 살아있고 package.json에 dep가 없으면 스니펫 2줄 안내(자동 기록 아님 — dep만 있고 플레이스홀더가 커밋 안 된 fresh clone은 bun install이 실패하므로, 기존 프로젝트에 대한 무분별한 자동 기록은 위험).
 
 **오류·경계**

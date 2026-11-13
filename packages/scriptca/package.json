@@ -1,11 +1,11 @@
 {
-  "name": "@unikit-bridge/scriptcable",
+  "name": "@unikit-bridge/scriptca",
   "version": "0.1.1",
   "description": "One TypeScript core (compiled by scriptc) → type-safe clients for Bun, Node, Deno, Tauri, React Native, Lynx, Cloudflare Workers, Vite, and Next.js — single package with per-host subpath exports",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "scriptcable": "./dist/cli/index.js"
+    "scriptca": "./dist/cli/index.js"
   },
   "exports": {
     ".": {
@@ -139,13 +139,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/loopy-lim/scriptcable.git",
-    "directory": "packages/scriptcable"
+    "url": "git+https://github.com/loopy-lim/scriptca.git",
+    "directory": "packages/scriptca"
   },
   "bugs": {
-    "url": "https://github.com/loopy-lim/scriptcable/issues"
+    "url": "https://github.com/loopy-lim/scriptca/issues"
   },
-  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
+  "homepage": "https://github.com/loopy-lim/scriptca#readme",
   "publishConfig": {
     "access": "public"
   }

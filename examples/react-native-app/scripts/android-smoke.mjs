@@ -21,10 +21,10 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const gen = join(root, '.scriptcable', 'generated');
+const gen = join(root, '.scriptca', 'generated');
 const androidGen = join(gen, 'android');
-const androidDir = join(root, '.scriptcable', 'android-arm64');
-const work = join(root, '.scriptcable', 'smoke-work');
+const androidDir = join(root, '.scriptca', 'android-arm64');
+const work = join(root, '.scriptca', 'smoke-work');
 
 function run(cmd, args, opts = {}) {
   return spawnSync(cmd, args, { cwd: root, encoding: 'utf8', ...opts });
@@ -59,14 +59,14 @@ static void check(const char* label, const std::string& got, const std::string& 
 }
 
 int main() {
-  check("add", scriptcable::callJson("add", "[20,22]"), "{\"ok\":true,\"value\":42}");
-  check("mul", scriptcable::callJson("mul", "[6,7]"), "{\"ok\":true,\"value\":42}");
-  check("greet", scriptcable::callJson("greet", "[\"smoke\"]"), "{\"ok\":true,\"value\":\"hello, smoke\"}");
-  check("greet-escape", scriptcable::callJson("greet", "[\"say \\\"hi\\\"\"]"),
+  check("add", scriptca::callJson("add", "[20,22]"), "{\"ok\":true,\"value\":42}");
+  check("mul", scriptca::callJson("mul", "[6,7]"), "{\"ok\":true,\"value\":42}");
+  check("greet", scriptca::callJson("greet", "[\"smoke\"]"), "{\"ok\":true,\"value\":\"hello, smoke\"}");
+  check("greet-escape", scriptca::callJson("greet", "[\"say \\\"hi\\\"\"]"),
         "{\"ok\":true,\"value\":\"hello, say \\\"hi\\\"\"}");
-  check("unknown", scriptcable::callJson("nope", "[]"), "{\"ok\":false,\"error\":\"unknown export: nope\"}");
-  check("missing-args", scriptcable::callJson("add", "[1]"), "{\"ok\":false,\"error\":\"missing argument\"}");
-  check("hasExport", scriptcable::hasExport("add") ? "y" : "n", "y");
+  check("unknown", scriptca::callJson("nope", "[]"), "{\"ok\":false,\"error\":\"unknown export: nope\"}");
+  check("missing-args", scriptca::callJson("add", "[1]"), "{\"ok\":false,\"error\":\"missing argument\"}");
+  check("hasExport", scriptca::hasExport("add") ? "y" : "n", "y");
   std::printf(fails == 0 ? "host dispatch smoke OK\n" : "host dispatch smoke FAILED\n");
   return fails == 0 ? 0 : 1;
 }
@@ -80,8 +80,8 @@ writeFileSync(
   'void scr_promise_settled_void(void) {}\nvoid scr_promise_settled_ref(void) {}\nvoid scr_promise_settled_now(void) {}\nint scr_promise_payload_truthy(void) { return 0; }\n',
 );
 
-const hostArchive = join(root, '.scriptcable', 'calculator.lib.a');
-if (!existsSync(hostArchive)) throw new Error('missing host archive — run `scriptcable build` once');
+const hostArchive = join(root, '.scriptca', 'calculator.lib.a');
+if (!existsSync(hostArchive)) throw new Error('missing host archive — run `scriptca build` once');
 // The stubs must stay C — a C++ driver would mangle the names.
 const ccDriver = process.env.CC ?? 'c++';
 const cCompiler = process.env.CC_C ?? 'cc';

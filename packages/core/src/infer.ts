@@ -1,6 +1,6 @@
 /**
- * TS → ABI inference: derive scriptcable exports directly from the entry
- * module's TypeScript, so `scriptcable.json` never needs a duplicate
+ * TS → ABI inference: derive scriptca exports directly from the entry
+ * module's TypeScript, so `scriptca.json` never needs a duplicate
  * `exports` array.
  *
  * Rules:
@@ -12,10 +12,10 @@
  * - Type aliases matching ABI class names (u8..u64, f32/f64, cstring, bytes)
  *   resolve to those classes — e.g. `type UserId = u32`.
  * - Functions whose params can't be mapped are skipped with a reason
- *   (reported by `scriptcable build --explain`).
+ *   (reported by `scriptca build --explain`).
  */
 import ts from 'typescript';
-import type { AbiClass } from '@scriptcable/types';
+import type { AbiClass } from '@scriptca/types';
 
 export type InferredExport = {
   name: string;

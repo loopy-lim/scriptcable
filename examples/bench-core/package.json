@@ -1,21 +1,21 @@
 {
-  "name": "@scriptcable/example-bench-core",
+  "name": "@scriptca/example-bench-core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "scriptcable build --target both --hosts node,bun,browser",
-    "doctor": "scriptcable doctor",
-    "contract:check": "scriptcable diff",
+    "build": "scriptca build --target both --hosts node,bun,browser",
+    "doctor": "scriptca doctor",
+    "contract:check": "scriptca diff",
     "bench": "bun src/bench.ts"
   },
   "dependencies": {
     "koffi": "^3.3.3",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "scriptc": "^0.4.12",
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

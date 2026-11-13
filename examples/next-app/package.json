@@ -1,10 +1,10 @@
 {
-  "name": "@scriptcable/example-next-app",
+  "name": "@scriptca/example-next-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "scriptcable build --target both && bun -e \"import('@unikit-bridge/scriptcable/next').then(m=>m.scriptcableBuild())\"",
+    "build:core": "scriptca build --target both && bun -e \"import('@unikit-bridge/scriptca/next').then(m=>m.scriptcaBuild())\"",
     "test:server": "bun run build:core && bun src/server-action.ts",
     "build": "bun run build:core && bun run scripts/fake-next-build.mjs && bun --bun next build --webpack",
     "build:turbo": "bun run build:core && bun --bun next build",
@@ -12,7 +12,7 @@
     "test": "bun run test:server && bun run build && bun run test:runtime"
   },
   "dependencies": {
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
@@ -22,6 +22,6 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "scriptc": "^0.4.12",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

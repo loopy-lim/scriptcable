@@ -33,27 +33,27 @@ jobs:
       - run: bun run build
       # bin links are only created when dist/index.js exists — re-link after build
       - run: bun install
-      - run: bun run --filter @scriptcable/core test
-      - run: bun run --filter @scriptcable/cli test
-      - run: bun run --filter @scriptcable/vite test
-      - run: bun run --filter @scriptcable/next test
-      - run: bun run --filter @scriptcable/webpack test
-      - run: bun run --filter @scriptcable/react-native test
-      - run: bun run --filter @scriptcable/node test
-      - run: bun run --filter @scriptcable/tauri test
-      - run: bun run --filter @scriptcable/lynx test
-      - run: bun run --filter @scriptcable/example-calculator-core build
-      - run: bun run --filter @scriptcable/example-bench-core build
-      - run: bun run --filter @scriptcable/example-node-app test
+      - run: bun run --filter @scriptca/core test
+      - run: bun run --filter @scriptca/cli test
+      - run: bun run --filter @scriptca/vite test
+      - run: bun run --filter @scriptca/next test
+      - run: bun run --filter @scriptca/webpack test
+      - run: bun run --filter @scriptca/react-native test
+      - run: bun run --filter @scriptca/node test
+      - run: bun run --filter @scriptca/tauri test
+      - run: bun run --filter @scriptca/lynx test
+      - run: bun run --filter @scriptca/example-calculator-core build
+      - run: bun run --filter @scriptca/example-bench-core build
+      - run: bun run --filter @scriptca/example-node-app test
       - name: Bun e2e
-        run: bun run --filter @scriptcable/example-bun-app start
+        run: bun run --filter @scriptca/example-bun-app start
       - name: Vite + Next
         run: |
-          bun run --filter @scriptcable/example-vite-app test:ssr
-          bun run --filter @scriptcable/example-vite-app test:wasm
-          bun run --filter @scriptcable/example-vite-app test:dropin
-          bun run --filter @scriptcable/example-vite-app build
-          bun run --filter @scriptcable/example-next-app test
+          bun run --filter @scriptca/example-vite-app test:ssr
+          bun run --filter @scriptca/example-vite-app test:wasm
+          bun run --filter @scriptca/example-vite-app test:dropin
+          bun run --filter @scriptca/example-vite-app build
+          bun run --filter @scriptca/example-next-app test
       # Desktop / mobile-framework / web-framework host smokes — the Electron
       # binary downloads via its (trusted) postinstall; ubuntu runners ship
       # libnss3 and xvfb-run.
@@ -68,31 +68,31 @@ jobs:
           ELECTRON_DISABLE_SANDBOX: '1'
         run: |
           rm -f node_modules/electron/dist/chrome-sandbox
-          bun run --filter @scriptcable/example-electron-app test
+          bun run --filter @scriptca/example-electron-app test
       - name: Astro
-        run: bun run --filter @scriptcable/example-astro-app test
+        run: bun run --filter @scriptca/example-astro-app test
       - name: SvelteKit
-        run: bun run --filter @scriptcable/example-sveltekit-app test
+        run: bun run --filter @scriptca/example-sveltekit-app test
       - name: Expo metro bundle
-        run: bun run --filter @scriptcable/example-react-native-app test:expo
+        run: bun run --filter @scriptca/example-react-native-app test:expo
       - name: Android native host (cross-build + dispatch smoke)
-        run: bun run --filter @scriptcable/example-react-native-app test:android
+        run: bun run --filter @scriptca/example-react-native-app test:android
       - name: Nuxt
-        run: bun run --filter @scriptcable/example-nuxt-app test
+        run: bun run --filter @scriptca/example-nuxt-app test
       - name: React Router
-        run: bun run --filter @scriptcable/example-remix-app test
+        run: bun run --filter @scriptca/example-remix-app test
       - name: SolidStart
-        run: bun run --filter @scriptcable/example-solidstart-app test
+        run: bun run --filter @scriptca/example-solidstart-app test
       - name: Cloudflare Workers (dry-run + wrangler dev)
-        run: bun run --filter @scriptcable/example-workers-app test
+        run: bun run --filter @scriptca/example-workers-app test
       - name: Install deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
       - name: Deno runtime
-        run: bun run --filter @scriptcable/example-deno-app test
-      - run: bun run --filter @scriptcable/example-calculator-core contract:check
-      - run: bun run --filter @scriptcable/example-calculator-core build:wasm
+        run: bun run --filter @scriptca/example-deno-app test
+      - run: bun run --filter @scriptca/example-calculator-core contract:check
+      - run: bun run --filter @scriptca/example-calculator-core build:wasm
       # Non-blocking while runner numbers accumulate — the ×2.5 tolerance
       # catches gross call-path regressions, not runner jitter
       - name: Perf gate (vs committed baseline)
@@ -150,6 +150,6 @@ jobs:
       - run: bun install
       - run: bun run build
       - run: bun install
-      - run: bun run --filter @scriptcable/core test
-      - run: bun run --filter @scriptcable/cli test
-      - run: bun run --filter @scriptcable/example-calculator-core build
+      - run: bun run --filter @scriptca/core test
+      - run: bun run --filter @scriptca/cli test
+      - run: bun run --filter @scriptca/example-calculator-core build

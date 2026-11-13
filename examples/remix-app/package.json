@@ -1,10 +1,10 @@
 {
-  "name": "@scriptcable/example-remix-app",
+  "name": "@scriptca/example-remix-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "build:core": "bun run --filter @scriptca/example-calculator-core build",
     "build": "bun run build:core && bunx --bun react-router build",
     "test": "bun run build && bun scripts/assert-output.mjs"
   },
@@ -13,11 +13,11 @@
     "react-dom": "^19.0.0",
     "react-router": "^8.5.0",
     "isbot": "^5",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "@react-router/dev": "^8.5.0",
     "vite": "^7.0.0",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

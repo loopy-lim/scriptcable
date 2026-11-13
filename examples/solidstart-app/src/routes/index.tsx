@@ -6,7 +6,7 @@ export default function Home() {
   const sum = add(20, 22);
   return (
     <main>
-      <h1>scriptcable solidstart</h1>
+      <h1>scriptca solidstart</h1>
       <p>
         add(20, 22) = {sum} · greet = {greet('solidstart')}
       </p>

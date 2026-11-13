@@ -12,7 +12,7 @@ if (!root) throw new Error('#root not found — check index.html');
 
 createRoot(root).render(
   <StrictMode>
-    <UnikitThemeProvider storageKey="scriptcable-theme">
+    <UnikitThemeProvider storageKey="scriptca-theme">
       <LangProvider>
         <App />
       </LangProvider>

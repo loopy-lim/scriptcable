@@ -28,8 +28,8 @@
  * executive + the decoded results array). All supported hosts are
  * little-endian; the C side reads/writes native order.
  */
-import type { AbiClass, BatchEntry, ScriptcableProfile, ExportDef } from '@scriptcable/types';
-import { ScriptcableError } from '@scriptcable/types';
+import type { AbiClass, BatchEntry, ScriptcaProfile, ExportDef } from '@scriptca/types';
+import { ScriptcaError } from '@scriptca/types';
 
 /** Result kinds — wire-stable constants shared with the C codegen. */
 const KIND_F64 = 1;
@@ -96,7 +96,7 @@ type WireState = {
   payload: Int32Array;
 };
 
-export function createBatchWire(profile: ScriptcableProfile): BatchWire {
+export function createBatchWire(profile: ScriptcaProfile): BatchWire {
   const byName = new Map<string, { def: ExportDef; idx: number }>();
   profile.exports.forEach((def, idx) => byName.set(def.export, { def, idx }));
 
@@ -129,14 +129,14 @@ export function createBatchWire(profile: ScriptcableProfile): BatchWire {
     for (const entry of entries) {
       const found = byName.get(entry[0]);
       if (!found) {
-        throw new ScriptcableError(
+        throw new ScriptcaError(
           'UNKNOWN_EXPORT',
           `Unknown export "${entry[0]}"`,
           `Known: ${[...byName.keys()].join(', ')}`,
         );
       }
       if (entry.length - 1 !== found.def.params.length) {
-        throw new ScriptcableError(
+        throw new ScriptcaError(
           'ABI',
           `Export "${entry[0]}" expects ${found.def.params.length} argument${found.def.params.length === 1 ? '' : 's'}, got ${entry.length - 1}`,
         );
@@ -159,7 +159,7 @@ export function createBatchWire(profile: ScriptcableProfile): BatchWire {
       const name = entry[0];
       const found = byName.get(name);
       if (!found) {
-        throw new ScriptcableError(
+        throw new ScriptcaError(
           'UNKNOWN_EXPORT',
           `Unknown export "${name}"`,
           `Known: ${[...byName.keys()].join(', ')}`,
@@ -168,7 +168,7 @@ export function createBatchWire(profile: ScriptcableProfile): BatchWire {
       const { def, idx } = found;
       const params = def.params;
       if (entry.length - 1 !== params.length) {
-        throw new ScriptcableError(
+        throw new ScriptcaError(
           'ABI',
           `Export "${name}" expects ${params.length} argument${params.length === 1 ? '' : 's'}, got ${entry.length - 1}`,
         );
@@ -244,7 +244,7 @@ export function createBatchWire(profile: ScriptcableProfile): BatchWire {
             break;
           }
           default:
-            throw new ScriptcableError('ABI', `Unsupported param class: ${cls}`);
+            throw new ScriptcaError('ABI', `Unsupported param class: ${cls}`);
         }
       }
     }
@@ -303,7 +303,7 @@ export function createBatchWire(profile: ScriptcableProfile): BatchWire {
           out.push(undefined);
           break;
         default:
-          throw new ScriptcableError('ABI', `Corrupt batch result block: kind ${kind} at byte ${i - 4}`);
+          throw new ScriptcaError('ABI', `Corrupt batch result block: kind ${kind} at byte ${i - 4}`);
       }
     }
     return out;

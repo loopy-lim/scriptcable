@@ -17,43 +17,43 @@ async function withTmpDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
 describe('config-loader', () => {
   it('loads a TS config (relative import inside project) and keeps exports undefined', async () => {
     await withTmpDir(async (dir) => {
-      // Simulate a user project: @scriptcable/core resolvable via node_modules
-      const nmDir = join(dir, 'node_modules', '@scriptcable');
+      // Simulate a user project: @scriptca/core resolvable via node_modules
+      const nmDir = join(dir, 'node_modules', '@scriptca');
       await symlink(resolveRepoDir('packages/core'), join(nmDir, 'core'), 'dir').catch(async () => {
         const { mkdir } = await import('node:fs/promises');
         await mkdir(nmDir, { recursive: true });
         await symlink(resolveRepoDir('packages/core'), join(nmDir, 'core'), 'dir');
       });
       await writeFile(
-        join(dir, 'scriptcable.config.ts'),
-        `import { defineConfig } from '@scriptcable/core';
+        join(dir, 'scriptca.config.ts'),
+        `import { defineConfig } from '@scriptca/core';
 export default defineConfig({ name: 'demo', entry: 'src/core.ts' });
 `,
       );
       const { config, source } = await loadProjectConfig(dir);
-      assert.equal(source, 'scriptcable.config.ts');
+      assert.equal(source, 'scriptca.config.ts');
       assert.equal(config.name, 'demo');
       assert.equal(config.exports, undefined);
     });
   });
 
-  it('falls back to scriptcable.json when no TS config exists', async () => {
+  it('falls back to scriptca.json when no TS config exists', async () => {
     await withTmpDir(async (dir) => {
       await writeFile(
-        join(dir, 'scriptcable.json'),
+        join(dir, 'scriptca.json'),
         JSON.stringify({ name: 'j', entry: 'src/core.ts' }),
       );
       const { source } = await loadProjectConfig(dir);
-      assert.equal(source, 'scriptcable.json');
+      assert.equal(source, 'scriptca.json');
     });
   });
 
   it('TS config takes priority over JSON', async () => {
     await withTmpDir(async (dir) => {
-      await writeFile(join(dir, 'scriptcable.json'), JSON.stringify({ name: 'json-one', entry: 'a.ts' }));
+      await writeFile(join(dir, 'scriptca.json'), JSON.stringify({ name: 'json-one', entry: 'a.ts' }));
       // no node_modules symlink needed: config imports nothing
       await writeFile(
-        join(dir, 'scriptcable.config.ts'),
+        join(dir, 'scriptca.config.ts'),
         `export default { name: 'ts-one', entry: 'a.ts' };
 `,
       );
@@ -66,7 +66,7 @@ export default defineConfig({ name: 'demo', entry: 'src/core.ts' });
     await withTmpDir(async (dir) => {
       await assert.rejects(
         () => loadProjectConfig(dir),
-        /scriptcable\.config\.ts/,
+        /scriptca\.config\.ts/,
       );
     });
   });
@@ -119,11 +119,11 @@ export default defineConfig({ name: 'demo', entry: 'src/core.ts' });
         await mkdir(join(dir, 'src'), { recursive: true });
         await writeFile(join(dir, 'src', 'core.ts'), 'export const x = 1;\n');
         await writeFile(
-          join(dir, 'scriptcable.json'),
+          join(dir, 'scriptca.json'),
           JSON.stringify({ name: 'explicit-name' }), // entry omitted, name explicit
         );
         const { config, source, inferredFields } = await resolveProjectConfig(dir);
-        assert.equal(source, 'scriptcable.json');
+        assert.equal(source, 'scriptca.json');
         assert.equal(config.name, 'explicit-name'); // explicit wins
         assert.equal(config.entry, 'src/core.ts'); // inferred
         assert.deepEqual(inferredFields, ['entry']);
@@ -135,7 +135,7 @@ export default defineConfig({ name: 'demo', entry: 'src/core.ts' });
         await assert.rejects(
           () => resolveProjectConfig(dir),
           (err: Error) => {
-            assert.match(err.message, /scriptcable\.config\.ts/);
+            assert.match(err.message, /scriptca\.config\.ts/);
             assert.match(err.message, /src\/core\.ts/);
             return true;
           },

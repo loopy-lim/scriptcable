@@ -2,12 +2,12 @@
  * Deno usage: one bare import — export conditions pick the deno flavor
  * (compiled .js, since Deno won't strip types under node_modules) and the
  * wasm is read from the generated directory. No flags, no config:
- *   scriptcable build --target wasm --hosts deno
+ *   scriptca build --target wasm --hosts deno
  *   deno run -A src/main.ts
  *
  * Same API as every other flavor: createClient(), then typed calls.
  */
-import { createClient } from '@unikit-bridge/scriptcable-client';
+import { createClient } from '@unikit-bridge/scriptca-client';
 
 const client = await createClient();
 

@@ -15,7 +15,7 @@ const { addonPath, profile, batches } = workerData as {
 };
 const req = createRequire(addonPath);
 const addon = req(addonPath) as Record<string, (...args: unknown[]) => unknown>;
-const exec = addon['__scriptcable_batch'] as (meta: Int32Array, args: Uint8Array) => Uint8Array;
+const exec = addon['__scriptca_batch'] as (meta: Int32Array, args: Uint8Array) => Uint8Array;
 const wire = createBatchWire(profile);
 
 let corrupt = 0;

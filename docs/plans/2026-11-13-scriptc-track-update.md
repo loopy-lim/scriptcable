@@ -30,7 +30,7 @@
 | V | 명령/관찰 | 결과 |
 |---|---|---|
 | V-1 | stale 핀 grep(정규식 `0\.4\.(0|9)`) 매니페스트·toolchain·init → 0건 — deno·workers의 `scriptc ^0.4.0` 2건은 독립 리뷰 F-1 지적으로 수정 반영; `bun.lock`에 `scriptc@0.4.12` | PASS |
-| V-2 | `bun run build` 13패키지 exit 0 · `bun run test` 전 패키지 exit 0(core 120 pass) · `test:e2e:bun`/`test:e2e:node` `{"sum":42,…}` 실호출 · calculator-core `.scriptcable` 재생성(캐시 무효화) | PASS |
+| V-2 | `bun run build` 13패키지 exit 0 · `bun run test` 전 패키지 exit 0(core 120 pass) · `test:e2e:bun`/`test:e2e:node` `{"sum":42,…}` 실호출 · calculator-core `.scriptca` 재생성(캐시 무효화) | PASS |
 | V-3 | README/ko·getting-started·toolchain 문구·CHANGELOG diff 대조 | PASS |
 | V-4 | `docs/research/2026-11-13-bun-aot-notes.md` 존재 | PASS |
 

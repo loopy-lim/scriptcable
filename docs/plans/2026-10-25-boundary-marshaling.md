@@ -51,7 +51,7 @@
 | AC-3 | wasm 문자열 왕복 ≥30% 감소, bytes 경로 동일 적용 + 회귀 0 | bench + 전체 테스트 |
 | AC-4 | 애드온 문자열 경로 분해 측정 기록 + 근거에 따라 C 입력 버퍼 재사용 적용 또는 미적용 판정 기록 | 측정 로그 + (적용 시) 애드온 빌드·로드 검증 |
 | AC-5 | linux-x64 baseline JSON + bench-gate 스크립트(문턱 초과 rc≠0)가 이 머신에서 동작한다 | gate 실행 rc 확인 |
-| AC-6 | BENCHMARK.md 재실측 수치 + "언제 scriptcable을 쓰지 말아야 하는가" 판정 기준 문서화 | 문서 diff |
+| AC-6 | BENCHMARK.md 재실측 수치 + "언제 scriptca을 쓰지 말아야 하는가" 판정 기준 문서화 | 문서 diff |
 | AC-7 | 전체 테스트 0 fail + pack-smoke 게이트 통과 | bun run test + pack-smoke rc=0 |
 
 ## 태스크

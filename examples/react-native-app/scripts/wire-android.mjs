@@ -5,7 +5,7 @@
  *   bun scripts/wire-android.mjs
  *   cd android && ./gradlew assembleDebug
  *
- * The bridge .so is PREBUILT by `scriptcable build --platform android`
+ * The bridge .so is PREBUILT by `scriptca build --platform android`
  * (JNI + dispatch + statically-linked scriptc archive) — it ships as a
  * jniLib, so no app-level CMake is added. IMPORTANT: never add an
  * `externalNativeBuild` block to app/build.gradle — RN 0.88's gradle
@@ -18,8 +18,8 @@ import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const android = join(root, 'android');
-const gen = join(root, '.scriptcable', 'generated', 'android');
-const soSource = join(root, '.scriptcable', 'android-arm64', 'libcalculator.so');
+const gen = join(root, '.scriptca', 'generated', 'android');
+const soSource = join(root, '.scriptca', 'android-arm64', 'libcalculator.so');
 
 if (!existsSync(android)) throw new Error('android/ missing — run `bunx expo prebuild -p android --no-install` first');
 for (const f of ['CableModule.kt', 'CablePackage.kt']) {
@@ -28,7 +28,7 @@ for (const f of ['CableModule.kt', 'CablePackage.kt']) {
 if (!existsSync(soSource)) throw new Error('prebuilt bridge .so missing — run `bun run build:android` first');
 
 // 1) Kotlin module + package
-const cablePkg = join(android, 'app', 'src', 'main', 'java', 'com', 'scriptcable', 'cable');
+const cablePkg = join(android, 'app', 'src', 'main', 'java', 'com', 'scriptca', 'cable');
 mkdirSync(cablePkg, { recursive: true });
 copyFileSync(join(gen, 'CableModule.kt'), join(cablePkg, 'CableModule.kt'));
 copyFileSync(join(gen, 'CablePackage.kt'), join(cablePkg, 'CablePackage.kt'));
@@ -56,7 +56,7 @@ copyFileSync(soSource, join(assets, 'libcalculator_cable.so'));
 copyFileSync(join(gen, '..', 'NativeCable.ts'), join(root, 'src', 'NativeCable.ts'));
 
 // 5) Register the package in MainApplication (idempotent)
-const appKt = join(android, 'app', 'src', 'main', 'java', 'com', 'scriptcable', 'rnexample', 'MainApplication.kt');
+const appKt = join(android, 'app', 'src', 'main', 'java', 'com', 'scriptca', 'rnexample', 'MainApplication.kt');
 let app = readFileSync(appKt, 'utf8');
 if (!app.includes('CablePackage')) {
   if (!app.includes('// Packages that cannot be autolinked yet')) {
@@ -64,7 +64,7 @@ if (!app.includes('CablePackage')) {
   }
   app = app.replace(
     '          // Packages that cannot be autolinked yet can be added manually here, for example:\n          // add(MyReactNativePackage())',
-    '          // Packages that cannot be autolinked yet can be added manually here, for example:\n          // add(MyReactNativePackage())\n          add(com.scriptcable.cable.CablePackage())',
+    '          // Packages that cannot be autolinked yet can be added manually here, for example:\n          // add(MyReactNativePackage())\n          add(com.scriptca.cable.CablePackage())',
   );
   writeFileSync(appKt, app);
 }

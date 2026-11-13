@@ -9,7 +9,7 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveProfile } from './profile.js';
-import type { ScriptcableConfig } from '@scriptcable/types';
+import type { ScriptcaConfig } from '@scriptca/types';
 
 describe('resolveProfile with explicit exports', () => {
   it('merges paramNames and JSDoc from the entry source', async () => {
@@ -24,7 +24,7 @@ describe('resolveProfile with explicit exports', () => {
       entry: 'src/core.ts',
       prefix: 'calc_',
       exports: [{ name: 'add', params: ['f64', 'f64'], returns: 'f64' }],
-    } as ScriptcableConfig;
+    } as ScriptcaConfig;
 
     const { profile, inferred } = await resolveProfile(config, dir);
     assert.equal(inferred, false, 'explicit declarations must still report as declared');
@@ -40,7 +40,7 @@ describe('resolveProfile with explicit exports', () => {
       entry: 'src/missing.ts',
       prefix: 'calc_',
       exports: [{ name: 'add', params: ['f64', 'f64'], returns: 'f64' }],
-    } as ScriptcableConfig;
+    } as ScriptcaConfig;
     const { profile } = await resolveProfile(config, dir);
     assert.equal(profile.exports.length, 1);
     assert.equal(profile.exports[0]!.paramNames, undefined, 'positional fallback');

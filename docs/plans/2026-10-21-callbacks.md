@@ -8,7 +8,7 @@
 
 **사용자에게 달라지는 결과**
 
-1. 코어가 호스트 콜백을 선언하면(`scriptcable.json`의 `callbacks`) 클라이언트가 `createClient({ callbacks: { onTick: (n) => ... } })`로 JS 구현을 넘기고, 코어의 네이티브/WASM 코드가 그것을 호출한다.
+1. 코어가 호스트 콜백을 선언하면(`scriptca.json`의 `callbacks`) 클라이언트가 `createClient({ callbacks: { onTick: (n) => ... } })`로 JS 구현을 넘기고, 코어의 네이티브/WASM 코드가 그것을 호출한다.
 2. 콜백이 있어도 N-API 애드온이 더 이상 스킵되지 않는다 (현재는 `canBuildNodeAddon`이 false — "cores with callbacks skip the addon").
 
 **제외 범위**
@@ -25,7 +25,7 @@
 | `packages/core/src/wasm-loader.ts:199` | **WASM 경로는 콜백 구현 완료** — 등록 테이블에 JS 함수를 심어 코어가 호출 (렌더러/브라우저에서 동작 가능) |
 | `packages/core/src/napi-addon.ts:24` | 콜백 있으면 애드온 스킵 (`canBuildNodeAddon` false) — 트램펄린 부재 |
 | `packages/core/src/native-loader.ts` | 콜백 등록 경로 없음 — 네이티브 공유 라이브러리는 JS 역호출 불가 |
-| scriptcable 추론 (`infer.ts`) | 콜백 선언은 `scriptcable.json` 명시만 (TS 소스에서 추론 안 함) |
+| scriptca 추론 (`infer.ts`) | 콜백 선언은 `scriptca.json` 명시만 (TS 소스에서 추론 안 함) |
 
 **미확정 (태스크 T-0에서 확정할 것)**: `callback_register_symbol`이 기대하는 등록 함수 서명(함수 포인터 배열? 개별 등록?), 호출 규약(동기 역호출 시 스레드), WASM 경로의 등록 테이블과의 정합. scriptc 0.4 문서 부재 → 바이너리 프로브로 확정.
 
@@ -33,7 +33,7 @@
 
 | ID | 관찰할 결과와 적용 조건 | 담당 태스크 | 검증 ID |
 |---|---|---|---|
-| AC-1 | `callbacks` 선언 코어가 `scriptcable build`로 네이티브 공유 라이브러리 + 애드온을 모두 생성하고, JS에서 `createClient({ callbacks })`로 코어의 역호출이 JS 함수로 도달한다 (`bun test` 실호출) | T-1, T-2 | V-1 |
+| AC-1 | `callbacks` 선언 코어가 `scriptca build`로 네이티브 공유 라이브러리 + 애드온을 모두 생성하고, JS에서 `createClient({ callbacks })`로 코어의 역호출이 JS 함수로 도달한다 (`bun test` 실호출) | T-1, T-2 | V-1 |
 | AC-2 | 생성 클라이언트 타입이 `callbacks` 매개변수를 노출하고 (플레이버별), 누락 시 코어 호출 시점에 "pass callbacks: { … }" 안내 오류 | T-2 | V-2 |
 | AC-3 | 콜백 유무와 무관하게 drop-in 3종 생성 규칙이 유지된다 (콜백 코어도 drop-in 가능 — 브라우저 플레이버는 WASM 경로이므로 이미 가능) | T-3 | V-3 |
 | AC-4 | 문서(README/ko)에 callbacks 레시피 + 네이티브 호스트(C 측 등록) 레시피 기재, CHANGELOG 갱신 | T-4 | V-4 |

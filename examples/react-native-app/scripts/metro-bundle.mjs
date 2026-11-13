@@ -8,11 +8,11 @@
  *   - the TypeScript entry source is NOT (its greet template literal only
  *     exists in the original core)
  *
- * Run after `scriptcable build --hosts react-native` (build:core does it).
+ * Run after `scriptca build --hosts react-native` (build:core does it).
  */
 import Metro from 'metro';
 import metroConfigPkg from '@react-native/metro-config';
-import { withScriptcableMetro } from '@scriptcable/react-native/metro';
+import { withScriptcaMetro } from '@scriptca/react-native/metro';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { mkdtempSync } from 'node:fs';
@@ -26,11 +26,11 @@ const entry = join(root, 'src', 'rn-entry.ts');
 const baseConfig = await metroConfigPkg.getDefaultConfig(root);
 baseConfig.projectRoot = root;
 baseConfig.watchFolders = [root, repoRoot];
-const config = withScriptcableMetro(baseConfig, {
+const config = withScriptcaMetro(baseConfig, {
   cwd: root,
   entry: '../calculator-core/src/core.ts',
 });
-if (!config.resolver?.resolveRequest) throw new Error('withScriptcableMetro did not wire a resolveRequest');
+if (!config.resolver?.resolveRequest) throw new Error('withScriptcaMetro did not wire a resolveRequest');
 
 const out = join(mkdtempSync(join(tmpdir(), 'sc-metro-')), 'index.bundle');
 const { code } = await Metro.runBuild(config, {

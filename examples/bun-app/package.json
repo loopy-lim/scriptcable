@@ -1,13 +1,13 @@
 {
-  "name": "@scriptcable/example-bun-app",
+  "name": "@scriptca/example-bun-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "build:core": "bun run --filter @scriptca/example-calculator-core build",
     "start": "bun run build:core && bun src/main.ts"
   },
   "dependencies": {
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

@@ -1,8 +1,8 @@
-# @scriptcable/webpack
+# @scriptca/webpack
 
 Works with Webpack 5, Rspack, and Rsbuild (Lynx Rspeedy):
 
 ```js
-import { ScriptcableRspackPlugin } from '@scriptcable/webpack';
-export default { plugins: [new ScriptcableRspackPlugin()] };
+import { ScriptcaRspackPlugin } from '@scriptca/webpack';
+export default { plugins: [new ScriptcaRspackPlugin()] };
 ```

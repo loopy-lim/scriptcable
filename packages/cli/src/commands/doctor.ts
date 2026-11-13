@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { doctor } from '@scriptcable/core';
+import { doctor } from '@scriptca/core';
 import { formatError } from '../errors.js';
 
 /** WSL env vars can be stripped (nested shells, CI) — /proc/version is the
@@ -20,7 +20,7 @@ function isWsl(): boolean {
 export async function runDoctor(cwd = process.cwd()): Promise<number> {
   try {
     const info = await doctor(cwd);
-    console.log('scriptcable doctor');
+    console.log('scriptca doctor');
     if (info.runtime === 'bun') {
       console.log(`  bun:      ${info.bunVersion} ✓`);
     } else {
@@ -43,7 +43,7 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
       `  zig:      ${
         info.hasZig
           ? `${info.zigPath} ✓`
-          : 'missing — auto-provisions 0.13.x on the first wasm/cross build (SCRIPTCABLE_NO_AUTO_TOOLS=1 disables)'
+          : 'missing — auto-provisions 0.13.x on the first wasm/cross build (SCRIPTCA_NO_AUTO_TOOLS=1 disables)'
       }`,
     );
     console.log(
@@ -62,12 +62,12 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
     }
     if (info.clientLink) {
       if (info.clientLink === 'blocked') {
-        console.log('  client:   @unikit-bridge/scriptcable-client link UNAVAILABLE');
-        console.log('    Fix: rerun `scriptcable build`, or add `"@unikit-bridge/scriptcable-client": "file:.scriptcable/generated"`');
+        console.log('  client:   @unikit-bridge/scriptca-client link UNAVAILABLE');
+        console.log('    Fix: rerun `scriptca build`, or add `"@unikit-bridge/scriptca-client": "file:.scriptca/generated"`');
         console.log('    to dependencies and reinstall for a CI-durable link.');
       } else {
         const verb = info.clientLink === 'current' ? '✓' : '✓ (repaired)';
-        console.log(`  client:   @unikit-bridge/scriptcable-client → node_modules ${verb}`);
+        console.log(`  client:   @unikit-bridge/scriptca-client → node_modules ${verb}`);
         // CI durability: the file: dep only survives when its placeholder
         // manifest is committed, so report rather than auto-write — `init`
         // scaffolds the dep + placeholder + gitignore negations as a set.
@@ -76,10 +76,10 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
             dependencies?: Record<string, string>;
             devDependencies?: Record<string, string>;
           };
-          const declared = { ...pkg.dependencies, ...pkg.devDependencies }['@unikit-bridge/scriptcable-client'];
-          if (declared !== 'file:.scriptcable/generated') {
+          const declared = { ...pkg.dependencies, ...pkg.devDependencies }['@unikit-bridge/scriptca-client'];
+          if (declared !== 'file:.scriptca/generated') {
             console.log('  client-dep: not CI-durable — add to package.json to survive re-installs:');
-            console.log('              "@unikit-bridge/scriptcable-client": "file:.scriptcable/generated"  (init scaffolds this)');
+            console.log('              "@unikit-bridge/scriptca-client": "file:.scriptca/generated"  (init scaffolds this)');
           }
         } catch {
           /* no package.json here — nothing to advise */
@@ -87,7 +87,7 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
       }
     }
     console.log('\nOK — ready to build native cores.');
-    console.log('  repeat builds are cached in .scriptcable/build-cache.json (scriptcable build --force to bypass)');
+    console.log('  repeat builds are cached in .scriptca/build-cache.json (scriptca build --force to bypass)');
     if (isWsl()) {
       console.log(
         `WSL (${process.env.WSL_DISTRO_NAME ?? 'detected via /proc'}): GUI hosts (Electron) may need system libs — on sudo-less setups,` +
@@ -95,10 +95,10 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
       );
     }
     console.log('Apple Silicon (M1/M2/M3): host builds are arm64 by default.');
-    console.log('  iOS device lib:   SCRIPTC_TARGET=aarch64-apple-ios scriptcable build --target native');
+    console.log('  iOS device lib:   SCRIPTC_TARGET=aarch64-apple-ios scriptca build --target native');
     console.log('  iOS simulator:    SCRIPTC_TARGET=aarch64-apple-ios-simulator …');
     console.log('  Android arm64:    SCRIPTC_TARGET=aarch64-linux-android … (needs NDK + zig)');
-    console.log('  WASM (browser):   scriptcable build --target wasm   # needs zig 0.13.x');
+    console.log('  WASM (browser):   scriptca build --target wasm   # needs zig 0.13.x');
     return 0;
   } catch (e) {
     console.error(formatError(e));

@@ -1,13 +1,13 @@
-# scriptcable Performance Report
+# scriptca Performance Report
 
-**Date:** 2026-10-20 (re-measured after the `@scriptcable/client` package release) · **Host:** Apple M1 Max (10-core CPU, 64 GB) · macOS arm64
+**Date:** 2026-10-20 (re-measured after the `@scriptca/client` package release) · **Host:** Apple M1 Max (10-core CPU, 64 GB) · macOS arm64
 **Runtime:** Bun 1.4.3 · **Toolchain:** scriptc 0.4.0, Apple clang, zig 0.13 (WASM)
 
 Run it yourself:
 
 ```bash
-bun run --filter @scriptcable/example-bench-core build
-bun run --filter @scriptcable/example-bench-core bench
+bun run --filter @scriptca/example-bench-core build
+bun run --filter @scriptca/example-bench-core bench
 ```
 
 ## 1. Call latency & throughput — native (bun:ffi) vs wasm (WASI)
@@ -53,12 +53,12 @@ Same `add(f64, f64) → f64` export, this machine. Measured rows are our runs; c
 | technology | measured | mean/call | notes |
 | --- | --- | --- | --- |
 | napi-rs 2 addon (Rust, statically typed export) | ✅ | **22 ns** | built for this comparison (LTO, Node 22) — direct N-API boundary, no per-call type conversion |
-| **scriptcable typed N-API addon (Node)** | ✅ | **24.5–24.7 ns** | shipped: the build compiles a per-export typed C wrapper against the same core archive — napi-rs class, generated |
-| scriptcable typed N-API addon (Bun) | ✅ | **46.5–47.8 ns** | same addon under Bun's N-API layer — still faster than bun:ffi |
-| scriptcable browser client (Chromium, raw WASM) | ✅ | **48 ns** | thin generated glue over plain wasm — competitive with statically bound addons |
+| **scriptca typed N-API addon (Node)** | ✅ | **24.5–24.7 ns** | shipped: the build compiles a per-export typed C wrapper against the same core archive — napi-rs class, generated |
+| scriptca typed N-API addon (Bun) | ✅ | **46.5–47.8 ns** | same addon under Bun's N-API layer — still faster than bun:ffi |
+| scriptca browser client (Chromium, raw WASM) | ✅ | **48 ns** | thin generated glue over plain wasm — competitive with statically bound addons |
 | koffi 3.3 (generic FFI, Node) | ✅ | 70–76 ns | generic symbol binding + per-call dynamic conversion |
 | bun:ffi (generic FFI, Bun) | ✅ | 73–80 ns | same class as koffi |
-| **scriptcable native client (Node / Bun)** | ✅ | **= host FFI** (70–80 ns) | the generated client binds the same symbols through the host's own loader — zero added layer |
+| **scriptca native client (Node / Bun)** | ✅ | **= host FFI** (70–80 ns) | the generated client binds the same symbols through the host's own loader — zero added layer |
 | JSI hybrid object (Nitro-class, RN) | — cited | tens of ns (claimed) | statically compiled JSI bindings, no serialization — upstream (margelo/nitro) claims JSI-class overhead and "up to 55×" vs the legacy bridge; not runnable here (no RN host) |
 | legacy RN bridge / TurboModule hop | ✅ JS-side | 165–181 ns + device transport | async + JSON per hop; transport not measured |
 | Tauri `invoke` (webview IPC) | — cited | IPC-class (µs+) | requires a running Tauri shell; out of scope here |
@@ -77,17 +77,17 @@ All three cross one boundary; they differ in how much work the boundary does per
 - **WASM in a browser (48 ns)**: the JS caller and the wasm module share one JIT (V8). The JS→wasm wrapper is signature-specialized and compiled once, then cached — parameters travel in registers, no boxing, no runtime type inspection.
 - **Generic FFI — bun:ffi / koffi (70–80 ns)**: the binding must handle *any* signature at runtime. Each call converts tagged JS values to C types dynamically, sets up a GC/trampoline scope, and dispatches through a generic layer. That generality is the extra ~25–30 ns.
 
-**Can scriptcable reach the 22 ns class natively? It does now.** The types are fixed at compile time, and `scriptcable build` compiles a per-export typed C wrapper (node_api.h) against the same core archive: `{name}.node`. Generated clients prefer it automatically — measured **24.5–24.7 ns/call** under Node (napi-rs class from generated code, ~3× faster than the generic-FFI fallback) and **~47 ns** under Bun (Bun's N-API layer carries more overhead than Node's; both beat their generic-FFI fallbacks). The fallbacks remain automatic. Two routes were validated against this project's predecessor rustra:
+**Can scriptca reach the 22 ns class natively? It does now.** The types are fixed at compile time, and `scriptca build` compiles a per-export typed C wrapper (node_api.h) against the same core archive: `{name}.node`. Generated clients prefer it automatically — measured **24.5–24.7 ns/call** under Node (napi-rs class from generated code, ~3× faster than the generic-FFI fallback) and **~47 ns** under Bun (Bun's N-API layer carries more overhead than Node's; both beat their generic-FFI fallbacks). The fallbacks remain automatic. Two routes were validated against this project's predecessor rustra:
 
 1. **Generated N-API addon** — shipped (the row above).
-2. **JSI for RN** — rustra measured parity with a Nitro HybridObject (±5%, iOS simulator) over JSI; the same route takes scriptcable's RN flavor from bridge-class (~165 ns + transport) to JSI-class (future work).
+2. **JSI for RN** — rustra measured parity with a Nitro HybridObject (±5%, iOS simulator) over JSI; the same route takes scriptca's RN flavor from bridge-class (~165 ns + transport) to JSI-class (future work).
 
-Before the addon, scriptcable's direct-ABI calls (70–80 ns) already beat rustra's host-level RPC paths (1.26–2.27 µs) ~16–30× for scalar calls, because rustra spends its budget on the wire, async semantics, and rich types rather than a bare sync boundary.
+Before the addon, scriptca's direct-ABI calls (70–80 ns) already beat rustra's host-level RPC paths (1.26–2.27 µs) ~16–30× for scalar calls, because rustra spends its budget on the wire, async semantics, and rich types rather than a bare sync boundary.
 
 **Reading:**
 
-- **scriptcable adds no layer of its own** — its native call cost is exactly the host's FFI cost, because the generated client binds the core's symbols through the host's loader (koffi/bun:ffi) or plain WASM.
-- A hand-written napi-rs addon beats generic FFI ~3× (22 vs 73 ns) thanks to statically typed bindings. That is the trade scriptcable makes deliberately: one TypeScript core compiled once → the same ABI surface on Bun, Node, browser, and RN, versus a per-host, per-language addon codebase. If you target Node only and need every nanosecond, write a napi addon; if you need four hosts from one source, scriptcable's ~50 ns/call premium over the fastest addon is usually irrelevant at the boundary's scale.
+- **scriptca adds no layer of its own** — its native call cost is exactly the host's FFI cost, because the generated client binds the core's symbols through the host's loader (koffi/bun:ffi) or plain WASM.
+- A hand-written napi-rs addon beats generic FFI ~3× (22 vs 73 ns) thanks to statically typed bindings. That is the trade scriptca makes deliberately: one TypeScript core compiled once → the same ABI surface on Bun, Node, browser, and RN, versus a per-host, per-language addon codebase. If you target Node only and need every nanosecond, write a napi addon; if you need four hosts from one source, scriptca's ~50 ns/call premium over the fastest addon is usually irrelevant at the boundary's scale.
 - The statically-typed-binding idea (napi-class ~22 ns) is a known future direction for generated clients (e.g. a compiled binding path instead of generic FFI).
 
 Reproducibility of the napi-rs row — the whole addon:
@@ -118,8 +118,8 @@ A pure in-process JS call is ~55–60× cheaper than crossing into a compiled co
 
 | metric | time | notes |
 | --- | --- | --- |
-| Cold core build (scriptc compile + clang link, both targets) | **~1.06 s** | full pipeline from an empty `.scriptcable` |
-| Warm build (cache hit) | **~166 ms** | **6.4× faster** — skips scriptc + link via `.scriptcable/build-cache.json` |
+| Cold core build (scriptc compile + clang link, both targets) | **~1.06 s** | full pipeline from an empty `.scriptca` |
+| Warm build (cache hit) | **~166 ms** | **6.4× faster** — skips scriptc + link via `.scriptca/build-cache.json` |
 | Warm repeat (cache + identical-codegen skip) | ~165 ms | content-hash codegen skip keeps editor watchers quiet |
 | Full monorepo package build (12 pkgs, clean) | ~3.7 s | `bun run build`, parallel across 10 cores |
 
@@ -129,15 +129,15 @@ The build cache hashes entry sources + sibling module graph + ABI surface + targ
 
 | scenario | wall time |
 | --- | --- |
-| `@scriptcable/client` import → loaded client (bun flavor, dylib) → first calls ready | **~6.2 ms** |
+| `@scriptca/client` import → loaded client (bun flavor, dylib) → first calls ready | **~6.2 ms** |
 | first two exported calls after load | ~0.16 ms |
 | `bun src/main.ts` — full process: runtime boot, dylib load, 3 calls, exit | ~0.10–0.13 s |
 
-The ~6 ms figure is measured inside the process (`performance.now()` around `import('@scriptcable/client')` + `createClient()`); the process wall adds Bun's own boot.
+The ~6 ms figure is measured inside the process (`performance.now()` around `import('@scriptca/client')` + `createClient()`); the process wall adds Bun's own boot.
 
-## 6. `@scriptcable/client` package — zero call-path cost
+## 6. `@scriptca/client` package — zero call-path cost
 
-The package published into `.scriptcable/generated/` and linked as `node_modules/@scriptcable/client` is the generated client itself, exposed through export conditions — no wrapper layer, no indirection at call time:
+The package published into `.scriptca/generated/` and linked as `node_modules/@scriptca/client` is the generated client itself, exposed through export conditions — no wrapper layer, no indirection at call time:
 
 - Resolution happens once at import; the bound methods call the typed N-API addon directly when present (24.5 ns class), else the shared library via the host's FFI, else WASM.
 - Runtime flavor selection (bun/node/browser/react-native) is static per environment — no branching in the call path.
@@ -152,16 +152,16 @@ The package published into `.scriptcable/generated/` and linked as `node_modules
 
 ## Takeaways
 
-1. **Native and WASM are interchangeable on speed** for scriptcable cores (~73–80 ns/call); pick per-platform.
+1. **Native and WASM are interchangeable on speed** for scriptca cores (~73–80 ns/call); pick per-platform.
 2. **The build cache is the big DX win** — 6.4× faster inner loop on unchanged inputs, with precise invalidation.
 3. **Coarse exports beat chatty ones** — string round-trips land at ~0.66–1.0 µs after the marshaling round (2026-10-25); batch string/bytes work inside one export to amortize the crossing.
-4. **`@scriptcable/client` adds no runtime cost** — flavor selection is import-time resolution; calls run at the measured engine speed everywhere (Bun CLI, Next server, browser).
+4. **`@scriptca/client` adds no runtime cost** — flavor selection is import-time resolution; calls run at the measured engine speed everywhere (Bun CLI, Next server, browser).
 5. Startup is snappy: ~6 ms from import to a loaded, callable native engine.
-6. **Against the alternatives**: scriptcable now generates a typed N-API addon — 24.5 ns/call under Node, ~47 ns under Bun (napi-rs class from generated code on Node), with generic FFI (70–80 ns) as the automatic fallback and browser WASM at 48 ns. Node-only and per-language addon codebases buy ~2 ns over that; scriptcable compiles one TS core for all four hosts.
+6. **Against the alternatives**: scriptca now generates a typed N-API addon — 24.5 ns/call under Node, ~47 ns under Bun (napi-rs class from generated code on Node), with generic FFI (70–80 ns) as the automatic fallback and browser WASM at 48 ns. Node-only and per-language addon codebases buy ~2 ns over that; scriptca compiles one TS core for all four hosts.
 
 ## 8. Re-measured on linux-x64 (WSL2, bun 1.4.4) — 2026-10-25, boundary-marshaling round
 
-Median of 3 runs (`bun run --filter @scriptcable/example-bench-core bench`, `call()` path):
+Median of 3 runs (`bun run --filter @scriptca/example-bench-core bench`, `call()` path):
 
 | benchmark | before round | after | change |
 | --- | --- | --- | --- |
@@ -194,10 +194,10 @@ round targeted the delivered number instead:
 - **bench-gate**: `examples/bench-core/scripts/bench-gate.ts` now guards the string-marshaling
   contract too, and the committed baseline covers linux-x64 (2.5× gross-regression tolerance).
 
-**When NOT to use scriptcable** (decision boundary, this host): the boundary pays one copy plus
+**When NOT to use scriptca** (decision boundary, this host): the boundary pays one copy plus
 UTF-8 encode/decode. Pure-JS references: ping 0.8 ns, add 1.1 ns, repeat(100) ~336 ns. Even at
 ~0.66 µs per string call, an API made of many small string round-trips is still ~2× slower in
-scriptcable than plain TS — keep that logic in TS. Where scriptcable wins is coarse exports: one
+scriptca than plain TS — keep that logic in TS. Where scriptca wins is coarse exports: one
 crossing that does the work of many (fib, image math, parsing) beats JS at equal or better
 latency with memory isolation and type-safe ABI.
 

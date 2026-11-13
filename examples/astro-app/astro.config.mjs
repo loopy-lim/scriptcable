@@ -1,16 +1,16 @@
 import { defineConfig } from 'astro/config';
-import scriptcable from '@scriptcable/vite';
+import scriptca from '@scriptca/vite';
 
-// Astro embeds Vite — the scriptcable plugin registers like any vite plugin.
+// Astro embeds Vite — the scriptca plugin registers like any vite plugin.
 export default defineConfig({
   vite: {
-    plugins: [scriptcable()],
+    plugins: [scriptca()],
     build: {
       // The drop-in browser client initializes WASM with top-level await.
       target: 'es2022',
     },
     optimizeDeps: {
-      exclude: ['@scriptcable/core', '@scriptcable/core/wasm', '@scriptcable/core/wasi'],
+      exclude: ['@scriptca/core', '@scriptca/core/wasm', '@scriptca/core/wasi'],
     },
   },
 });

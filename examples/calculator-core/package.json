@@ -1,18 +1,18 @@
 {
-  "name": "@scriptcable/example-calculator-core",
+  "name": "@scriptca/example-calculator-core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "scriptcable build --hosts node,bun,browser,tauri,react-native,lynx",
-    "build:both": "scriptcable build --target both --hosts node,bun,browser,tauri,react-native,lynx",
-    "build:wasm": "scriptcable build --target wasm --hosts node,bun,browser,tauri,react-native,lynx",
-    "doctor": "scriptcable doctor",
-    "contract:check": "scriptcable diff"
+    "build": "scriptca build --hosts node,bun,browser,tauri,react-native,lynx",
+    "build:both": "scriptca build --target both --hosts node,bun,browser,tauri,react-native,lynx",
+    "build:wasm": "scriptca build --target wasm --hosts node,bun,browser,tauri,react-native,lynx",
+    "doctor": "scriptca doctor",
+    "contract:check": "scriptca diff"
   },
   "devDependencies": {
     "scriptc": "^0.4.12",
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

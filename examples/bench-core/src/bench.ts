@@ -1,5 +1,5 @@
 /**
- * scriptcable benchmark — native (bun:ffi) vs wasm (WASI) on this machine.
+ * scriptca benchmark — native (bun:ffi) vs wasm (WASI) on this machine.
  *
  * Workloads:
  *   ping          — pure call overhead (no work)
@@ -7,18 +7,18 @@
  *   fib(30)       — CPU-heavy iterative loop
  *   repeat(s,100) — string marshal round-trip (alloc + copy both ways)
  */
-import { bench, formatTable, formatComparison, type BenchResult, type CompareRow } from '@unikit-bridge/scriptcable/testing';
-import { loadNativeFromOutDir } from '@unikit-bridge/scriptcable/core/native';
-import { loadWasmModule } from '@unikit-bridge/scriptcable/core/wasm';
-import { createMinimalWasi } from '@unikit-bridge/scriptcable/core/wasi';
-import { createBatchWire } from '@unikit-bridge/scriptcable/core/batch';
+import { bench, formatTable, formatComparison, type BenchResult, type CompareRow } from '@unikit-bridge/scriptca/testing';
+import { loadNativeFromOutDir } from '@unikit-bridge/scriptca/core/native';
+import { loadWasmModule } from '@unikit-bridge/scriptca/core/wasm';
+import { createMinimalWasi } from '@unikit-bridge/scriptca/core/wasi';
+import { createBatchWire } from '@unikit-bridge/scriptca/core/batch';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const outDir = join(dirname(fileURLToPath(import.meta.url)), '../.scriptcable');
+const outDir = join(dirname(fileURLToPath(import.meta.url)), '../.scriptca');
 
 async function timeColdAndWarmBuild(): Promise<{ coldMs: number; warmMs: number; cachedMs: number }> {
   const { spawnSync } = await import('node:child_process');
@@ -142,7 +142,7 @@ async function main(): Promise<void> {
   if (existsSync(addonPath)) {
     const req = createRequire(join(outDir, 'package.json'));
     const addon = req(addonPath) as Record<string, (...args: unknown[]) => unknown>;
-    const exec = addon['__scriptcable_batch'] as
+    const exec = addon['__scriptca_batch'] as
       | ((meta: Int32Array, args: Uint8Array) => Uint8Array)
       | undefined;
     const wire = createBatchWire(profile);

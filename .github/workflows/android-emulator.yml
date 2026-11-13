@@ -28,7 +28,7 @@ name: android-emulator
 #    without upstream tooling.
 #
 # RE-ENABLE when vercel-labs/scriptc ships @scriptc/runtime-android-x86_64:
-#   - build: scriptcable build --platform android --abi x86_64 (core needs
+#   - build: scriptca build --platform android --abi x86_64 (core needs
 #     the abi plumbed through toolchain.ts platform + ensureRuntimePack)
 #   - expo plugin: jniLibs/x86_64 copy
 #   - below: image system-images;android-30;google_apis;x86_64 (native
@@ -88,9 +88,9 @@ jobs:
       - run: bun install
       - run: bun run build
       - name: Build core + android artifacts + dispatch smoke
-        run: bun run --filter @scriptcable/example-react-native-app test:android
+        run: bun run --filter @scriptca/example-react-native-app test:android
       - name: App bundle smoke (launchability — real metro graph)
-        run: bun run --filter @scriptcable/example-react-native-app test:app-bundle
+        run: bun run --filter @scriptca/example-react-native-app test:app-bundle
       - name: Serve JS bundle (expo metro — warm it before the app asks)
         run: |
           cd examples/react-native-app
@@ -169,22 +169,22 @@ jobs:
           # --- Primary: debug APK (JS from metro over adb reverse) ---
           "$ADB" install -r android/app/build/outputs/apk/debug/app-debug.apk
           "$ADB" logcat -c
-          "$ADB" shell monkey -p com.scriptcable.rnexample 1
+          "$ADB" shell monkey -p com.scriptca.rnexample 1
           sleep 120
           "$ADB" exec-out screencap -p > /tmp/debug-hang.png 2>/dev/null || true
           if assert_result "" 30 "debug APK"; then exit 0; fi
           echo "debug APK silent after 7 min — JS never produced a log."
           echo "--- app threads (missing js/mqt_js = React never initialized):"
-          "$ADB" shell ps -T "$("$ADB" shell pidof com.scriptcable.rnexample | tr -d '\r')" 2>/dev/null | head -60 || true
+          "$ADB" shell ps -T "$("$ADB" shell pidof com.scriptca.rnexample | tr -d '\r')" 2>/dev/null | head -60 || true
           echo "--- focused window:"
           "$ADB" shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true
           # --- Fallback: release APK (bundle baked in — no dev server at all;
           # --- RN template ships minify disabled, so JNI symbols stay intact).
           echo "--- falling back to release APK (embedded bundle, no metro)"
-          "$ADB" uninstall com.scriptcable.rnexample >/dev/null 2>&1 || true
+          "$ADB" uninstall com.scriptca.rnexample >/dev/null 2>&1 || true
           "$ADB" install -r android/app/build/outputs/apk/release/app-release.apk
           "$ADB" logcat -c
-          "$ADB" shell monkey -p com.scriptcable.rnexample 1
+          "$ADB" shell monkey -p com.scriptca.rnexample 1
           sleep 60
           "$ADB" exec-out screencap -p > /tmp/release-hang.png 2>/dev/null || true
           if assert_result "" 60 "release APK"; then
@@ -193,7 +193,7 @@ jobs:
           fi
           echo "release APK silent too — diagnostics:"
           echo "--- app process (empty = died/never started):"
-          "$ADB" shell pidof com.scriptcable.rnexample || true
+          "$ADB" shell pidof com.scriptca.rnexample || true
           echo "--- focused window:"
           "$ADB" shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true
           echo "--- ReactNativeJS + AndroidRuntime:"

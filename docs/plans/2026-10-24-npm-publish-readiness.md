@@ -2,10 +2,10 @@
 
 ## 요구
 
-노스스타("TypeScript 프로젝트에 scriptcable만 추가하면 알아서 다 잘 되는")의 최대 병목은
-발행 전 상태다. README.ko가 `# npm 발행 후: bunx @scriptcable/cli init`를 전제하고,
+노스스타("TypeScript 프로젝트에 scriptca만 추가하면 알아서 다 잘 되는")의 최대 병목은
+발행 전 상태다. README.ko가 `# npm 발행 후: bunx @scriptca/cli init`를 전제하고,
 잔여 한계 2건(standalone Deno의 core 해석, 코드젠 CLI 배포)이 발행에 매달려 있다.
-현 시점 13개 `@scriptcable/*` 패키지 모두 `repository`·`publishConfig` 필드가 없고,
+현 시점 13개 `@scriptca/*` 패키지 모두 `repository`·`publishConfig` 필드가 없고,
 expo만 LICENSE 파일이 없으며, 발행 자동화(워크플로)가 없다.
 
 **범위**: 발행 가능성 완비(매니페스트·타르볼 검증) + 태그 기반 발행 자동화 + F-2 결함
@@ -21,7 +21,7 @@ expo만 LICENSE 파일이 없으며, 발행 자동화(워크플로)가 없다.
   **사용자 프로젝트에** `bun add --dev`하는 것(`packages/core/src/toolchain.ts:236`) —
   발행 core에 런타임 팩 의존성 불필요.
 - expo만 `LICENSE` 파일 부재(files에도 미등록). 나머지 12개는 LICENSE·README·files 완비.
-- git remote: `https://github.com/loopy-lim/scriptcable`.
+- git remote: `https://github.com/loopy-lim/scriptca`.
 - cli bin 진입점 `#!/usr/bin/env bun` shebang 확인(`packages/cli/src/index.ts:1`).
 - F-2 위치: `packages/cli/src/commands/init.ts:57` — `opts.name`을 그대로 슬러그화해
   `/tmp/sc-perf-demo` → `name: "-tmp-sc-perf-demo"`(basename 추출 없음).
@@ -73,7 +73,7 @@ expo만 LICENSE 파일이 없으며, 발행 자동화(워크플로)가 없다.
 
 ## 잔여 한계
 
-- **실제 npm 발행·조직(`@scriptcable`) 권한 확인은 사용자 몫** — `NPM_TOKEN` 시크릿 등록 후 첫 태그 푸시가 실런타임 검증(409 재발행 거부, 토큰 권한, `--access` 서버 효과 포함). 워크플로는 정적 검증 + 동일 커맨드 로컬 녹색으로 대체.
+- **실제 npm 발행·조직(`@scriptca`) 권한 확인은 사용자 몫** — `NPM_TOKEN` 시크릿 등록 후 첫 태그 푸시가 실런타임 검증(409 재발행 거부, 토큰 권한, `--access` 서버 효과 포함). 워크플로는 정적 검증 + 동일 커맨드 로컬 녹색으로 대체.
 - provenance는 bun 1.4.4 publish 미지원 — 서명 필요 시 npm CLI 경로 별도 과제.
 - deno/node 계층 런타임 검증은 CI 몫 유지(기존 한계).
 - CLI의 Node 실행 감지 분기(`node dist/index.js` → 명시적 오류)는 로컬 node 미설치로 읽기 검증만 — bun 경로(라이브러리 임포트 무실행, bin 실행)는 스모크 실측.

@@ -7,7 +7,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
+import type { ResolvedConfig, ScriptcaProfile } from '@scriptca/types';
 import { analyzeEntryExports } from './infer.js';
 
 export type Interceptability = { ok: boolean; reasons: string[] };
@@ -15,7 +15,7 @@ export type Interceptability = { ok: boolean; reasons: string[] };
 export async function canInterceptEntry(
   config: ResolvedConfig,
   cwd: string,
-  profile: ScriptcableProfile,
+  profile: ScriptcaProfile,
 ): Promise<Interceptability> {
   const entryAbs = resolve(cwd, config.entry);
   let source: string;

@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 import { Button, Input, Label, Tabs, TabsContent, TabsList, TabsTrigger } from '@unikit-bridge/ui';
 
 // Drop-in: this import keeps pointing at the TypeScript core — the vite
-// plugin (@unikit-bridge/scriptcable/vite) swaps the module behind it for
+// plugin (@unikit-bridge/scriptca/vite) swaps the module behind it for
 // the compiled WASM client at build/dev time. These calls are native-speed
 // WebAssembly in your browser, with zero call-site ceremony.
 // This module is loaded via React.lazy so the WASM top-level-await lives in
@@ -322,12 +322,12 @@ function FibPanel() {
 
 function RepeatPanel() {
   const { t } = useI18n();
-  const [text, setText] = useState('scriptcable');
+  const [text, setText] = useState('scriptca');
   const [times, setTimes] = useState('5');
   const [result, setResult] = useState<Result | null>(null);
 
   const run = useCallback(() => {
-    const s = text.slice(0, 24) || 'scriptcable';
+    const s = text.slice(0, 24) || 'scriptca';
     const sAlt = `${s.slice(0, -1)}${s.endsWith('0') ? '1' : '0'}`;
     const count = Math.min(12, Math.max(1, Math.floor(Number(times) || 1)));
     setText(s);

@@ -1,12 +1,12 @@
 import { describe, it, beforeAll } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createNodeEngineFromOutDir } from '@unikit-bridge/scriptcable/node';
+import { createNodeEngineFromOutDir } from '@unikit-bridge/scriptca/node';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { access } from 'node:fs/promises';
-import { sharedLibraryFileName } from '@unikit-bridge/scriptcable/core';
+import { sharedLibraryFileName } from '@unikit-bridge/scriptca/core';
 
-const outDir = join(dirname(fileURLToPath(import.meta.url)), '../../calculator-core/.scriptcable');
+const outDir = join(dirname(fileURLToPath(import.meta.url)), '../../calculator-core/.scriptca');
 
 describe('node e2e', () => {
   beforeAll(async () => {

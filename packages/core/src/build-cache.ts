@@ -1,5 +1,5 @@
 /**
- * Content-addressed build cache for scriptcable builds.
+ * Content-addressed build cache for scriptca builds.
  *
  * A build is a cache hit when the hash of (entry sources + profile + target)
  * matches the previous successful build. Hits skip the scriptc compile and
@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto';
 import { readFile, stat, writeFile, access } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
-import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
+import type { ResolvedConfig, ScriptcaProfile } from '@scriptca/types';
 
 const CACHE_FILE = 'build-cache.json';
 
@@ -146,7 +146,7 @@ async function collectSourceHashes(
 export async function computeBuildHash(options: {
   cwd: string;
   config: ResolvedConfig;
-  profile: ScriptcableProfile;
+  profile: ScriptcaProfile;
   target: 'native' | 'wasm' | 'both';
   extraInputs?: string[];
   /** scriptc version that produces the build — an upgrade must recompile. */

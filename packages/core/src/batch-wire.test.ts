@@ -1,9 +1,9 @@
 import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
 import { createBatchWire } from './batch-wire.js';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import type { ScriptcaProfile } from '@scriptca/types';
 
-const PROFILE: ScriptcableProfile = {
+const PROFILE: ScriptcaProfile = {
   profile_format: 1,
   name: 'demo',
   entry: 'src/core.ts',

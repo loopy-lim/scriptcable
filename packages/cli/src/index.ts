@@ -8,14 +8,14 @@ import { runInit } from './commands/init.js';
 import type { CodegenTarget } from './codegen/index.js';
 
 function usage(): void {
-  console.log(`scriptcable — TypeScript core → native clients (via scriptc; WASM opt-in)
+  console.log(`scriptca — TypeScript core → native clients (via scriptc; WASM opt-in)
 
 Usage:
-  scriptcable init <name> [--host bun|node|vite|next|tauri|react-native|lynx]
-  scriptcable build [--target wasm|native|both] [--hosts bun,node,browser,...] [--platform host|android] [--force] [--watch]
-  scriptcable diff [--snapshot path]   compare scriptcable.json to committed contract
-  scriptcable doctor                   check Bun / scriptc / zig / clang
-  scriptcable --help
+  scriptca init <name> [--host bun|node|vite|next|tauri|react-native|lynx]
+  scriptca build [--target wasm|native|both] [--hosts bun,node,browser,...] [--platform host|android] [--force] [--watch]
+  scriptca diff [--snapshot path]   compare scriptca.json to committed contract
+  scriptca doctor                   check Bun / scriptc / zig / clang
+  scriptca --help
 
 Docs: see the repo README. scriptc: https://scriptc.dev
 `);
@@ -33,7 +33,7 @@ async function main(argv: string[]): Promise<number> {
     case 'init': {
       const name = rest.find((a) => !a.startsWith('-'));
       if (!name) {
-        console.error('Usage: scriptcable init <name> [--host bun|node|vite|next|tauri|react-native|lynx]');
+        console.error('Usage: scriptca init <name> [--host bun|node|vite|next|tauri|react-native|lynx]');
         return 1;
       }
       let host: import('./commands/init.js').InitHost | undefined;
@@ -86,7 +86,7 @@ async function main(argv: string[]): Promise<number> {
   }
 }
 
-// bin 실행에서만 main을 돌린다 — 라이브러리 임포트(@scriptcable/cli)가
+// bin 실행에서만 main을 돌린다 — 라이브러리 임포트(@scriptca/cli)가
 // CLI를 실행·process.exit하는 일이 없어야 발행 후 import가 안전하다.
 // import.meta.main은 Bun 전용이라 Node 직접 실행(`node dist/index.js`)을 위해
 // entry URL 대조를 함께 본다(G3 리뷰 F-1 — Node에선 침묵 no-op이 되지 않게).
@@ -97,7 +97,7 @@ const invokedAsMain =
     import.meta.url === pathToFileURL(resolve(process.argv[1])).href);
 if (invokedAsMain) {
   if (typeof Bun === 'undefined') {
-    console.error('scriptcable CLI runs on Bun — install Bun >= 1.2 (https://bun.sh).');
+    console.error('scriptca CLI runs on Bun — install Bun >= 1.2 (https://bun.sh).');
     process.exit(1);
   }
   const code = await main(process.argv.slice(2));

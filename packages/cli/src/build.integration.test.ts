@@ -1,6 +1,6 @@
 /**
  * Integration test: zero-config build. Creates a real project with NO
- * scriptcable config file and runs the full `scriptcable build` pipeline
+ * scriptca config file and runs the full `scriptca build` pipeline
  * (scriptc compile + native link + codegen) against the workspace dist.
  */
 import { describe, it, afterAll } from 'bun:test';
@@ -55,7 +55,7 @@ async function makeProject(): Promise<string> {
   await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '@scriptc'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptca'), join(nm, '@unikit-bridge', 'scriptca'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(
     resolve(repoRoot, 'node_modules/.bin/scriptc'),
@@ -75,38 +75,38 @@ afterAll(async () => {
 });
 
 describe('zero-config build (integration)', () => {
-  it('builds a native core with no scriptcable config file', async () => {
+  it('builds a native core with no scriptca config file', async () => {
     const project = await makeProject();
     const code = await runBuild({ cwd: project });
     assert.equal(code, 0);
 
-    const profile = JSON.parse(await Bun.file(join(project, '.scriptcable', 'profile.json')).text());
+    const profile = JSON.parse(await Bun.file(join(project, '.scriptca', 'profile.json')).text());
     assert.equal(profile.name, 'zero_cfg_it'); // inferred from package.json
     // twice(bigint) is skipped at inference (not ABI-mappable) → 4 exports
     assert.equal(profile.exports.length, 4);
     assert.equal(profile.exports[0].export, 'add');
     // native artifact + generated client exist
-    const artifacts = await Array.fromAsync(new Bun.Glob('.scriptcable/*').scan({ cwd: project }));
+    const artifacts = await Array.fromAsync(new Bun.Glob('.scriptca/*').scan({ cwd: project }));
     assert.ok(
       artifacts.some((a) => a.endsWith('.dylib') || a.endsWith('.so') || a.endsWith('.dll')),
       `no shared lib in ${artifacts.join(', ')}`,
     );
-    const generated = await Array.fromAsync(new Bun.Glob('.scriptcable/generated/*.ts').scan({ cwd: project }));
+    const generated = await Array.fromAsync(new Bun.Glob('.scriptca/generated/*.ts').scan({ cwd: project }));
     assert.ok(generated.some((g) => g.endsWith('node.ts')), `no generated client in ${generated.join(', ')}`);
 
-    // @unikit-bridge/scriptcable-client package: manifest written, link present
-    const clientPkg = JSON.parse(await Bun.file(join(project, '.scriptcable', 'generated', 'package.json')).text());
-    assert.equal(clientPkg.name, '@unikit-bridge/scriptcable-client');
-    const linkPath = join(project, 'node_modules', '@unikit-bridge', 'scriptcable-client');
-    assert.equal((await lstat(linkPath)).isSymbolicLink(), true, 'no node_modules/@unikit-bridge/scriptcable-client link');
+    // @unikit-bridge/scriptca-client package: manifest written, link present
+    const clientPkg = JSON.parse(await Bun.file(join(project, '.scriptca', 'generated', 'package.json')).text());
+    assert.equal(clientPkg.name, '@unikit-bridge/scriptca-client');
+    const linkPath = join(project, 'node_modules', '@unikit-bridge', 'scriptca-client');
+    assert.equal((await lstat(linkPath)).isSymbolicLink(), true, 'no node_modules/@unikit-bridge/scriptca-client link');
 
     // Typed N-API direct binding: built into outDir and copied next to the
     // clients. Soft-fail by design — Windows doesn't build the addon yet
     // (FFI fallback serves those hosts) and the build still succeeds.
     if (process.platform !== 'win32') {
-      const addonPath = join(project, '.scriptcable', 'zero_cfg_it.node');
+      const addonPath = join(project, '.scriptca', 'zero_cfg_it.node');
       await access(addonPath);
-      await access(join(project, '.scriptcable', 'generated', 'zero_cfg_it.node'));
+      await access(join(project, '.scriptca', 'generated', 'zero_cfg_it.node'));
     }
 
     // The bare specifier actually resolves and calls the real core under Bun,
@@ -115,7 +115,7 @@ describe('zero-config build (integration)', () => {
       cmd: [
         'bun',
         '-e',
-        `const m = await import('@unikit-bridge/scriptcable-client');
+        `const m = await import('@unikit-bridge/scriptca-client');
 const c = await m.createClient();
 console.log(JSON.stringify({
   add: c.add(20, 22),
@@ -144,7 +144,7 @@ console.log(JSON.stringify({
       cmd: [
         'bun',
         '-e',
-        `const m = await import('@unikit-bridge/scriptcable-client');
+        `const m = await import('@unikit-bridge/scriptca-client');
 const c = await m.createClient({ preferWasm: true });
 console.log(JSON.stringify({
   add: c.add(20, 22),

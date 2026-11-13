@@ -1,14 +1,14 @@
 /**
- * @scriptcable/next — Next.js integration (Webpack & Turbopack-friendly).
+ * @scriptca/next — Next.js integration (Webpack & Turbopack-friendly).
  *
- * Zero-config: reads scriptcable.config.ts > scriptcable.json > inference
+ * Zero-config: reads scriptca.config.ts > scriptca.json > inference
  * (package.json name + standard entry locations) unless `configPath` is set.
  *
  * Turbopack does not support arbitrary Webpack plugins the same way, so we
  * expose:
- * 1. `withScriptcable(nextConfig)` — Webpack plugin path for `next build` / `next dev` (webpack).
- * 2. `scriptcableBuild()` — call from `instrumentation.ts` or a prebuild script for Turbopack.
- * 3. `withScriptcableAsync(nextConfig)` — same, plus a Turbopack `resolveAlias`
+ * 1. `withScriptca(nextConfig)` — Webpack plugin path for `next build` / `next dev` (webpack).
+ * 2. `scriptcaBuild()` — call from `instrumentation.ts` or a prebuild script for Turbopack.
+ * 3. `withScriptcaAsync(nextConfig)` — same, plus a Turbopack `resolveAlias`
  *    that redirects entry imports onto the drop-in client (awaitable config).
  *
  * Drop-in interception (default on, webpack path): client graphs redirect
@@ -16,7 +16,7 @@
  * graphs onto the node drop-in (synchronous init — no await anywhere).
  */
 import { join, resolve } from 'node:path';
-import type { ResolvedConfig } from '@scriptcable/types';
+import type { ResolvedConfig } from '@scriptca/types';
 import {
   buildCore,
   loadProjectConfig,
@@ -26,32 +26,32 @@ import {
   ensureWasmArtifact,
   copyWasmToPublicDir,
   canInterceptEntry,
-  ScriptcableDropinResolvePlugin,
-} from '@scriptcable/core';
+  ScriptcaDropinResolvePlugin,
+} from '@scriptca/core';
 
-export type WithScriptcableOptions = {
+export type WithScriptcaOptions = {
   /** Explicit config file (.ts or .json) — default: auto-discover or infer */
   configPath?: string;
   /** Redirect entry imports onto the compiled client (default: true) */
   dropin?: boolean;
 };
 
-type ScriptcableBuildOutput = {
+type ScriptcaBuildOutput = {
   genDir: string;
   /** Absolute entry path + drop-in file for the requested flavor ('' when disabled). */
   entryAbs: string;
   dropinPath: string;
 };
 
-async function runScriptcableBuild(
+async function runScriptcaBuild(
   projectRoot: string,
   configPath: string | undefined,
   dropinFlavor: 'browser' | 'node' | false,
-): Promise<ScriptcableBuildOutput> {
+): Promise<ScriptcaBuildOutput> {
   const config = configPath
     ? await loadConfigFile(resolve(projectRoot, configPath), projectRoot)
     : (await loadProjectConfig(projectRoot)).config;
-  const outDir = resolve(projectRoot, config.outDir ?? '.scriptcable');
+  const outDir = resolve(projectRoot, config.outDir ?? '.scriptca');
   const result = await buildCore(config, { cwd: projectRoot, outDir, target: 'native', doctorRuntimeGate: 'skip' });
   // The generated browser flavor needs the WASM artifact — ensure it (built
   // automatically on first use, cached afterwards) and copy it into public/
@@ -64,7 +64,7 @@ async function runScriptcableBuild(
       wasmName: `${config.name}.wasm`,
     });
     if (copied === 'written') {
-      console.log(`[scriptcable] browser wasm → public/${config.name}.wasm (served at /${config.name}.wasm)`);
+      console.log(`[scriptca] browser wasm → public/${config.name}.wasm (served at /${config.name}.wasm)`);
     }
   }
   const { genDir, clientLink } = await writeGeneratedClients({
@@ -77,7 +77,7 @@ async function runScriptcableBuild(
     profile: result.profile,
   });
   if (clientLink === 'blocked') {
-    console.warn('[scriptcable] could not link node_modules/@unikit-bridge/scriptcable-client — run `scriptcable doctor`');
+    console.warn('[scriptca] could not link node_modules/@unikit-bridge/scriptca-client — run `scriptca doctor`');
   }
   // Drop-in: imports of the entry resolve to the compiled client. Only when
   // the drop-in can provide the entry's whole runtime export surface.
@@ -88,19 +88,19 @@ async function runScriptcableBuild(
     if (check.ok) {
       entryAbs = resolve(projectRoot, config.entry);
       dropinPath = join(genDir, 'dropin', `${dropinFlavor}.ts`);
-      console.log(`[scriptcable] drop-in: imports of ${config.entry} resolve to the compiled ${dropinFlavor} client`);
+      console.log(`[scriptca] drop-in: imports of ${config.entry} resolve to the compiled ${dropinFlavor} client`);
     } else {
-      console.warn(`[scriptcable] drop-in disabled — ${check.reasons.join('; ')}`);
+      console.warn(`[scriptca] drop-in disabled — ${check.reasons.join('; ')}`);
     }
   }
   return { genDir, entryAbs, dropinPath };
 }
 
 /** Prebuild helper — works with Turbopack (`next dev --turbo`) via npm script. */
-export async function scriptcableBuild(
-  options: WithScriptcableOptions & { cwd?: string } = {},
+export async function scriptcaBuild(
+  options: WithScriptcaOptions & { cwd?: string } = {},
 ): Promise<string> {
-  const { genDir } = await runScriptcableBuild(options.cwd ?? process.cwd(), options.configPath, false);
+  const { genDir } = await runScriptcaBuild(options.cwd ?? process.cwd(), options.configPath, false);
   return genDir;
 }
 
@@ -117,17 +117,17 @@ type NextConfig = Record<string, unknown> & {
  */
 function dropinGate(state: { entryAbs: string; dropinPath: string }) {
   return {
-    name: 'ScriptcableDropinResolvePlugin',
-    apply(resolver: Parameters<ScriptcableDropinResolvePlugin['apply']>[0]): void {
+    name: 'ScriptcaDropinResolvePlugin',
+    apply(resolver: Parameters<ScriptcaDropinResolvePlugin['apply']>[0]): void {
       if (!state.entryAbs || !state.dropinPath) return;
-      new ScriptcableDropinResolvePlugin(state.entryAbs, state.dropinPath).apply(resolver);
+      new ScriptcaDropinResolvePlugin(state.entryAbs, state.dropinPath).apply(resolver);
     },
   };
 }
 
-export function withScriptcable(
+export function withScriptca(
   nextConfig: NextConfig = {},
-  options: WithScriptcableOptions = {},
+  options: WithScriptcaOptions = {},
 ): NextConfig {
   const configPath = options.configPath;
   const dropinEnabled = options.dropin !== false;
@@ -135,13 +135,13 @@ export function withScriptcable(
     ...nextConfig,
     // The generated client package ships plain .ts — both webpack and
     // Turbopack need it transpiled. Honors packages the app already lists.
-    transpilePackages: [...new Set([...(nextConfig.transpilePackages ?? []), '@unikit-bridge/scriptcable-client'])],
+    transpilePackages: [...new Set([...(nextConfig.transpilePackages ?? []), '@unikit-bridge/scriptca-client'])],
     webpack(config: any, ctx: any) {
       // Per-graph drop-in flavor: client components bundle for the browser
       // (top-level-await init); nodejs server graphs stay await-free. The
       // edge runtime has no node:fs/node:module — the node drop-in cannot
       // load there, so it stays off (imports fall through to
-      // `@unikit-bridge/scriptcable-client`, whose wasm fallback still applies).
+      // `@unikit-bridge/scriptca-client`, whose wasm fallback still applies).
       const isEdge = ctx?.isServer && ctx?.nextRuntime === 'edge';
       const flavor: 'browser' | 'node' | false = !dropinEnabled
         ? false
@@ -160,8 +160,8 @@ export function withScriptcable(
       extensionAlias['.js'] = [...new Set([...(extensionAlias['.js'] ?? []), '.js', '.ts', '.tsx'])];
       const buildPlugin = {
         apply(compiler: any) {
-          compiler.hooks.beforeCompile.tapPromise('ScriptcableWebpackPlugin', async () => {
-            const out = await runScriptcableBuild(
+          compiler.hooks.beforeCompile.tapPromise('ScriptcaWebpackPlugin', async () => {
+            const out = await runScriptcaBuild(
               compiler.context || process.cwd(),
               configPath,
               dropinEnabled ? flavor : false,
@@ -186,22 +186,22 @@ export function withScriptcable(
 
 /**
  * Async variant (`next.config.mjs` supports top-level await): runs the same
- * build as `withScriptcable` at config time so artifacts and the
- * `@unikit-bridge/scriptcable-client` package exist before compiling, under either bundler.
+ * build as `withScriptca` at config time so artifacts and the
+ * `@unikit-bridge/scriptca-client` package exist before compiling, under either bundler.
  *
  * Turbopack note (verified against Next 16): Turbopack has no per-graph
  * resolve hook, and `turbopack.resolveAlias` matches request specifiers —
  * an absolute-path alias key does NOT redirect relative entry imports (it
  * silently does nothing). So entry drop-in is a webpack-path feature; under
- * Turbopack the app's `@unikit-bridge/scriptcable-client` import still resolves the
+ * Turbopack the app's `@unikit-bridge/scriptca-client` import still resolves the
  * compiled client via export conditions. This helper states that once,
  * instead of setting a dead alias.
  */
-export async function withScriptcableAsync(
+export async function withScriptcaAsync(
   nextConfig: NextConfig = {},
-  options: WithScriptcableOptions & { cwd?: string } = {},
+  options: WithScriptcaOptions & { cwd?: string } = {},
 ): Promise<NextConfig> {
-  const base = withScriptcable(nextConfig, options);
+  const base = withScriptca(nextConfig, options);
   const root = options.cwd ?? process.cwd();
   try {
     const config: ResolvedConfig = options.configPath
@@ -211,11 +211,11 @@ export async function withScriptcableAsync(
     const check = await canInterceptEntry(config, root, profile);
     if (check.ok) {
       console.log(
-        '[scriptcable] turbopack: entry drop-in not available (no resolve hook) —' +
-          ' use @unikit-bridge/scriptcable-client, or run next with --webpack for drop-in imports',
+        '[scriptca] turbopack: entry drop-in not available (no resolve hook) —' +
+          ' use @unikit-bridge/scriptca-client, or run next with --webpack for drop-in imports',
       );
     } else {
-      console.warn(`[scriptcable] drop-in disabled — ${check.reasons.join('; ')}`);
+      console.warn(`[scriptca] drop-in disabled — ${check.reasons.join('; ')}`);
     }
   } catch {
     // Zero-config inference failure shouldn't break the Next config —

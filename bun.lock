@@ -13,97 +13,97 @@
       },
     },
     "examples/astro-app": {
-      "name": "@scriptcable/example-astro-app",
+      "name": "@scriptca/example-astro-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
       "devDependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "astro": "^5.0.0",
       },
     },
     "examples/bench-core": {
-      "name": "@scriptcable/example-bench-core",
+      "name": "@scriptca/example-bench-core",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "koffi": "^3.3.3",
       },
       "devDependencies": {
         "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "scriptc": "^0.4.12",
       },
     },
     "examples/bun-app": {
-      "name": "@scriptcable/example-bun-app",
+      "name": "@scriptca/example-bun-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
     },
     "examples/calculator-core": {
-      "name": "@scriptcable/example-calculator-core",
+      "name": "@scriptca/example-calculator-core",
       "version": "0.1.0",
       "devDependencies": {
         "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "scriptc": "^0.4.12",
       },
     },
     "examples/deno-app": {
-      "name": "@scriptcable/example-deno-app",
+      "name": "@scriptca/example-deno-app",
       "version": "0.1.0",
       "devDependencies": {
         "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "scriptc": "^0.4.12",
       },
     },
     "examples/dx-app": {
-      "name": "@scriptcable/example-dx-app",
+      "name": "@scriptca/example-dx-app",
       "version": "0.1.0",
       "devDependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "scriptc": "^0.4.12",
       },
     },
     "examples/electron-app": {
-      "name": "@scriptcable/example-electron-app",
+      "name": "@scriptca/example-electron-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
       "devDependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "electron": "^33.0.0",
         "vite": "^6.0.0",
       },
     },
     "examples/lynx-app": {
-      "name": "@scriptcable/example-lynx-app",
+      "name": "@scriptca/example-lynx-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
       "devDependencies": {
         "@lynx-js/rspeedy": "^0.18.2",
         "@rspack/core": "^2.2.9",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
     },
     "examples/next-app": {
-      "name": "@scriptcable/example-next-app",
+      "name": "@scriptca/example-next-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
       "devDependencies": {
         "@scriptc/runtime-wasm32-wasi": "^0.4.12",
         "@types/node": "^26.6.5",
         "@types/react": "^19.3.0",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "next": "^16.4.2",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
@@ -111,30 +111,30 @@
       },
     },
     "examples/node-app": {
-      "name": "@scriptcable/example-node-app",
+      "name": "@scriptca/example-node-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "koffi": "^3.3.3",
       },
     },
     "examples/nuxt-app": {
-      "name": "@scriptcable/example-nuxt-app",
+      "name": "@scriptca/example-nuxt-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
       "devDependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "nuxt": "^4.6.2",
         "vue": "^3.5.0",
       },
     },
     "examples/react-native-app": {
-      "name": "@scriptcable/example-react-native-app",
+      "name": "@scriptca/example-react-native-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "expo": "~58.0.16",
         "react": "19.3.0",
         "react-native": "0.88.0",
@@ -146,15 +146,15 @@
         "@react-native/community-cli-plugin": "^0.88.0",
         "@react-native/metro-config": "^0.88.0",
         "@scriptc/runtime-android-arm64": "0.4.12",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "metro": "^0.87.1",
       },
     },
     "examples/remix-app": {
-      "name": "@scriptcable/example-remix-app",
+      "name": "@scriptca/example-remix-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "isbot": "^5",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
@@ -162,98 +162,98 @@
       },
       "devDependencies": {
         "@react-router/dev": "^8.5.0",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "vite": "^7.0.0",
       },
     },
     "examples/solidstart-app": {
-      "name": "@scriptcable/example-solidstart-app",
+      "name": "@scriptca/example-solidstart-app",
       "version": "0.1.0",
       "dependencies": {
         "@solidjs/router": "^0.16.0",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "solid-js": "^1.9.0",
       },
       "devDependencies": {
         "@solidjs/start": "^2.0.6",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "vite": "^8.3.5",
       },
     },
     "examples/sveltekit-app": {
-      "name": "@scriptcable/example-sveltekit-app",
+      "name": "@scriptca/example-sveltekit-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
       "devDependencies": {
         "@sveltejs/adapter-static": "^3.0.0",
         "@sveltejs/kit": "^2.0.0",
         "@sveltejs/vite-plugin-svelte": "^5.0.0",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "svelte": "^5.0.0",
         "vite": "^6.0.0",
       },
     },
     "examples/tauri-app": {
-      "name": "@scriptcable/example-tauri-app",
+      "name": "@scriptca/example-tauri-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
     },
     "examples/vite-app": {
-      "name": "@scriptcable/example-vite-app",
+      "name": "@scriptca/example-vite-app",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
       },
       "devDependencies": {
         "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "scriptc": "^0.4.12",
         "vite": "^6.0.0",
       },
     },
     "examples/workers-app": {
-      "name": "@scriptcable/example-workers-app",
+      "name": "@scriptca/example-workers-app",
       "version": "0.1.0",
       "devDependencies": {
         "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "scriptc": "^0.4.12",
         "wrangler": "^4.151.3",
       },
     },
     "packages/bun": {
-      "name": "@scriptcable/bun",
+      "name": "@scriptca/bun",
       "version": "0.1.0",
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/node": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/node": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
     },
     "packages/cli": {
-      "name": "@scriptcable/cli",
+      "name": "@scriptca/cli",
       "version": "0.1.0",
       "bin": {
-        "scriptcable": "./dist/index.js",
+        "scriptca": "./dist/index.js",
       },
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.3.0",
       },
     },
     "packages/core": {
-      "name": "@scriptcable/core",
+      "name": "@scriptca/core",
       "version": "0.1.0",
       "dependencies": {
         "@babel/runtime": "^8.0.0",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/types": "workspace:*",
         "node-api-headers": "^1.9.0",
         "typescript": "^5.9.2",
       },
@@ -262,56 +262,56 @@
       },
     },
     "packages/expo": {
-      "name": "@scriptcable/expo",
+      "name": "@scriptca/expo",
       "version": "0.1.0",
       "peerDependencies": {
         "expo": ">=52",
       },
     },
     "packages/lynx": {
-      "name": "@scriptcable/lynx",
+      "name": "@scriptca/lynx",
       "version": "0.1.0",
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
     },
     "packages/next": {
-      "name": "@scriptcable/next",
+      "name": "@scriptca/next",
       "version": "0.1.0",
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.3.0",
       },
     },
     "packages/node": {
-      "name": "@scriptcable/node",
+      "name": "@scriptca/node",
       "version": "0.1.0",
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.3.0",
       },
     },
     "packages/react-native": {
-      "name": "@scriptcable/react-native",
+      "name": "@scriptca/react-native",
       "version": "0.1.0",
       "dependencies": {
         "@babel/runtime": "^8.0.0",
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
     },
-    "packages/scriptcable": {
-      "name": "@unikit-bridge/scriptcable",
+    "packages/scriptca": {
+      "name": "@unikit-bridge/scriptca",
       "version": "0.1.1",
       "bin": {
-        "scriptcable": "./dist/cli/index.js",
+        "scriptca": "./dist/cli/index.js",
       },
       "dependencies": {
         "@babel/runtime": "^8.0.0",
@@ -328,34 +328,34 @@
       ],
     },
     "packages/tauri": {
-      "name": "@scriptcable/tauri",
+      "name": "@scriptca/tauri",
       "version": "0.1.0",
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
     },
     "packages/testing": {
-      "name": "@scriptcable/testing",
+      "name": "@scriptca/testing",
       "version": "0.1.0",
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
     },
     "packages/types": {
-      "name": "@scriptcable/types",
+      "name": "@scriptca/types",
       "version": "0.1.0",
       "dependencies": {
         "@babel/runtime": "^8.0.0",
       },
     },
     "packages/vite": {
-      "name": "@scriptcable/vite",
+      "name": "@scriptca/vite",
       "version": "0.1.0",
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.3.0",
@@ -369,21 +369,21 @@
       ],
     },
     "packages/webpack": {
-      "name": "@scriptcable/webpack",
+      "name": "@scriptca/webpack",
       "version": "0.1.0",
       "dependencies": {
-        "@scriptcable/core": "workspace:*",
-        "@scriptcable/types": "workspace:*",
+        "@scriptca/core": "workspace:*",
+        "@scriptca/types": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.3.0",
       },
     },
     "site": {
-      "name": "@scriptcable/site",
+      "name": "@scriptca/site",
       "version": "0.1.0",
       "dependencies": {
-        "@unikit-bridge/scriptcable": "workspace:*",
+        "@unikit-bridge/scriptca": "workspace:*",
         "@unikit-bridge/ui": "^0.3.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -1262,69 +1262,69 @@
 
     "@scriptc/runtime-win32-x64-msvc": ["@scriptc/runtime-win32-x64-msvc@0.4.12", "", {}, "sha512-MT9YNT3Zs0pGFcmErDzMoNAHyuQmpf5cVcmhyI9/vpR5A3FSirdQ1rnyiLQ84xxncF62Rysb0AobvSDbN4vR3g=="],
 
-    "@scriptcable/bun": ["@scriptcable/bun@workspace:packages/bun"],
+    "@scriptca/bun": ["@scriptca/bun@workspace:packages/bun"],
 
-    "@scriptcable/cli": ["@scriptcable/cli@workspace:packages/cli"],
+    "@scriptca/cli": ["@scriptca/cli@workspace:packages/cli"],
 
-    "@scriptcable/core": ["@scriptcable/core@workspace:packages/core"],
+    "@scriptca/core": ["@scriptca/core@workspace:packages/core"],
 
-    "@scriptcable/example-astro-app": ["@scriptcable/example-astro-app@workspace:examples/astro-app"],
+    "@scriptca/example-astro-app": ["@scriptca/example-astro-app@workspace:examples/astro-app"],
 
-    "@scriptcable/example-bench-core": ["@scriptcable/example-bench-core@workspace:examples/bench-core"],
+    "@scriptca/example-bench-core": ["@scriptca/example-bench-core@workspace:examples/bench-core"],
 
-    "@scriptcable/example-bun-app": ["@scriptcable/example-bun-app@workspace:examples/bun-app"],
+    "@scriptca/example-bun-app": ["@scriptca/example-bun-app@workspace:examples/bun-app"],
 
-    "@scriptcable/example-calculator-core": ["@scriptcable/example-calculator-core@workspace:examples/calculator-core"],
+    "@scriptca/example-calculator-core": ["@scriptca/example-calculator-core@workspace:examples/calculator-core"],
 
-    "@scriptcable/example-deno-app": ["@scriptcable/example-deno-app@workspace:examples/deno-app"],
+    "@scriptca/example-deno-app": ["@scriptca/example-deno-app@workspace:examples/deno-app"],
 
-    "@scriptcable/example-dx-app": ["@scriptcable/example-dx-app@workspace:examples/dx-app"],
+    "@scriptca/example-dx-app": ["@scriptca/example-dx-app@workspace:examples/dx-app"],
 
-    "@scriptcable/example-electron-app": ["@scriptcable/example-electron-app@workspace:examples/electron-app"],
+    "@scriptca/example-electron-app": ["@scriptca/example-electron-app@workspace:examples/electron-app"],
 
-    "@scriptcable/example-lynx-app": ["@scriptcable/example-lynx-app@workspace:examples/lynx-app"],
+    "@scriptca/example-lynx-app": ["@scriptca/example-lynx-app@workspace:examples/lynx-app"],
 
-    "@scriptcable/example-next-app": ["@scriptcable/example-next-app@workspace:examples/next-app"],
+    "@scriptca/example-next-app": ["@scriptca/example-next-app@workspace:examples/next-app"],
 
-    "@scriptcable/example-node-app": ["@scriptcable/example-node-app@workspace:examples/node-app"],
+    "@scriptca/example-node-app": ["@scriptca/example-node-app@workspace:examples/node-app"],
 
-    "@scriptcable/example-nuxt-app": ["@scriptcable/example-nuxt-app@workspace:examples/nuxt-app"],
+    "@scriptca/example-nuxt-app": ["@scriptca/example-nuxt-app@workspace:examples/nuxt-app"],
 
-    "@scriptcable/example-react-native-app": ["@scriptcable/example-react-native-app@workspace:examples/react-native-app"],
+    "@scriptca/example-react-native-app": ["@scriptca/example-react-native-app@workspace:examples/react-native-app"],
 
-    "@scriptcable/example-remix-app": ["@scriptcable/example-remix-app@workspace:examples/remix-app"],
+    "@scriptca/example-remix-app": ["@scriptca/example-remix-app@workspace:examples/remix-app"],
 
-    "@scriptcable/example-solidstart-app": ["@scriptcable/example-solidstart-app@workspace:examples/solidstart-app"],
+    "@scriptca/example-solidstart-app": ["@scriptca/example-solidstart-app@workspace:examples/solidstart-app"],
 
-    "@scriptcable/example-sveltekit-app": ["@scriptcable/example-sveltekit-app@workspace:examples/sveltekit-app"],
+    "@scriptca/example-sveltekit-app": ["@scriptca/example-sveltekit-app@workspace:examples/sveltekit-app"],
 
-    "@scriptcable/example-tauri-app": ["@scriptcable/example-tauri-app@workspace:examples/tauri-app"],
+    "@scriptca/example-tauri-app": ["@scriptca/example-tauri-app@workspace:examples/tauri-app"],
 
-    "@scriptcable/example-vite-app": ["@scriptcable/example-vite-app@workspace:examples/vite-app"],
+    "@scriptca/example-vite-app": ["@scriptca/example-vite-app@workspace:examples/vite-app"],
 
-    "@scriptcable/example-workers-app": ["@scriptcable/example-workers-app@workspace:examples/workers-app"],
+    "@scriptca/example-workers-app": ["@scriptca/example-workers-app@workspace:examples/workers-app"],
 
-    "@scriptcable/expo": ["@scriptcable/expo@workspace:packages/expo"],
+    "@scriptca/expo": ["@scriptca/expo@workspace:packages/expo"],
 
-    "@scriptcable/lynx": ["@scriptcable/lynx@workspace:packages/lynx"],
+    "@scriptca/lynx": ["@scriptca/lynx@workspace:packages/lynx"],
 
-    "@scriptcable/next": ["@scriptcable/next@workspace:packages/next"],
+    "@scriptca/next": ["@scriptca/next@workspace:packages/next"],
 
-    "@scriptcable/node": ["@scriptcable/node@workspace:packages/node"],
+    "@scriptca/node": ["@scriptca/node@workspace:packages/node"],
 
-    "@scriptcable/react-native": ["@scriptcable/react-native@workspace:packages/react-native"],
+    "@scriptca/react-native": ["@scriptca/react-native@workspace:packages/react-native"],
 
-    "@scriptcable/site": ["@scriptcable/site@workspace:site"],
+    "@scriptca/site": ["@scriptca/site@workspace:site"],
 
-    "@scriptcable/tauri": ["@scriptcable/tauri@workspace:packages/tauri"],
+    "@scriptca/tauri": ["@scriptca/tauri@workspace:packages/tauri"],
 
-    "@scriptcable/testing": ["@scriptcable/testing@workspace:packages/testing"],
+    "@scriptca/testing": ["@scriptca/testing@workspace:packages/testing"],
 
-    "@scriptcable/types": ["@scriptcable/types@workspace:packages/types"],
+    "@scriptca/types": ["@scriptca/types@workspace:packages/types"],
 
-    "@scriptcable/vite": ["@scriptcable/vite@workspace:packages/vite"],
+    "@scriptca/vite": ["@scriptca/vite@workspace:packages/vite"],
 
-    "@scriptcable/webpack": ["@scriptcable/webpack@workspace:packages/webpack"],
+    "@scriptca/webpack": ["@scriptca/webpack@workspace:packages/webpack"],
 
     "@shikijs/core": ["@shikijs/core@3.23.0", "", { "dependencies": { "@shikijs/types": "3.23.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4", "hast-util-to-html": "^9.0.5" } }, "sha512-NSWQz0riNb67xthdm5br6lAkvpDJRTgB36fxlo37ZzM2yq0PQFFzbd8psqC2XMPgCzo1fW6cVi18+ArJ44wqgA=="],
 
@@ -1478,7 +1478,7 @@
 
     "@unhead/vue": ["@unhead/vue@3.4.3", "", { "dependencies": { "@unhead/bundler": "3.4.3", "hookable": "^6.1.1", "unhead": "3.4.3", "unplugin": "^3.3.0" }, "peerDependencies": { "vite": ">=6.4.2", "vue": ">=3.5.18", "webpack": ">=5.0.0" }, "optionalPeers": ["vite", "webpack"] }, "sha512-Wrmk62oC/V1EcBSKRDuy77kVaBtBXXsj6b+vEEWvmfo9AQfpLlc2b6vvvSj9WnXr8VY1ksKHj49Ejo8J/wLSOA=="],
 
-    "@unikit-bridge/scriptcable": ["@unikit-bridge/scriptcable@workspace:packages/scriptcable"],
+    "@unikit-bridge/scriptca": ["@unikit-bridge/scriptca@workspace:packages/scriptca"],
 
     "@unikit-bridge/ui": ["@unikit-bridge/ui@0.3.0", "", { "peerDependencies": { "class-variance-authority": "^0.7.0", "clsx": "^2.1.0", "lucide-react": "^1.71.0", "lucide-react-native": "^1.71.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0", "react-hook-form": "^7.0.0", "react-native": ">=0.81.0", "react-native-svg": ">=15.0.0", "tailwind-merge": "^3.0.0", "uniwind": ">=1.13.0" }, "optionalPeers": ["lucide-react", "lucide-react-native", "react-dom", "react-hook-form", "react-native", "react-native-svg", "uniwind"] }, "sha512-YbFucQCXzjV86fx4pakb8IH3oMBaojV8pKEH+Wv0QHNhlLTovV18VAz3E/yBzjLRCGyKcE5QuCwZfJ/6dBLP5Q=="],
 
@@ -3626,11 +3626,11 @@
 
     "@rsdoctor/shared/source-map": ["source-map@0.8.0", "", {}, "sha512-d8EqvL+k/SOXCreS/SUzg2ciyHqBBLcN/yuRjFsbvVhHTE2pgei7oAhmPM7kWFbkX6OSMQfUq4KbkF3au9lhYQ=="],
 
-    "@scriptcable/example-react-native-app/react": ["react@19.3.0", "", {}, "sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog=="],
+    "@scriptca/example-react-native-app/react": ["react@19.3.0", "", {}, "sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog=="],
 
-    "@scriptcable/example-remix-app/vite": ["vite@7.3.7", "", { "dependencies": { "esbuild": "^0.27.0 || ^0.28.0", "fdir": "^6.5.0", "picomatch": "^4.0.3", "postcss": "^8.5.6", "rollup": "^4.43.0", "tinyglobby": "^0.2.15" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "jiti": ">=1.21.0", "less": "^4.0.0", "lightningcss": "^1.21.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "jiti", "less", "lightningcss", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA=="],
+    "@scriptca/example-remix-app/vite": ["vite@7.3.7", "", { "dependencies": { "esbuild": "^0.27.0 || ^0.28.0", "fdir": "^6.5.0", "picomatch": "^4.0.3", "postcss": "^8.5.6", "rollup": "^4.43.0", "tinyglobby": "^0.2.15" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "jiti": ">=1.21.0", "less": "^4.0.0", "lightningcss": "^1.21.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "jiti", "less", "lightningcss", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA=="],
 
-    "@scriptcable/example-solidstart-app/vite": ["vite@8.3.5", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.7", "postcss": "^8.5.30", "rolldown": "~1.2.14", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.7.1 || ^0.8.0", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-z1YpjieJ9g0ebTmQpLBv/oq9E3F9EIlOe+7LahW8SrE3LTiG3udBRUXQOlYXP9b+IC2q2phHeVxj9xGlw34OEQ=="],
+    "@scriptca/example-solidstart-app/vite": ["vite@8.3.5", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.7", "postcss": "^8.5.30", "rolldown": "~1.2.14", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.7.1 || ^0.8.0", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-z1YpjieJ9g0ebTmQpLBv/oq9E3F9EIlOe+7LahW8SrE3LTiG3udBRUXQOlYXP9b+IC2q2phHeVxj9xGlw34OEQ=="],
 
     "@shikijs/primitive/@shikijs/types": ["@shikijs/types@4.5.0", "", { "dependencies": { "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.5" } }, "sha512-drtPrtD8N0DENyD2cyt6Ajy+IWsiCLgMxODwLTpvH1UsN6a9jf90tNTPjqwHvA+0Lzu9e0txk8DjfqH1p9UJRw=="],
 
@@ -4042,7 +4042,7 @@
 
     "@react-native/metro-babel-transformer/flow-parser/flow-estree": ["flow-estree@0.327.0", "", {}, "sha512-f9vK751YUzD0qaHSpKc5/qQM6gqOlgGS+4ZRqTNcZOpVqn3mC55yEQ6dUG2K1eaVm5FbKkz9CFWe6XNvrkQFQg=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild": ["esbuild@0.28.2", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.28.2", "@esbuild/android-arm": "0.28.2", "@esbuild/android-arm64": "0.28.2", "@esbuild/android-x64": "0.28.2", "@esbuild/darwin-arm64": "0.28.2", "@esbuild/darwin-x64": "0.28.2", "@esbuild/freebsd-arm64": "0.28.2", "@esbuild/freebsd-x64": "0.28.2", "@esbuild/linux-arm": "0.28.2", "@esbuild/linux-arm64": "0.28.2", "@esbuild/linux-ia32": "0.28.2", "@esbuild/linux-loong64": "0.28.2", "@esbuild/linux-mips64el": "0.28.2", "@esbuild/linux-ppc64": "0.28.2", "@esbuild/linux-riscv64": "0.28.2", "@esbuild/linux-s390x": "0.28.2", "@esbuild/linux-x64": "0.28.2", "@esbuild/netbsd-arm64": "0.28.2", "@esbuild/netbsd-x64": "0.28.2", "@esbuild/openbsd-arm64": "0.28.2", "@esbuild/openbsd-x64": "0.28.2", "@esbuild/openharmony-arm64": "0.28.2", "@esbuild/sunos-x64": "0.28.2", "@esbuild/win32-arm64": "0.28.2", "@esbuild/win32-ia32": "0.28.2", "@esbuild/win32-x64": "0.28.2" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA=="],
+    "@scriptca/example-remix-app/vite/esbuild": ["esbuild@0.28.2", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.28.2", "@esbuild/android-arm": "0.28.2", "@esbuild/android-arm64": "0.28.2", "@esbuild/android-x64": "0.28.2", "@esbuild/darwin-arm64": "0.28.2", "@esbuild/darwin-x64": "0.28.2", "@esbuild/freebsd-arm64": "0.28.2", "@esbuild/freebsd-x64": "0.28.2", "@esbuild/linux-arm": "0.28.2", "@esbuild/linux-arm64": "0.28.2", "@esbuild/linux-ia32": "0.28.2", "@esbuild/linux-loong64": "0.28.2", "@esbuild/linux-mips64el": "0.28.2", "@esbuild/linux-ppc64": "0.28.2", "@esbuild/linux-riscv64": "0.28.2", "@esbuild/linux-s390x": "0.28.2", "@esbuild/linux-x64": "0.28.2", "@esbuild/netbsd-arm64": "0.28.2", "@esbuild/netbsd-x64": "0.28.2", "@esbuild/openbsd-arm64": "0.28.2", "@esbuild/openbsd-x64": "0.28.2", "@esbuild/openharmony-arm64": "0.28.2", "@esbuild/sunos-x64": "0.28.2", "@esbuild/win32-arm64": "0.28.2", "@esbuild/win32-ia32": "0.28.2", "@esbuild/win32-x64": "0.28.2" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA=="],
 
     "@solidjs/start/shiki/@shikijs/core": ["@shikijs/core@4.5.0", "", { "dependencies": { "@shikijs/primitive": "4.5.0", "@shikijs/types": "4.5.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.5", "hast-util-to-html": "^9.0.5" } }, "sha512-6CIgwq+bt2JZ3OSjb/nBkkwEf/CfpHcbam+Mg5Pllco7HAGRQ2/EFhZrrJtbyNTgKwknfVS+llsXGygiDGwJWw=="],
 
@@ -4448,57 +4448,57 @@
 
     "@nuxt/devtools/execa/onetime/mimic-fn": ["mimic-fn@4.0.0", "", {}, "sha512-vqiC06CuhBTUdZH+RYl8sFrL096vA45Ok5ISO6sE/Mr1jRbGH4Csnhi8f3wKVl7x8mO4Au7Ir9D3Oyv1VYMFJw=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/android-arm": ["@esbuild/android-arm@0.28.2", "", { "os": "android", "cpu": "arm" }, "sha512-kXXoiPVVGQcnIYGOeaovwOURpniDBpSq4A03qkQ+BMQqtGG6HYap3xne9C1O1yo4TR3qxlCX5IqqmX6fFo2Lqg=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/android-arm": ["@esbuild/android-arm@0.28.2", "", { "os": "android", "cpu": "arm" }, "sha512-kXXoiPVVGQcnIYGOeaovwOURpniDBpSq4A03qkQ+BMQqtGG6HYap3xne9C1O1yo4TR3qxlCX5IqqmX6fFo2Lqg=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/android-arm64": ["@esbuild/android-arm64@0.28.2", "", { "os": "android", "cpu": "arm64" }, "sha512-5YfKeeI8qWfBZIX+u2xZC3Zlb3Os/gLS2sbEKM+I4ZOcsWmHS2WLysCcQZDAFRslDUU5Oiq44gf6PYN1vGwG5A=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/android-arm64": ["@esbuild/android-arm64@0.28.2", "", { "os": "android", "cpu": "arm64" }, "sha512-5YfKeeI8qWfBZIX+u2xZC3Zlb3Os/gLS2sbEKM+I4ZOcsWmHS2WLysCcQZDAFRslDUU5Oiq44gf6PYN1vGwG5A=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/android-x64": ["@esbuild/android-x64@0.28.2", "", { "os": "android", "cpu": "x64" }, "sha512-O387ite7SzUyCcy3JQX4P4bLtEA7bLLkx+esve5JHnyYfNTxcVpXZo9jhdB0lTKN44gztELTdU7nS8Nr16Fs1Q=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/android-x64": ["@esbuild/android-x64@0.28.2", "", { "os": "android", "cpu": "x64" }, "sha512-O387ite7SzUyCcy3JQX4P4bLtEA7bLLkx+esve5JHnyYfNTxcVpXZo9jhdB0lTKN44gztELTdU7nS8Nr16Fs1Q=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/darwin-arm64": ["@esbuild/darwin-arm64@0.28.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-n4KqkOQrraxHJcgjM1RvwbigfQKIKJVpM7xp+KsxiyUSrRdIXnt73VhrPAx0fV44hgfmIVKjxMN9J1t5jySVkw=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/darwin-arm64": ["@esbuild/darwin-arm64@0.28.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-n4KqkOQrraxHJcgjM1RvwbigfQKIKJVpM7xp+KsxiyUSrRdIXnt73VhrPAx0fV44hgfmIVKjxMN9J1t5jySVkw=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/darwin-x64": ["@esbuild/darwin-x64@0.28.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-uq6suIWYP37qzGddBKPw5QEQPi6HiLGsO7UmkpfyaYNQ3D+rN6w6WfwH+nuqcGXWvawGwxOEroO4YGnFh95azw=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/darwin-x64": ["@esbuild/darwin-x64@0.28.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-uq6suIWYP37qzGddBKPw5QEQPi6HiLGsO7UmkpfyaYNQ3D+rN6w6WfwH+nuqcGXWvawGwxOEroO4YGnFh95azw=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/freebsd-arm64": ["@esbuild/freebsd-arm64@0.28.2", "", { "os": "freebsd", "cpu": "arm64" }, "sha512-n+I0BTSRIoy+d6RPKnEVwql5UwBJolytvY4mAOIEJorKlqgPII8ix6slVVrfZ5Tnj7glIZvloylbB/EJPMWEXw=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/freebsd-arm64": ["@esbuild/freebsd-arm64@0.28.2", "", { "os": "freebsd", "cpu": "arm64" }, "sha512-n+I0BTSRIoy+d6RPKnEVwql5UwBJolytvY4mAOIEJorKlqgPII8ix6slVVrfZ5Tnj7glIZvloylbB/EJPMWEXw=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/freebsd-x64": ["@esbuild/freebsd-x64@0.28.2", "", { "os": "freebsd", "cpu": "x64" }, "sha512-78XJTJkvPs0kz2w61301PJjXl4g7q3JqiYMZ/M/yVI73EHBrCRTgkhu9oqG7vPqq+a/yadEW8aD+agKlk5xrmg=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/freebsd-x64": ["@esbuild/freebsd-x64@0.28.2", "", { "os": "freebsd", "cpu": "x64" }, "sha512-78XJTJkvPs0kz2w61301PJjXl4g7q3JqiYMZ/M/yVI73EHBrCRTgkhu9oqG7vPqq+a/yadEW8aD+agKlk5xrmg=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-arm": ["@esbuild/linux-arm@0.28.2", "", { "os": "linux", "cpu": "arm" }, "sha512-XlDnu2q5yoqems+xay6wSAcg9DDD7K9RLKZEBOMZm3ckNpJBvOX20tSfby8KfrrhINDyv9V2YVZKY/SpoGJI8w=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-arm": ["@esbuild/linux-arm@0.28.2", "", { "os": "linux", "cpu": "arm" }, "sha512-XlDnu2q5yoqems+xay6wSAcg9DDD7K9RLKZEBOMZm3ckNpJBvOX20tSfby8KfrrhINDyv9V2YVZKY/SpoGJI8w=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-arm64": ["@esbuild/linux-arm64@0.28.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-pW4AC0P3it8c7do9MVM4p51FzHzdM/TZrerurgRcHJ2WTa1VQ1CIq18xncfpBJw4ojkiZZrKW2yIBWBP92j6Ug=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-arm64": ["@esbuild/linux-arm64@0.28.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-pW4AC0P3it8c7do9MVM4p51FzHzdM/TZrerurgRcHJ2WTa1VQ1CIq18xncfpBJw4ojkiZZrKW2yIBWBP92j6Ug=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-ia32": ["@esbuild/linux-ia32@0.28.2", "", { "os": "linux", "cpu": "ia32" }, "sha512-CYbnj78HsIeA+DhgUKgFCfvNsTHFhMMrinUrMZpDXJXKN8T3XViTZ/+wtHeVxEWY8ewSzTFN+nRmSwO2tZaLUQ=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-ia32": ["@esbuild/linux-ia32@0.28.2", "", { "os": "linux", "cpu": "ia32" }, "sha512-CYbnj78HsIeA+DhgUKgFCfvNsTHFhMMrinUrMZpDXJXKN8T3XViTZ/+wtHeVxEWY8ewSzTFN+nRmSwO2tZaLUQ=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-loong64": ["@esbuild/linux-loong64@0.28.2", "", { "os": "linux", "cpu": "none" }, "sha512-buwkd8nsph4R+ajRvw0qM5Hja/TXQow3ptzWO2EbG/cqcIkHloRrdlBtQlshyYGTNFvfkfJ5tpPLVkY4DtsPfQ=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-loong64": ["@esbuild/linux-loong64@0.28.2", "", { "os": "linux", "cpu": "none" }, "sha512-buwkd8nsph4R+ajRvw0qM5Hja/TXQow3ptzWO2EbG/cqcIkHloRrdlBtQlshyYGTNFvfkfJ5tpPLVkY4DtsPfQ=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-mips64el": ["@esbuild/linux-mips64el@0.28.2", "", { "os": "linux", "cpu": "none" }, "sha512-ZVykbDyk7519VwiNb9Lcj9m8XM6v5V9uKPvrEMkkEedVewf+0itkhahp4HDpgERXhwLRpWFypsGbG/J8s0QjJA=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-mips64el": ["@esbuild/linux-mips64el@0.28.2", "", { "os": "linux", "cpu": "none" }, "sha512-ZVykbDyk7519VwiNb9Lcj9m8XM6v5V9uKPvrEMkkEedVewf+0itkhahp4HDpgERXhwLRpWFypsGbG/J8s0QjJA=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-ppc64": ["@esbuild/linux-ppc64@0.28.2", "", { "os": "linux", "cpu": "ppc64" }, "sha512-CAXl+Dtd9UUuJd8pKKdwh6MLm3MUMiqMPmhZ3tTSXPqfyQ3vDl6R5hZdZ/kYojK4ofXtdfSv1tFq8XzWx3heNQ=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-ppc64": ["@esbuild/linux-ppc64@0.28.2", "", { "os": "linux", "cpu": "ppc64" }, "sha512-CAXl+Dtd9UUuJd8pKKdwh6MLm3MUMiqMPmhZ3tTSXPqfyQ3vDl6R5hZdZ/kYojK4ofXtdfSv1tFq8XzWx3heNQ=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-riscv64": ["@esbuild/linux-riscv64@0.28.2", "", { "os": "linux", "cpu": "none" }, "sha512-GeXCej4IQtU1B+QlDV8W/RRvbzI3O/Stss+/bCXv4lZls5WGRtu2a+3JkA3i4qIUlMXpcHebWpF8AkJhATowuA=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-riscv64": ["@esbuild/linux-riscv64@0.28.2", "", { "os": "linux", "cpu": "none" }, "sha512-GeXCej4IQtU1B+QlDV8W/RRvbzI3O/Stss+/bCXv4lZls5WGRtu2a+3JkA3i4qIUlMXpcHebWpF8AkJhATowuA=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-s390x": ["@esbuild/linux-s390x@0.28.2", "", { "os": "linux", "cpu": "s390x" }, "sha512-3H1weTYZPxt/WOhByszQZybS9w5lKzUn1FDMsgEChbHWQwHYQQRfBxgCcZvPhjHfKyJjIievvMmEUawJrdY9Dg=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-s390x": ["@esbuild/linux-s390x@0.28.2", "", { "os": "linux", "cpu": "s390x" }, "sha512-3H1weTYZPxt/WOhByszQZybS9w5lKzUn1FDMsgEChbHWQwHYQQRfBxgCcZvPhjHfKyJjIievvMmEUawJrdY9Dg=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/linux-x64": ["@esbuild/linux-x64@0.28.2", "", { "os": "linux", "cpu": "x64" }, "sha512-4xTZr1FUmSoQW4XIWmit3tzQrUTZM+N3P0XV8xROKYF50XfI7xeO90+1bZvNwxIufQ9hDQVRJH5YhgPVF8A/HQ=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/linux-x64": ["@esbuild/linux-x64@0.28.2", "", { "os": "linux", "cpu": "x64" }, "sha512-4xTZr1FUmSoQW4XIWmit3tzQrUTZM+N3P0XV8xROKYF50XfI7xeO90+1bZvNwxIufQ9hDQVRJH5YhgPVF8A/HQ=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/netbsd-arm64": ["@esbuild/netbsd-arm64@0.28.2", "", { "os": "none", "cpu": "arm64" }, "sha512-sSATRjPeDBg3pdgHoQfoYBob11Kk1FGa9lui5RIHZCoCkJa9QKlvl3/vKz2usCmYYjs7ymJR/2Nnsqe+Hjt5nw=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/netbsd-arm64": ["@esbuild/netbsd-arm64@0.28.2", "", { "os": "none", "cpu": "arm64" }, "sha512-sSATRjPeDBg3pdgHoQfoYBob11Kk1FGa9lui5RIHZCoCkJa9QKlvl3/vKz2usCmYYjs7ymJR/2Nnsqe+Hjt5nw=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/netbsd-x64": ["@esbuild/netbsd-x64@0.28.2", "", { "os": "none", "cpu": "x64" }, "sha512-lqnzCV+mM0gIADaKihiCg6ifgfU2L3h5E33rNQBN1Y4MaVGnzryzmvvf7UHxprpQdE8hpqLolJ9Rl+SkIRDpyw=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/netbsd-x64": ["@esbuild/netbsd-x64@0.28.2", "", { "os": "none", "cpu": "x64" }, "sha512-lqnzCV+mM0gIADaKihiCg6ifgfU2L3h5E33rNQBN1Y4MaVGnzryzmvvf7UHxprpQdE8hpqLolJ9Rl+SkIRDpyw=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/openbsd-arm64": ["@esbuild/openbsd-arm64@0.28.2", "", { "os": "openbsd", "cpu": "arm64" }, "sha512-AL2qJILH7lNjrDmCQDvdxMfAUIv8KMNZOvrwAQ8i8//ntL9FflhOyMJ8OZSMBb8/AWXe3/5v5S20y3zCoZWKoQ=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/openbsd-arm64": ["@esbuild/openbsd-arm64@0.28.2", "", { "os": "openbsd", "cpu": "arm64" }, "sha512-AL2qJILH7lNjrDmCQDvdxMfAUIv8KMNZOvrwAQ8i8//ntL9FflhOyMJ8OZSMBb8/AWXe3/5v5S20y3zCoZWKoQ=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/openbsd-x64": ["@esbuild/openbsd-x64@0.28.2", "", { "os": "openbsd", "cpu": "x64" }, "sha512-QtiuPytchRyC4rwUKhexJdQKvDuZ6hWloi3igqPQNUJCS1/v9EiO3UTOXR6A3FoMo4fnAKbWJdqaIwhOzh8qEw=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/openbsd-x64": ["@esbuild/openbsd-x64@0.28.2", "", { "os": "openbsd", "cpu": "x64" }, "sha512-QtiuPytchRyC4rwUKhexJdQKvDuZ6hWloi3igqPQNUJCS1/v9EiO3UTOXR6A3FoMo4fnAKbWJdqaIwhOzh8qEw=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/openharmony-arm64": ["@esbuild/openharmony-arm64@0.28.2", "", { "os": "none", "cpu": "arm64" }, "sha512-WkhYDmpTjLvGlScA1rwjRUmhl4k8oXR3cIbtqWmELgU/dFeHHlEllxDvdWcNJV9rbzCexB5vz8gtNewWLgCT7Q=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/openharmony-arm64": ["@esbuild/openharmony-arm64@0.28.2", "", { "os": "none", "cpu": "arm64" }, "sha512-WkhYDmpTjLvGlScA1rwjRUmhl4k8oXR3cIbtqWmELgU/dFeHHlEllxDvdWcNJV9rbzCexB5vz8gtNewWLgCT7Q=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/sunos-x64": ["@esbuild/sunos-x64@0.28.2", "", { "os": "sunos", "cpu": "x64" }, "sha512-GPMSkTOtMnv2U2F8gxe4Io6qmVs+YKyp832Etqqxr0hFngmXQ3rzwytelm3GIn7T4VviRUlf3sOgBOiTdvaf7g=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/sunos-x64": ["@esbuild/sunos-x64@0.28.2", "", { "os": "sunos", "cpu": "x64" }, "sha512-GPMSkTOtMnv2U2F8gxe4Io6qmVs+YKyp832Etqqxr0hFngmXQ3rzwytelm3GIn7T4VviRUlf3sOgBOiTdvaf7g=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/win32-arm64": ["@esbuild/win32-arm64@0.28.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-PIhhEkE9uPBleRBrQEJpUn7MBnibZzbGzYWPmY3x+YoVg/95zbjB4CxPPOQ8l5tYYM4mMaCthF8/1DIfBQQyWQ=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/win32-arm64": ["@esbuild/win32-arm64@0.28.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-PIhhEkE9uPBleRBrQEJpUn7MBnibZzbGzYWPmY3x+YoVg/95zbjB4CxPPOQ8l5tYYM4mMaCthF8/1DIfBQQyWQ=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.28.2", "", { "os": "win32", "cpu": "ia32" }, "sha512-YmJbfTlvU7Sdn9BB+4PRES4oB6pxgS37MAONj+hBr/cpXS1aBPKXxNnDbu+QCWPj0o9dgyxeq79g6c5P8KeuYA=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.28.2", "", { "os": "win32", "cpu": "ia32" }, "sha512-YmJbfTlvU7Sdn9BB+4PRES4oB6pxgS37MAONj+hBr/cpXS1aBPKXxNnDbu+QCWPj0o9dgyxeq79g6c5P8KeuYA=="],
 
-    "@scriptcable/example-remix-app/vite/esbuild/@esbuild/win32-x64": ["@esbuild/win32-x64@0.28.2", "", { "os": "win32", "cpu": "x64" }, "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g=="],
+    "@scriptca/example-remix-app/vite/esbuild/@esbuild/win32-x64": ["@esbuild/win32-x64@0.28.2", "", { "os": "win32", "cpu": "x64" }, "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g=="],
 
     "archiver-utils/glob/minimatch/brace-expansion": ["brace-expansion@2.1.7", "", { "dependencies": { "balanced-match": "^1.0.0" } }, "sha512-uZbew1NqdmPDTMJ8ah1y+b+9QEJrfkXFk3RcTQw3X0jW/xRUvFKsg1CfQdSYGdTbXZWExtU3J3ccxtnfw1Fi0g=="],
 

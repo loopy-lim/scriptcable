@@ -1,5 +1,5 @@
 /**
- * Example RN screen using the scriptcable core through useCable.
+ * Example RN screen using the scriptca core through useCable.
  * Copy this pattern into your Expo / RN CLI app.
  */
 import React, { useEffect, useState } from 'react';
@@ -29,7 +29,7 @@ export default function App() {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const NativeCable = require('./NativeCable').default;
           // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const { createTurboModuleBridge } = require('@scriptcable/react-native');
+          const { createTurboModuleBridge } = require('@scriptca/react-native');
           // getEnforcing inside the spec throws when the native module is
           // absent — exactly what must fail loudly on a broken device build.
           const bridge = createTurboModuleBridge(NativeCable);
@@ -53,7 +53,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={{ padding: 24, gap: 12 }}>
-      <Text style={{ fontSize: 22, fontWeight: '600' }}>scriptcable + React Native</Text>
+      <Text style={{ fontSize: 22, fontWeight: '600' }}>scriptca + React Native</Text>
       <Text>{hi}</Text>
       <Text>sum: {sum ?? '—'}</Text>
       <Button title="add(20, 22)" onPress={() => add(20, 22).then(setSum).catch(console.error)} />

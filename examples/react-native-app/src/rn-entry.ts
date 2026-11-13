@@ -1,5 +1,5 @@
 // Metro bundle entry: imports the core ENTRY like real app code would.
-// With withScriptcableMetro registered, this import must resolve to the
+// With withScriptcaMetro registered, this import must resolve to the
 // generated drop-in (dropin/react-native.ts) — not this TypeScript source.
 import { add, greet } from '../../calculator-core/src/core';
 

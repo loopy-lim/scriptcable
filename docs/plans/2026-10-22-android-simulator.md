@@ -23,14 +23,14 @@
 | `packages/react-native/src/native-host.ts` | 타입 선언뿐 — 네이티브 호스트 구현부 없음. `packages/react-native/README.md`: "Implement call(exportName, argsJson) dispatching to the C ABI (`{prefix}{export}` symbols)" — **사용자 몫으로 문서화돼 있음(이번에 메울 갭)** |
 | `packages/core/src/link-shared.ts` | 링크는 호스트 전용(zig cc는 Windows에서만 드라이버로 사용, 타깃 플래그 없음) — android 크로스 링크 플럼빙 없음 |
 | `packages/core/src/toolchain.ts:353` | `SCRIPTC_TARGET`은 wasm 경로에서만 설정. README iOS 레시피가 `SCRIPTC_TARGET=aarch64-apple-ios`를 언급 — scriptc 자체는 타깃 env 지원이 기대되나 **android 타깃 실측 미확증(조사 unknown — T-2 최우선 프로브)** |
-| `examples/react-native-app` | android/ 프로젝트 없음(metro 번들 스모크 + mock 브리지 테스트만). expo 58 의존 설치됨(expo prebuild 경로 가능), scriptcable.json 존재 |
+| `examples/react-native-app` | android/ 프로젝트 없음(metro 번들 스모크 + mock 브리지 테스트만). expo 58 의존 설치됨(expo prebuild 경로 가능), scriptca.json 존재 |
 | 브리지 계약 | JS: `createTurboModuleBridge(NativeCable)` → `TurboModuleRegistry.getEnforcing('calculator')`의 `call(exportName, argsJson): Promise<string>`. 네이티브: C ABI `{prefix}{export}` — 문자열 (ptr,len) in / (out_ptr,out_len) out, f64, bool(0/1) |
 
 ## 수락 기준
 
 | ID | 관찰할 결과와 적용 조건 | 담당 태스크 | 검증 ID |
 |---|---|---|---|
-| AC-1 | `scriptcable build --hosts react-native`의 Android 변형이 네이티브 산출물 전체를 생성한다 — SCRIPTC_TARGET 크로스컴파일 `.lib.a`, zig cc `-target x86_64-linux-android`로 링크한 `lib{name}.so`, **네이티브 호스트 스캐폴드**(C++ dispatch 코어 + JNI 래퍼 + CMakeLists)가 generated에 emit된다 | T-2, T-3 | V-1, V-2 |
+| AC-1 | `scriptca build --hosts react-native`의 Android 변형이 네이티브 산출물 전체를 생성한다 — SCRIPTC_TARGET 크로스컴파일 `.lib.a`, zig cc `-target x86_64-linux-android`로 링크한 `lib{name}.so`, **네이티브 호스트 스캐폴드**(C++ dispatch 코어 + JNI 래퍼 + CMakeLists)가 generated에 emit된다 | T-2, T-3 | V-1, V-2 |
 | AC-2 | 생성된 C++ dispatch 코어가 마샬링 계약을 지킨다 — 호스트에서 컴파일해 `callJson('add','[20,22]') === '42'`, `callJson('greet','["android"]') === '"hello, android"'`(JSON 프로토콜 round-trip)를 실측한다 | T-4 | V-3 |
 | AC-3 | Android 앱 조립이 로컬에서 완성된다 — expo prebuild android + 생성 스캐폴드 연결, `gradle assembleDebug` 성공(브리지 네이티브 모듈 포함 APK) | T-5 | V-4 |
 | AC-4 | 실제 Android 바이너리 컨텍스트에서 네이티브 호스트가 코어를 로드하고 dispatch가 42를 반환하는 것이 실측된다 — **로컬: qemu-user + bionic sysroot에서 android-arm64 스모크 실행**(1차 실측), **에뮬레이터 앱 경로: CI arm64+KVM 워크플로 제공**(실행은 푸시 후 CI 담당 — 한계로 문서화) | T-1, T-6 | V-5 |
@@ -76,7 +76,7 @@
 
 | ID | 방법 | 기대 | 실제 결과 | 판정 |
 |---|---|---|---|---|
-| V-1 | 생성물 검사 — `scriptcable build --target native --hosts react-native --platform android` 후 산출물 존재 | 전 산출물 존재 + 올바른 타깃 | `.scriptcable/android-arm64/calculator.lib.a` + `libcalculator.so` + `generated/android/` 6파일(cable_host.{h,cpp}, cable_jni.cpp, CableModule.kt, CablePackage.kt, CMakeLists.txt) — exit 0 | PASS |
+| V-1 | 생성물 검사 — `scriptca build --target native --hosts react-native --platform android` 후 산출물 존재 | 전 산출물 존재 + 올바른 타깃 | `.scriptca/android-arm64/calculator.lib.a` + `libcalculator.so` + `generated/android/` 6파일(cable_host.{h,cpp}, cable_jni.cpp, CableModule.kt, CablePackage.kt, CMakeLists.txt) — exit 0 | PASS |
 | V-2 | `file`로 .so 아키텍처 확인 | android arm64 ELF | `ELF 64-bit LSB shared object, ARM aarch64` (x86_64 호스트에서 크로스 생산) | PASS |
 | V-3 | dispatch 호스트 스모크 — 생성된 cable_host.cpp를 호스트 아카이브와 그대로 컴파일, callJson 단언 | add/mul=42, greet round-trip, 에러 케이스 | `add: {"ok":true,"value":42}` · mul 42 · greet + `\"` escape round-trip · unknown export · missing argument · `host dispatch smoke OK`, exit 0 (`test:android`로 최종 상태 재검증 포함) | PASS |
 | V-4 | `gradle assembleDebug -PreactNativeArchitectures=arm64-v8a` (prebuild + wire-android 후) | APK 생성 | **BUILD SUCCESSFUL**, `app-debug.apk` 생성 — `unzip -l`로 `lib/arm64-v8a/libcalculator_cable.so`(1.06MB) 포함 확인(네이티브 브리지가 앱에 실림) | PASS |
@@ -104,7 +104,7 @@
 
 ## G3 리뷰 결함과 수정 (독립 평가자 초기 판정 FAIL → 8건 전부 수정·재검증)
 
-독립 평가자가 core 테스트·test:android·신규 크로스빌드·APK 심볼 테이블(export된 global이 `Java_com_scriptcable_cable_CableModule_nativeCall` 하나임을 실측)·ABI 계약 대조(traced greet vs napi-addon cSignature)까지 재실행했고, 코어 플럼빙은 clean으로 확인 — 결함은 CI 워크플로·앱 기동 경로에 집중. 전부 수정 후 영향 검증 재실행.
+독립 평가자가 core 테스트·test:android·신규 크로스빌드·APK 심볼 테이블(export된 global이 `Java_com_scriptca_cable_CableModule_nativeCall` 하나임을 실측)·ABI 계약 대조(traced greet vs napi-addon cSignature)까지 재실행했고, 코어 플럼빙은 clean으로 확인 — 결함은 CI 워크플로·앱 기동 경로에 집중. 전부 수정 후 영향 검증 재실행.
 
 | ID | 심각도 | 결함 | 수정 | 재검증 |
 |---|---|---|---|---|
@@ -123,12 +123,12 @@
 
 **기기 생성·실측**: 이 환경에 Android 14 x86_64 에뮬레이터 생성(KVM, 32.5초 부팅) — arm64 이미지는 에뮬레이터가 크로스 아키텍처 자체를 거부("System image must match the host architecture") 실측. 사용자 환경의 Android 16 에뮬레이터도 병행 사용.
 
-**RN 런타임 실패의 진짜 원인 규명(이전 세그먼트 판정 정정)**: 바이세트(순수 create-expo-app 정상 기동 vs 우리 앱 실패 → 순수 APK가 우리 번들을 정상 실행)로 좁혀 결과 — **원인은 wire-android가 앱 gradle에 추가한 `externalNativeBuild` 블록이 RN 0.88 플러그인이 주입하는 cmake(libappmodules.so = 코어 TM 바인딩)를 덮어쓴 것**. scriptcable 무관의 "상위 문제"로 잘못 판정했던 것을 정정(격리 실험이 externalNativeBuild 잔존 상태에서 진행된 맹점).
+**RN 런타임 실패의 진짜 원인 규명(이전 세그먼트 판정 정정)**: 바이세트(순수 create-expo-app 정상 기동 vs 우리 앱 실패 → 순수 APK가 우리 번들을 정상 실행)로 좁혀 결과 — **원인은 wire-android가 앱 gradle에 추가한 `externalNativeBuild` 블록이 RN 0.88 플러그인이 주입하는 cmake(libappmodules.so = 코어 TM 바인딩)를 덮어쓴 것**. scriptca 무관의 "상위 문제"로 잘못 판정했던 것을 정정(격리 실험이 externalNativeBuild 잔존 상태에서 진행된 맹점).
 
 **구현 변경**:
 - link-shared: android 링크 **NDK 드라이버 우선**(ANDROID_NDK_HOME/ANDROID_HOME/ndk 탐색, `aarch64-linux-android24-clang++`) — 실 DT_NEEDED(libc.so/libm.so/libdl.so/libc++_shared.so)를 만들어 번역 기기가 해결; zig 폴백은 데이터 시밤(stderr/stdout/environ null 정의) 유지. `extraSources`/`includeDirs` 옵션으로 생성 JNI·dispatch 소스를 .so에 직접 링크 — **생성 .so가 완성된 브리지**(JNI+dispatch+archive 통합).
 - 생성 CableModule.kt: 로딩 실패가 앱을 죽이지 않도록 방어(loadError 보관 → 호출 시 reject).
-- **`@scriptcable/expo` config plugin** 신설(packages/expo): expo prebuild 때 브리지 .so(jniLibs+assets)·Kotlin 모듈·MainApplication 등록·useLegacyPackaging·src/NativeCable.ts 복사를 자동 수행 — wire-android 수동 단계 제거(스크립트는 플러그인 없이 쓰는 폴백으로 유지). ⚠️ 앱 gradle에 externalNativeBuild 추가 금지를 문서화.
+- **`@scriptca/expo` config plugin** 신설(packages/expo): expo prebuild 때 브리지 .so(jniLibs+assets)·Kotlin 모듈·MainApplication 등록·useLegacyPackaging·src/NativeCable.ts 복사를 자동 수행 — wire-android 수동 단계 제거(스크립트는 플러그인 없이 쓰는 폴백으로 유지). ⚠️ 앱 gradle에 externalNativeBuild 추가 금지를 문서화.
 - 앱 gradle에 externalNativeBuild/cmake 제거 → **RN이 에뮬레이터에서 정상 기동** + 플러그인 경로 end-to-end 실측.
 
 **기기 실측 결과(2026-10-23)**:
@@ -152,7 +152,7 @@ UI 변경 없음(툴체인·codegen·예제·CI·문서).
 - 이 환경의 에뮬레이터 현황: 사용자의 Android 16 x86_64 에뮬레이터(~/android-sdk, KVM 가속 동작 확인) + 내가 만든 **Android 14 x86_64 에뮬레이터**(cable-x86, api-34 이미지 다운로드 → AVD → 32.5초 부팅).
 - arm64 이미지는 에뮬레이터가 크로스 아키텍처 자체를 거부("System image must match the host architecture") — TCG 크로스 불가 실측.
 - **하이브리드 APK**(RN x86_64 + arm64 브리지) 설치: 네이티브 모듈 로딩은 성공/실패 케이스 모두 관찰 — arm64 전용 APK는 SoLoader가 기기 선호 ABI(x86_64)로 APK 내부를 탐색해 실패(useLegacyPackaging=true로 추출 해결), 하이브리드에서는 스텁이 뜸 → **CableModule에 assets 추출·절대경로 로딩 폴백을 생성 템플릿에 추가**.
-- **RN 0.88 + Expo 58 런타임 자체가 이 에뮬레이터들(Android 14/16, x86_64·arm64 번역 포함, debug/release 전부)에서 코어 TM 등록 실패**('PlatformConstants' could not be found → Global was not installed) — CablePackage 제거 격리 실험으로 동일 확인 = **scriptcable 무관의 상위 템플릿 호환 문제**로 판정.
+- **RN 0.88 + Expo 58 런타임 자체가 이 에뮬레이터들(Android 14/16, x86_64·arm64 번역 포함, debug/release 전부)에서 코어 TM 등록 실패**('PlatformConstants' could not be found → Global was not installed) — CablePackage 제거 격리 실험으로 동일 확인 = **scriptca 무관의 상위 템플릿 호환 문제**로 판정.
 - 판정에 따라 **RN 없는 순수 JNI 프로브 앱**(device-jni-probe — 생성 JNI 심볼과 동일 패키지/클래스 경로)을 만들어 기기에서 실행:
   **`add={"ok":true,"value":42} mul=42 greet="hello, device" / CABLE_RESULT:{"sum":42} / on-device bridge OK`** — 실제 Android 에뮬레이터 위에서 생성 네이티브 호스트(JNI→C++ dispatch→scriptc arm64 archive)의 전체 체인 실측.
 
@@ -164,4 +164,4 @@ UI 변경 없음(툴체인·codegen·예제·CI·문서).
 | AC-4 기기 실측 | **PASS(코어) / RN JS 계층만 CI 대기** | **온디바이스: 이 환경의 Android 14 에뮬레이터에서 JNI 프로브가 add=42·greet round-trip 실측("on-device bridge OK")** — 생성 네이티브 호스트가 기기에서 동작함을 실증. RN JS 앱 경로는 RN 0.88/Expo 58 상위 런타임 문제(격리 실증)로 미기동 — CI android-emulator.yml이 RN 경로 검증 담당 |
 | AC-5 회귀·문서 | PASS | V-6 — 패키지 test 0 fail·typecheck exit 0, 예제 14종 exit 0, README(영/한)·CHANGELOG·troubleshooting·CI 갱신 |
 
-**잔여 한계**: RN JS 앱의 기기 기동은 RN 0.88/Expo 58 × Android 14/16 에뮬레이터 상위 호환 문제로 미해결(격리 실증 — scriptcable 무관, 상위 업데이트 대기 또는 RN/Expo 버전 교체 실험), x86_64 안드로이드용 scriptc 타깃 부재(arm64 전용), iOS 네이티브 호스트는 사용자 구현, Lynx는 동일 인프라 후속.
+**잔여 한계**: RN JS 앱의 기기 기동은 RN 0.88/Expo 58 × Android 14/16 에뮬레이터 상위 호환 문제로 미해결(격리 실증 — scriptca 무관, 상위 업데이트 대기 또는 RN/Expo 버전 교체 실험), x86_64 안드로이드용 scriptc 타깃 부재(arm64 전용), iOS 네이티브 호스트는 사용자 구현, Lynx는 동일 인프라 후속.

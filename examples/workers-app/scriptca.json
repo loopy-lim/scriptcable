@@ -2,7 +2,7 @@
   "name": "calculator",
   "entry": "../calculator-core/src/core.ts",
   "prefix": "calc_",
-  "outDir": ".scriptcable",
+  "outDir": ".scriptca",
   "target": "wasm",
   "exports": [
     { "name": "add", "params": ["f64", "f64"], "returns": "f64" },

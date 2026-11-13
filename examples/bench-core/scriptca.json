@@ -2,7 +2,7 @@
   "name": "bench",
   "entry": "src/core.ts",
   "prefix": "bench_",
-  "outDir": ".scriptcable",
+  "outDir": ".scriptca",
   "target": "both",
   "exports": [
     { "name": "add", "params": ["f64", "f64"], "returns": "f64" },

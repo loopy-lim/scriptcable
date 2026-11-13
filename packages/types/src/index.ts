@@ -1,4 +1,4 @@
-/** @scriptcable/types — shared EngineClient contract and errors. */
+/** @scriptca/types — shared EngineClient contract and errors. */
 
 export type AbiClass =
   | 'f64'
@@ -42,7 +42,7 @@ export type CallbackDef = {
  */
 export type BatchEntry = [exportName: string, ...args: unknown[]];
 
-export type ScriptcableProfile = {
+export type ScriptcaProfile = {
   profile_format: 1 | 2;
   name: string;
   entry: string;
@@ -61,14 +61,14 @@ export type ScriptcableProfile = {
 };
 
 /**
- * Project config (scriptcable.config.ts / scriptcable.json).
+ * Project config (scriptca.config.ts / scriptca.json).
  *
  * Zero-config: `name` and `entry` may be omitted — the build infers `name`
  * from package.json (falling back to the directory name) and `entry` from
  * standard locations (`src/core.ts` > `core.ts` > `src/index.ts` > `index.ts`).
  * Explicit values always win over inference.
  */
-export type ScriptcableConfig = {
+export type ScriptcaConfig = {
   /** Package / project name — inferred from package.json when omitted */
   name?: string;
   /** Core entry relative to project root — inferred from standard locations when omitted */
@@ -99,7 +99,7 @@ export type ScriptcableConfig = {
  * Produced by `resolveProjectConfig` / `resolveProfile`; required by
  * `configToProfile`, `buildCore`, and `generateClients`.
  */
-export type ResolvedConfig = ScriptcableConfig & { name: string; entry: string };
+export type ResolvedConfig = ScriptcaConfig & { name: string; entry: string };
 
 
 export type EngineSupports = {
@@ -125,28 +125,28 @@ export interface EngineClient {
   dispose?(): void | Promise<void>;
 }
 
-export class ScriptcableError extends Error {
+export class ScriptcaError extends Error {
   readonly code: string;
   readonly hint?: string;
   constructor(code: string, message: string, hint?: string) {
     super(message);
-    this.name = 'ScriptcableError';
+    this.name = 'ScriptcaError';
     this.code = code;
     this.hint = hint;
   }
 }
 
-export class ScriptcableToolchainError extends ScriptcableError {
+export class ScriptcaToolchainError extends ScriptcaError {
   constructor(message: string, hint?: string) {
     super('SCRIPTC_TOOLCHAIN', message, hint);
-    this.name = 'ScriptcableToolchainError';
+    this.name = 'ScriptcaToolchainError';
   }
 }
 
-export class ScriptcableContractError extends ScriptcableError {
+export class ScriptcaContractError extends ScriptcaError {
   constructor(message: string, hint?: string) {
     super('CONTRACT', message, hint);
-    this.name = 'ScriptcableContractError';
+    this.name = 'ScriptcaContractError';
   }
 }
 

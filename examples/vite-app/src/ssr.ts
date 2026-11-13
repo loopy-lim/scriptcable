@@ -1,9 +1,9 @@
 /** SSR / Node path — native shared library */
-import { createNodeEngine } from '@unikit-bridge/scriptcable/node';
+import { createNodeEngine } from '@unikit-bridge/scriptca/node';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const outDir = join(dirname(fileURLToPath(import.meta.url)), '../.scriptcable');
+const outDir = join(dirname(fileURLToPath(import.meta.url)), '../.scriptca');
 const engine = await createNodeEngine({ outDir });
 const result = {
   sum: engine.call('add', 20, 22),

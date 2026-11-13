@@ -7,8 +7,8 @@ import {
   resolveProfile,
   loadProjectConfig,
   loadConfigFile,
-} from '@scriptcable/core';
-import type { ContractSnapshot } from '@scriptcable/types';
+} from '@scriptca/core';
+import type { ContractSnapshot } from '@scriptca/types';
 
 export async function runDiff(opts: {
   cwd?: string;
@@ -22,7 +22,7 @@ export async function runDiff(opts: {
     : (await loadProjectConfig(cwd)).config;
   const { profile } = await resolveProfile(config, cwd);
   const after = snapshotFromProfile(profile);
-  const snapPath = resolve(cwd, opts.snapshot ?? '.scriptcable/contract.json');
+  const snapPath = resolve(cwd, opts.snapshot ?? '.scriptca/contract.json');
   const before = await readJsonFile<ContractSnapshot>(snapPath);
   const diff = diffContracts(before, after);
   console.log(formatDiff(diff));

@@ -1,7 +1,7 @@
 /**
  * Zero-config defaults: infer the project name and core entry when the
- * config file doesn't provide them, so `scriptcable build` works with no
- * scriptcable config at all. Explicit config values always win.
+ * config file doesn't provide them, so `scriptca build` works with no
+ * scriptca config at all. Explicit config values always win.
  *
  * Kept free of imports from config-loader/profile so both can use it
  * without an import cycle.

@@ -12,5 +12,5 @@
   });
 </script>
 
-<h1>scriptcable sveltekit</h1>
+<h1>scriptca sveltekit</h1>
 <div id="out">{result}</div>

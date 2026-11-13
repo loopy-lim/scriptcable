@@ -1,17 +1,17 @@
 {
-  "name": "@scriptcable/site",
+  "name": "@scriptca/site",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "scriptcable build --target wasm --hosts browser",
+    "build:core": "scriptca build --target wasm --hosts browser",
     "dev": "bun run build:core && bun --bun vite",
     "build": "bun run build:core && bun --bun vite build && node scripts/postbuild.mjs",
     "verify": "bun run build && bun scripts/assert-dist.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@unikit-bridge/scriptcable": "workspace:*",
+    "@unikit-bridge/scriptca": "workspace:*",
     "@unikit-bridge/ui": "^0.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

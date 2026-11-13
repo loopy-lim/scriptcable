@@ -9,9 +9,9 @@ import {
   canBuildNodeAddon,
   napiAddonFileName,
 } from './napi-addon.js';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import type { ScriptcaProfile } from '@scriptca/types';
 
-const PROFILE: ScriptcableProfile = {
+const PROFILE: ScriptcaProfile = {
   profile_format: 1,
   name: 'demo',
   entry: 'src/core.ts',
@@ -97,32 +97,32 @@ describe('napi-addon', () => {
     // Wire bounds are checked before slots are read; OOM (−1) vs bounds (0) split.
     assert.match(src, /if \(arg_base \+ \d+ > args_len\) return 0;/);
     assert.match(src, /napi_throw_range_error\(env, NULL, "batch wire bounds violation/);
-    assert.match(src, /napi_throw_error\(env, NULL, "scriptcable batch: out of memory"\)/);
+    assert.match(src, /napi_throw_error\(env, NULL, "scriptca batch: out of memory"\)/);
     // One Buffer copy back per batch; empty batch still returns a buffer.
     assert.match(src, /napi_create_buffer_copy\(env, __sc_bres_used, __sc_bres_buf \? __sc_bres_buf : \(const uint8_t\*\)""/);
     // Registration + the client-visible symbol name.
-    assert.match(src, /napi_create_function\(env, "__scriptcable_batch", NAPI_AUTO_LENGTH, __sc_batch, NULL, &fn\)/);
+    assert.match(src, /napi_create_function\(env, "__scriptca_batch", NAPI_AUTO_LENGTH, __sc_batch, NULL, &fn\)/);
     // Typed-array wire check: (Int32Array meta, Uint8Array args) only.
     assert.match(src, /meta_type != napi_int32_array \|\| args_type != napi_uint8_array/);
   });
 
   it('skips the batch executive when an export takes its name', () => {
-    const hostile: ScriptcableProfile = {
+    const hostile: ScriptcaProfile = {
       ...PROFILE,
-      exports: [...PROFILE.exports, { export: '__scriptcable_batch', symbol: 'demo_batch', params: [], returns: 'void' }],
+      exports: [...PROFILE.exports, { export: '__scriptca_batch', symbol: 'demo_batch', params: [], returns: 'void' }],
     };
     const src = generateNodeAddonSource(hostile);
     assert.doesNotMatch(src, /static napi_value __sc_batch\(/);
-    assert.doesNotMatch(src, /"__scriptcable_batch", NAPI_AUTO_LENGTH, __sc_batch/);
+    assert.doesNotMatch(src, /"__scriptca_batch", NAPI_AUTO_LENGTH, __sc_batch/);
     // The user's own export still registers under its name.
-    assert.match(src, /napi_set_named_property\(env, exports, "__scriptcable_batch", fn\)/);
+    assert.match(src, /napi_set_named_property\(env, exports, "__scriptca_batch", fn\)/);
   });
 
   it('skips the executive when a wrapper name (__sc_<export>) collides with executive C symbols', () => {
     // An export named `batch` generates wrapper `__sc_batch` — the executive's
     // own function name. Emitting both would redefine the symbol in one TU
     // and the soft-fail would kill the ENTIRE addon (reproduced 2026-10-25).
-    const collides: ScriptcableProfile = {
+    const collides: ScriptcaProfile = {
       ...PROFILE,
       exports: [...PROFILE.exports, { export: 'batch', symbol: 'demo_x_batch', params: [], returns: 'void' }],
     };
@@ -136,7 +136,7 @@ describe('napi-addon', () => {
   it('the collision guard knows every C symbol the executive defines/uses', () => {
     // The guard list is hand-maintained — this keeps it from drifting behind
     // BATCH_HELPERS_C (a missed symbol would re-open the F-2 collision).
-    const full: ScriptcableProfile = {
+    const full: ScriptcaProfile = {
       ...PROFILE,
       exports: [
         ...PROFILE.exports,
@@ -160,7 +160,7 @@ describe('napi-addon', () => {
   });
 
   it('skips the host (.so) executive TU on symbol collision or empty exports', () => {
-    const collides: ScriptcableProfile = {
+    const collides: ScriptcaProfile = {
       ...PROFILE,
       exports: [{ export: 'x', symbol: SHARED_BATCH_SYMBOL, params: [], returns: 'void' }],
     };
@@ -179,14 +179,14 @@ describe('napi-addon', () => {
     // path has no toolchain-level soft-fail, so a colliding TU would hard-fail
     // the whole build (so-batch review F-1)
     for (const hostile of ['__sc_bres_buf', '__sc_bres_u32', '__sc_bentry_0']) {
-      const prof: ScriptcableProfile = {
+      const prof: ScriptcaProfile = {
         ...PROFILE,
         exports: [{ export: 'x', symbol: hostile, params: [], returns: 'void' }],
       };
       assert.equal(generateSharedBatchSource(prof), '', `symbol ${hostile} must drop the TU`);
     }
     // and `__sc_batch` is not a TU symbol here — an export so named keeps the TU
-    const batchNamed: ScriptcableProfile = {
+    const batchNamed: ScriptcaProfile = {
       ...PROFILE,
       exports: [{ export: 'x', symbol: '__sc_batch', params: [], returns: 'void' }],
     };

@@ -4,7 +4,7 @@
 
 ## 결론
 
-"AoT"의 정체는 **Bun 1.4.1의 `bun build --compile --bytecode` (JavaScriptCore 바이트코드 ahead-of-time 직렬화) 대규모 개선**이다. 단일 JIT/AoT 네이티브 컴파일 같은 근본적 전환은 아니고, 컴파일 실행파일의 **시작 성능·크기** 최적화 계열이다. 이 레포(scriptcable)는 이미 bun 1.4.3(1.4.1 개선 포함)을 쓰고 있으나 **`bun build --compile` 산출물이 없어 당장 적용할 지점이 없다.** 핵심 성능(AoT 네이티브 코드)은 어차피 scriptc(LLVM 백엔드)가 담당한다.
+"AoT"의 정체는 **Bun 1.4.1의 `bun build --compile --bytecode` (JavaScriptCore 바이트코드 ahead-of-time 직렬화) 대규모 개선**이다. 단일 JIT/AoT 네이티브 컴파일 같은 근본적 전환은 아니고, 컴파일 실행파일의 **시작 성능·크기** 최적화 계열이다. 이 레포(scriptca)는 이미 bun 1.4.3(1.4.1 개선 포함)을 쓰고 있으나 **`bun build --compile` 산출물이 없어 당장 적용할 지점이 없다.** 핵심 성능(AoT 네이티브 코드)은 어차피 scriptc(LLVM 백엔드)가 담당한다.
 
 ## 1.4.1에서 바뀐 것 (bun.sh/blog/bun-v1.4.1)
 
@@ -20,4 +20,4 @@
 
 ## 이 레포에 적용하려면 (미래 후보)
 
-scriptcable CLI 예컨대 `scriptcable` 실행파일을 `bun build --compile --bytecode`로 배포하기 시작하면 그 시점에 1.4.1+ 개선이 그대로 적용된다(별도 플래그 외 설정 불필요). 생성되는 클라이언트·코어 산출물(.so/.node/.wasm)은 Bun 실행파일이 아니므로 무관. CLI 실행파일 배포를 시작할 때 `--bytecode --bytecode-depth` 튜닝만 검토하면 된다.
+scriptca CLI 예컨대 `scriptca` 실행파일을 `bun build --compile --bytecode`로 배포하기 시작하면 그 시점에 1.4.1+ 개선이 그대로 적용된다(별도 플래그 외 설정 불필요). 생성되는 클라이언트·코어 산출물(.so/.node/.wasm)은 Bun 실행파일이 아니므로 무관. CLI 실행파일 배포를 시작할 때 `--bytecode --bytecode-depth` 튜닝만 검토하면 된다.

@@ -1,13 +1,13 @@
 {
-  "name": "@scriptcable/example-tauri-app",
+  "name": "@scriptca/example-tauri-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "build:core": "bun run --filter @scriptca/example-calculator-core build",
     "test": "bun run build:core && bun test src/"
   },
   "dependencies": {
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

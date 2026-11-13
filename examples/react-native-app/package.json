@@ -1,13 +1,13 @@
 {
-  "name": "@scriptcable/example-react-native-app",
+  "name": "@scriptca/example-react-native-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
-    "build:hosts": "bunx --bun scriptcable build --hosts react-native",
-    "build:android": "bunx --bun scriptcable build --target native --hosts react-native --platform android",
+    "build:core": "bun run --filter @scriptca/example-calculator-core build",
+    "build:hosts": "bunx --bun scriptca build --hosts react-native",
+    "build:android": "bunx --bun scriptca build --target native --hosts react-native --platform android",
     "test": "bun run build:core && bun test src/",
     "test:metro": "bun run build:core && bun run build:hosts && bun scripts/metro-bundle.mjs",
     "test:expo": "bun run build:core && bun run build:hosts && bun scripts/expo-bundle.mjs",
@@ -18,7 +18,7 @@
     "expo": "~58.0.16",
     "react": "19.3.0",
     "react-native": "0.88.0",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "@babel/runtime": "^8.0.7",
@@ -28,6 +28,6 @@
     "@react-native/metro-config": "^0.88.0",
     "@scriptc/runtime-android-arm64": "0.4.12",
     "metro": "^0.87.1",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

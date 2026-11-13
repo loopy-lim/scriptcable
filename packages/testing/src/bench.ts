@@ -1,5 +1,5 @@
 /**
- * Micro benchmark utilities for scriptcable engines.
+ * Micro benchmark utilities for scriptca engines.
  * Latency (mean/p50/p99 in ns) and throughput (ops/sec) with warmup.
  */
 

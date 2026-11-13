@@ -1,18 +1,18 @@
 {
-  "name": "@scriptcable/example-astro-app",
+  "name": "@scriptca/example-astro-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "build:core": "bun run --filter @scriptca/example-calculator-core build",
     "build": "bun run build:core && bunx --bun astro build",
     "test": "bun run build && bun scripts/assert-dist.mjs"
   },
   "dependencies": {
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "astro": "^5.0.0",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

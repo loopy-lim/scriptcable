@@ -1,7 +1,7 @@
 /**
- * @scriptcable/vite — Vite plugin: builds scriptc core (WASM) on startup and HMR.
+ * @scriptca/vite — Vite plugin: builds scriptc core (WASM) on startup and HMR.
  *
- * Zero-config: reads scriptcable.config.ts > scriptcable.json > inference
+ * Zero-config: reads scriptca.config.ts > scriptca.json > inference
  * (package.json name + standard entry locations) unless `configPath` is set.
  *
  * Drop-in interception (default on): module imports that resolve to the core
@@ -11,7 +11,7 @@
  */
 import { resolve, join } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import type { ResolvedConfig } from '@scriptcable/types';
+import type { ResolvedConfig } from '@scriptca/types';
 import {
   buildCore,
   loadProjectConfig,
@@ -19,9 +19,9 @@ import {
   writeGeneratedClients,
   copyWasmToPublicDir,
   canInterceptEntry,
-} from '@scriptcable/core';
+} from '@scriptca/core';
 
-export type ScriptcableViteOptions = {
+export type ScriptcaViteOptions = {
   /** Explicit config file (.ts or .json) — default: auto-discover or infer */
   configPath?: string;
   /** Virtual module id for the generated client */
@@ -119,7 +119,7 @@ async function rebuild(
   buildGate: { command: string; target: unknown },
 ): Promise<{ genDir: string; config: ResolvedConfig }> {
   const config = await loadProject(root, configPath);
-  const outDir = resolve(root, config.outDir ?? '.scriptcable');
+  const outDir = resolve(root, config.outDir ?? '.scriptca');
   const result = await buildCore(config, {
     cwd: root,
     outDir,
@@ -144,7 +144,7 @@ async function rebuild(
       wasmName: `${config.name}.wasm`,
     });
     if (copied === 'written') {
-      console.log(`[scriptcable] browser wasm → public/${config.name}.wasm (served at /${config.name}.wasm)`);
+      console.log(`[scriptca] browser wasm → public/${config.name}.wasm (served at /${config.name}.wasm)`);
     }
   }
   // Drop-in: imports of the entry resolve to the compiled client. Only when
@@ -169,24 +169,24 @@ async function rebuild(
       dropin.enabled = true;
       dropin.entryAbs = resolve(root, config.entry);
       dropin.path = join(genDir, 'dropin', 'browser.ts');
-      console.log(`[scriptcable] drop-in: imports of ${config.entry} resolve to the compiled client (browser wasm)`);
+      console.log(`[scriptca] drop-in: imports of ${config.entry} resolve to the compiled client (browser wasm)`);
     } else {
       dropin.enabled = false;
-      console.warn(`[scriptcable] drop-in disabled — ${blockedBy}`);
+      console.warn(`[scriptca] drop-in disabled — ${blockedBy}`);
     }
   } else {
     dropin.enabled = false;
   }
   if (clientLink === 'blocked') {
-    console.warn('[scriptcable] could not link node_modules/@unikit-bridge/scriptcable-client — run `scriptcable doctor`');
+    console.warn('[scriptca] could not link node_modules/@unikit-bridge/scriptca-client — run `scriptca doctor`');
   }
   return { genDir, config };
 }
 
-export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
+export function scriptca(options: ScriptcaViteOptions = {}): VitePlugin {
   const configPath = options.configPath;
   const dropinOpt = options.dropin !== false;
-  const virtualId = options.virtualId ?? 'virtual:scriptcable';
+  const virtualId = options.virtualId ?? 'virtual:scriptca';
   // Nuxt (4+) points vite's root at its srcDir (app/) — an explicit root
   // option must survive configResolved so config discovery stays at the
   // project root.
@@ -202,7 +202,7 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
   let lastEntryAbs = '';
 
   return {
-    name: 'vite-plugin-scriptcable',
+    name: 'vite-plugin-scriptca',
     configResolved(config) {
       if (!rootExplicit) root = config.root;
       // publicDir: false is explicit — the user wants no static dir; don't
@@ -241,7 +241,7 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
       // see them.
       order: 'pre',
       async handler(id, importer) {
-        if (id === virtualId || id === '@unikit-bridge/scriptcable-client') {
+        if (id === virtualId || id === '@unikit-bridge/scriptca-client') {
           // Resolve to the real browser client so it stays inside vite's module
           // graph and gets transformed. (A virtual re-export of its absolute
           // path serves raw, untransformed TS to the browser.)
@@ -261,8 +261,8 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
     },
     async handleHotUpdate(ctx) {
       const isConfigFile =
-        ctx.file === resolve(root, 'scriptcable.config.ts') ||
-        ctx.file === resolve(root, 'scriptcable.json') ||
+        ctx.file === resolve(root, 'scriptca.config.ts') ||
+        ctx.file === resolve(root, 'scriptca.json') ||
         (configPath !== undefined && ctx.file === resolve(root, configPath));
       if (!isConfigFile && !/\.(ts|js)$/.test(ctx.file)) return;
       // Only resolve the config when the file could be the entry (or is a config)
@@ -282,4 +282,4 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
   };
 }
 
-export default scriptcable;
+export default scriptca;

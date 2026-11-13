@@ -1,5 +1,5 @@
 /**
- * Integration test: `scriptcable build --watch`. Spawns the real CLI in a
+ * Integration test: `scriptca build --watch`. Spawns the real CLI in a
  * temp project, edits the core, and asserts the automatic rebuild — including
  * the keep-watching-through-errors behavior.
  */
@@ -47,7 +47,7 @@ async function makeProject(): Promise<string> {
   await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '@scriptc'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptca'), join(nm, '@unikit-bridge', 'scriptca'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/.bin/scriptc'), join(nm, '.bin', 'scriptc'), 'file');
   return root;
@@ -94,7 +94,7 @@ describe('build --watch (integration)', () => {
       await new Promise((r) => setTimeout(r, 600));
       await writeFile(join(project, 'src', 'core.ts'), CORE_V2);
       await out(/rebuilt in \d+ms/, 60_000);
-      const nodeSrc = await readFile(join(project, '.scriptcable', 'generated', 'node.ts'), 'utf8');
+      const nodeSrc = await readFile(join(project, '.scriptca', 'generated', 'node.ts'), 'utf8');
       assert.match(nodeSrc, /mul\(a: number, b: number\): number/, 'rebuilt client missing the new export');
     } finally {
       child.kill();
@@ -119,7 +119,7 @@ describe('build --watch (integration)', () => {
       await new Promise((r) => setTimeout(r, 600));
       await writeFile(join(project, 'src', 'core.ts'), CORE_V2);
       await out(/rebuilt in \d+ms/, 60_000);
-      await access(join(project, '.scriptcable', 'generated', 'node.ts'));
+      await access(join(project, '.scriptca', 'generated', 'node.ts'));
     } finally {
       child.kill();
       await child.exited;

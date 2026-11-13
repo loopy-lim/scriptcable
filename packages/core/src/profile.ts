@@ -1,12 +1,12 @@
-import type { ResolvedConfig, ScriptcableConfig, ScriptcableProfile } from '@scriptcable/types';
+import type { ResolvedConfig, ScriptcaConfig, ScriptcaProfile } from '@scriptca/types';
 import { inferExportsFromSource } from './infer.js';
 import { resolveNameEntry, slugPackageName } from './defaults.js';
 
 /** Build a scriptc library profile from a fully-resolved config. */
-export function configToProfile(config: ResolvedConfig): ScriptcableProfile {
+export function configToProfile(config: ResolvedConfig): ScriptcaProfile {
   const prefix = normalizePrefix(config.prefix ?? `${slug(config.name)}_`);
   const hasCallbacks = (config.callbacks?.length ?? 0) > 0;
-  const profile: ScriptcableProfile = {
+  const profile: ScriptcaProfile = {
     profile_format: 1,
     name: config.name,
     entry: config.entry,
@@ -45,9 +45,9 @@ export function configToProfile(config: ResolvedConfig): ScriptcableProfile {
  * Explicit declarations win; inferred values fill the rest.
  */
 export async function resolveProfile(
-  config: ScriptcableConfig,
+  config: ScriptcaConfig,
   cwd: string,
-): Promise<{ profile: ScriptcableProfile; inferred: boolean; skipped: Array<{ name: string; reason: string }> }> {
+): Promise<{ profile: ScriptcaProfile; inferred: boolean; skipped: Array<{ name: string; reason: string }> }> {
   const { config: resolvedResult } = await resolveNameEntry(config, cwd);
   const resolved = resolvedResult as ResolvedConfig;
 
@@ -80,7 +80,7 @@ export async function resolveProfile(
         (skipped.length
           ? `Skipped: ${skipped.map((s) => `${s.name} (${s.reason})`).join('; ')}. `
           : '') +
-        'Use exported functions with explicit primitive types, or declare exports in scriptcable.json.',
+        'Use exported functions with explicit primitive types, or declare exports in scriptca.json.',
     );
   }
   const merged: ResolvedConfig = { ...(resolved as ResolvedConfig), exports: found.map((f) => ({ name: f.name, params: f.params, returns: f.returns })) };
@@ -107,21 +107,21 @@ function slug(name: string): string {
   return slugPackageName(name);
 }
 
-export function loadConfig(raw: unknown): ScriptcableConfig {
+export function loadConfig(raw: unknown): ScriptcaConfig {
   if (!raw || typeof raw !== 'object') {
-    throw new Error('scriptcable config must be an object');
+    throw new Error('scriptca config must be an object');
   }
   const o = raw as Record<string, unknown>;
   // Zero-config: name/entry may be omitted (inferred at resolve time) —
   // but when provided they must be usable.
   if (o.name !== undefined && (typeof o.name !== 'string' || !o.name)) {
-    throw new Error('scriptcable config: name must be a non-empty string when provided (or omit it to infer from package.json)');
+    throw new Error('scriptca config: name must be a non-empty string when provided (or omit it to infer from package.json)');
   }
   if (o.entry !== undefined && (typeof o.entry !== 'string' || !o.entry)) {
-    throw new Error('scriptcable config: entry must be a non-empty string when provided (or omit it to infer from standard locations)');
+    throw new Error('scriptca config: entry must be a non-empty string when provided (or omit it to infer from standard locations)');
   }
   if (o.exports !== undefined && (!Array.isArray(o.exports) || o.exports.length === 0)) {
-    throw new Error('scriptcable config: exports must be a non-empty array when present (or omit it to infer from the TS entry)');
+    throw new Error('scriptca config: exports must be a non-empty array when present (or omit it to infer from the TS entry)');
   }
-  return o as ScriptcableConfig;
+  return o as ScriptcaConfig;
 }

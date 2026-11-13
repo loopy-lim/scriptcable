@@ -2,8 +2,8 @@
  * Load a scriptc native shared library and call C ABI exports.
  * Bun → bun:ffi (default engine, built-in); plain Node → optional koffi fallback.
  */
-import type { AbiClass, BatchEntry, ExportDef, ScriptcableProfile } from '@scriptcable/types';
-import { ScriptcableError } from '@scriptcable/types';
+import type { AbiClass, BatchEntry, ExportDef, ScriptcaProfile } from '@scriptca/types';
+import { ScriptcaError } from '@scriptca/types';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { sharedLibraryFileName } from './link-shared.js';
@@ -11,7 +11,7 @@ import { createBatchWire } from './batch-wire.js';
 import { SHARED_BATCH_SYMBOL } from './napi-addon.js';
 
 export type NativeModule = {
-  profile: ScriptcableProfile;
+  profile: ScriptcaProfile;
   call: (exportName: string, ...args: unknown[]) => unknown;
   /**
    * Per-export pre-bound functions keyed by TypeScript export name —
@@ -56,12 +56,12 @@ function isBun(): boolean {
   return typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined';
 }
 
-async function bindBun(soPath: string, profile: ScriptcableProfile): Promise<FfiBinding> {
+async function bindBun(soPath: string, profile: ScriptcaProfile): Promise<FfiBinding> {
   return bindBunSync(soPath, profile, await import('bun:ffi'));
 }
 
 /** Same binding as `bindBun`, given the already-loaded bun:ffi module. */
-function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof import('bun:ffi')): FfiBinding {
+function bindBunSync(soPath: string, profile: ScriptcaProfile, ffi: typeof import('bun:ffi')): FfiBinding {
   const { dlopen, FFIType, ptr, toArrayBuffer } = ffi;
 
   const mapClass = (c: AbiClass): unknown => {
@@ -137,7 +137,7 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
       exec(meta: Int32Array, args: Uint8Array): Uint8Array {
         const size = Number((rawBatch as (m: unknown, me: number, a: unknown, al: number, o: unknown) => bigint)(ptr(meta), meta.length, ptr(args), args.byteLength, outSlotArg));
         if (size < 0) {
-          throw new ScriptcableError(
+          throw new ScriptcaError(
             'BATCH',
             size === -3 ? 'batch executive out of memory' : 'batch wire rejected by the executive (bounds/wire error)',
           );
@@ -159,7 +159,7 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
     const fn = sym[e.symbol];
     if (typeof fn !== 'function') {
       fns[e.export] = () => {
-        throw new ScriptcableError('MISSING_EXPORT', e.symbol);
+        throw new ScriptcaError('MISSING_EXPORT', e.symbol);
       };
     } else if (hasDirectFfiSignature(e)) {
       fns[e.export] = makeDirectFfiFn(fn, e);
@@ -171,7 +171,7 @@ function bindBunSync(soPath: string, profile: ScriptcableProfile, ffi: typeof im
   return {
     call(symbol, args) {
       const def = profile.exports.find((x) => x.symbol === symbol);
-      if (!def) throw new ScriptcableError('MISSING_EXPORT', symbol);
+      if (!def) throw new ScriptcaError('MISSING_EXPORT', symbol);
       // Same fast path as fns — the per-export closure carries the scratch
       // and slot layout, so the universal entry pays no dispatch penalty.
       return fns[def.export]!(...args);
@@ -188,14 +188,14 @@ const KOFFI_HINT =
   'Bun is the default engine and loads native libraries with built-in bun:ffi — no extra dependency.\n' +
   'Node fallback only: npm install koffi';
 
-async function bindKoffi(soPath: string, profile: ScriptcableProfile): Promise<FfiBinding> {
+async function bindKoffi(soPath: string, profile: ScriptcaProfile): Promise<FfiBinding> {
   let koffiMod: KoffiModule;
   try {
     koffiMod = await import('koffi');
   } catch {
-    throw new ScriptcableError(
+    throw new ScriptcaError(
       'MISSING_DEP',
-      'koffi is an optional fallback for running scriptcable native libraries under plain Node.js.',
+      'koffi is an optional fallback for running scriptca native libraries under plain Node.js.',
       KOFFI_HINT,
     );
   }
@@ -203,7 +203,7 @@ async function bindKoffi(soPath: string, profile: ScriptcableProfile): Promise<F
 }
 
 /** Same binding as `bindKoffi`, given the already-loaded koffi module. */
-export function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffiMod: KoffiModule): FfiBinding {
+export function bindKoffiSync(soPath: string, profile: ScriptcaProfile, koffiMod: KoffiModule): FfiBinding {
   const koffi = koffiMod.default ?? koffiMod;
   const lib = koffi.load(soPath);
   const funcs: Record<string, (...args: unknown[]) => unknown> = {};
@@ -229,7 +229,7 @@ export function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffi
         const out: unknown[] = [null];
         const size = Number(koffiBatch!(meta, meta.length, args, args.byteLength, out));
         if (size < 0) {
-          throw new ScriptcableError(
+          throw new ScriptcaError(
             'BATCH',
             size === -3 ? 'batch executive out of memory' : 'batch wire rejected by the executive (bounds/wire error)',
           );
@@ -242,7 +242,7 @@ export function bindKoffiSync(soPath: string, profile: ScriptcableProfile, koffi
   return {
     call(symbol, args) {
       const fn = funcs[symbol];
-      if (!fn) throw new ScriptcableError('MISSING_EXPORT', symbol);
+      if (!fn) throw new ScriptcaError('MISSING_EXPORT', symbol);
       return fn(...args);
     },
     // koffi's funcs already marshal per export — re-key them by export name.
@@ -427,7 +427,7 @@ function readNativeCString(helpers: PtrHelpers, addr: number | bigint): string {
     const zero = bytes.indexOf(0);
     if (zero >= 0) return cstrDecoder.decode(bytes.subarray(0, zero));
     if (size >= 1 << 20) {
-      throw new ScriptcableError('ABI', 'unterminated cstring return (no NUL within 1 MiB)');
+      throw new ScriptcaError('ABI', 'unterminated cstring return (no NUL within 1 MiB)');
     }
     size *= 16;
   }
@@ -553,10 +553,10 @@ function makeDirectFfiFn(
   }
 }
 
-function makeNativeModule(profile: ScriptcableProfile, binding: FfiBinding): NativeModule {
+function makeNativeModule(profile: ScriptcaProfile, binding: FfiBinding): NativeModule {
   const byName = new Map(profile.exports.map((e) => [e.export, e]));
-  const unknownExport = (exportName: string): ScriptcableError =>
-    new ScriptcableError(
+  const unknownExport = (exportName: string): ScriptcaError =>
+    new ScriptcaError(
       'UNKNOWN_EXPORT',
       `Unknown export "${exportName}"`,
       `Known: ${[...byName.keys()].join(', ')}`,
@@ -611,7 +611,7 @@ function makeNativeModule(profile: ScriptcableProfile, binding: FfiBinding): Nat
 
 export async function loadNativeLibrary(
   sharedPath: string,
-  profile: ScriptcableProfile,
+  profile: ScriptcaProfile,
 ): Promise<NativeModule> {
   const binding = isBun() ? await bindBun(sharedPath, profile) : await bindKoffi(sharedPath, profile);
   return makeNativeModule(profile, binding);
@@ -625,7 +625,7 @@ export async function loadNativeLibrary(
  */
 export function loadNativeLibrarySync(
   sharedPath: string,
-  profile: ScriptcableProfile,
+  profile: ScriptcaProfile,
 ): NativeModule {
   const req = createRequire(import.meta.url);
   const binding = isBun()
@@ -635,7 +635,7 @@ export function loadNativeLibrarySync(
 }
 
 export async function loadNativeFromOutDir(outDir: string): Promise<NativeModule> {
-  const profile = JSON.parse(await readFile(`${outDir}/profile.json`, 'utf8')) as ScriptcableProfile;
+  const profile = JSON.parse(await readFile(`${outDir}/profile.json`, 'utf8')) as ScriptcaProfile;
   const soPath = `${outDir}/${sharedLibraryFileName(profile.name)}`;
   return loadNativeLibrary(soPath, profile);
 }

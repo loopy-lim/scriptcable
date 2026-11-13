@@ -2,7 +2,7 @@
 
 - 날짜: 2026-10-21
 - 기준 리비전: main @ 7f84a9d + 작업 트리의 2차 자동 적용 변경(커밋 전, 보존)
-- 원 요청: "그냥 플러그인을 등록만 하면 알아서 성능이 높아지게" + "vite뿐 아니라 rn, electron, lynx 등 다양한 프로젝트에서도". [[auto-apply-dx-north-star]] — 앱 코드가 알아야 것을 줄인다. 마지막 수동 단계는 **앱 코드의 import를 `@scriptcable/client`로 고쳐 쓰는 일**이다.
+- 원 요청: "그냥 플러그인을 등록만 하면 알아서 성능이 높아지게" + "vite뿐 아니라 rn, electron, lynx 등 다양한 프로젝트에서도". [[auto-apply-dx-north-star]] — 앱 코드가 알아야 것을 줄인다. 마지막 수동 단계는 **앱 코드의 import를 `@scriptca/client`로 고쳐 쓰는 일**이다.
 
 ## 목표와 범위
 
@@ -16,7 +16,7 @@
 **제외 범위**
 
 - 실제 Next(Turbopack)·Rspeedy·Metro 런타임 e2e — 레포에 해당 호스트 미설치. 설정 생성+단위 검증까지만, 한계 문서화
-- Bun/Node 무번들러 실행의 import 스왑(번들러 플러그인 전제) — 기존 `@scriptcable/client` 직접 import 안내
+- Bun/Node 무번들러 실행의 import 스왑(번들러 플러그인 전제) — 기존 `@scriptca/client` 직접 import 안내
 - RN 기기 브릿지의 동기화(TurboModule 호출은 기기에서 Promise — 기존 RN 클라이언트와 동일 시맨틱, 문서화)
 
 **현재 구조와 근거 (조사 완료)**
@@ -27,7 +27,7 @@
 | `packages/core/src/native-loader.ts:256` | `loadNativeLibrary` async 래퍼 — 실제 dlopen/koffi.load는 동기, `await import`만 비동기 |
 | `packages/core/src/infer.ts:101` | `export function`만 수집 — 함수 아닌 export 탐지 없음 → 가로채기 안전성 판정 불가 |
 | `packages/webpack/src/index.ts:30` | beforeCompile 빌드만 — 해석 단계 개입 없음 |
-| `packages/vite/src/index.ts:96` | resolveId가 `@scriptcable/client`만 브라우저 플레이버로 매핑 |
+| `packages/vite/src/index.ts:96` | resolveId가 `@scriptca/client`만 브라우저 플레이버로 매핑 |
 | `packages/core/src/client-package.ts:182` | `writeGeneratedClients`가 단일 emit 지점 — drop-in 파일 추가 위치 |
 | webpack alias | 원본 request 문자열에만 적용 → 상대 import('./core')엔 무효, resolver 플러그인 필요 |
 | `loadNativeLibrary` 호출 그래프 | 바인딩 생성(dlopen·koffi.load·심볼 테이블)은 전부 동기 구성 가능 |
@@ -40,13 +40,13 @@
 
 | ID | 관찰할 결과와 적용 조건 | 담당 태스크 | 검증 ID |
 |---|---|---|---|
-| AC-1 | 생성 node/bun 클라이언트에 `createClientSync()`가 있다: 애드온 → 공유 라이브러리 순 동기 로드, 네이티브 부재 시 "scriptcable build를 먼저" 안내 오류. 실제 빌드 산출물로 `add(20,22)===42` 런타임 확인 | T-1 | V-1 |
+| AC-1 | 생성 node/bun 클라이언트에 `createClientSync()`가 있다: 애드온 → 공유 라이브러리 순 동기 로드, 네이티브 부재 시 "scriptca build를 먼저" 안내 오류. 실제 빌드 산출물로 `add(20,22)===42` 런타임 확인 | T-1 | V-1 |
 | AC-2 | 빌드가 `dropin/browser.ts`(TLA), `dropin/node.ts`(sync), `dropin/react-native.ts`(lazy bridge)를 플레이버별로 생성하고, export 이름·파라미터명·JSDoc이 원본과 일치한다 | T-2 | V-2 |
 | AC-3 | 엔트리에 매핑 불가 런타임 export가 있으면 가로채기가 꺼지고 이유 1줄이 출력된다. 전부 매핑 가능하면 켜진다. 명시적 `exports` 선언 시 엔트리 전체 표면과 비교한다 | T-2 | V-3 |
 | AC-4 | vite 플러그인이 엔트리로 해석되는 import를 drop-in/browser.ts로 스왑하고, 실제 `vite build` 산출물이 drop-in을 사용한다 | T-4, T-8 | V-4 |
 | AC-5 | webpack 플러그인이 resolve.plugins에 리다이렉트 플러그인을 넣고(중복 푸시 없음), 상대/절대 엔트리 요청만 drop-in으로 돌린다(옵션 browser/node) | T-3, T-5 | V-5 |
-| AC-6 | next webpack 그래프: client→browser drop-in, server/edge→node drop-in. Turbopack용 `withScriptcableAsync`가 `turbopack.resolveAlias`를 생성한다(런타임 검증은 미설치로 제외, 문서 표기) | T-6 | V-6 |
-| AC-7 | RN: `withScriptcableMetro(config, opts)`가 엔트리 요청을 dropin/react-native.ts로 리다이렉트하고 나머지는 기본 해석으로 위임한다 | T-7 | V-7 |
+| AC-6 | next webpack 그래프: client→browser drop-in, server/edge→node drop-in. Turbopack용 `withScriptcaAsync`가 `turbopack.resolveAlias`를 생성한다(런타임 검증은 미설치로 제외, 문서 표기) | T-6 | V-6 |
+| AC-7 | RN: `withScriptcaMetro(config, opts)`가 엔트리 요청을 dropin/react-native.ts로 리다이렉트하고 나머지는 기본 해석으로 위임한다 | T-7 | V-7 |
 | AC-8 | Lynx(Rspeedy)·Electron·Turbopack·무번들러 레시피가 README/ko에 문서화된다 | T-9 | V-8 |
 | AC-9 | 전체 회귀(test/typecheck/build + 예제) 통과, CHANGELOG 갱신 | T-9 | V-9 |
 
@@ -57,23 +57,23 @@
 - `native-loader.ts`: 심볼 테이블·바인딩 생성을 동기 본문으로 추출하고 `loadNativeLibrarySync(sharedPath, profile)` 추가 — Bun은 `createRequire(...)('bun:ffi')`, Node는 `('koffi')` 동기 require. 기존 async 경로는 동기 본문 재사용(동작 불변).
 - `genNodeClient`에 `createClientSync(options?)` 추가: `createRequire(import.meta.url)`로 SEARCH_DIRS 순회 `require(애드온)` → `loadNativeLibrarySync(공유)` → 둘 다 없으면 안내 오류(throw). `bun.ts`는 헤더 치환으로 상속. 정적 import만 사용 — TLA/CJS 양쪽 안전.
 - `codegen.ts`에 drop-in 종 생성:
-  - `dropin/browser.ts`: `const client = await createClient()` + `export function add(...)` 원본 시그니처 + `getScriptcableClient()`. `../browser.js` 상대 import(.js→.ts 해석은 vite/next 모두 기존 생성물이 이미 사용·검증된 패턴).
+  - `dropin/browser.ts`: `const client = await createClient()` + `export function add(...)` 원본 시그니처 + `getScriptcaClient()`. `../browser.js` 상대 import(.js→.ts 해석은 vite/next 모두 기존 생성물이 이미 사용·검증된 패턴).
   - `dropin/node.ts`: `const client = createClientSync()` + 동일 export.
-  - `dropin/react-native.ts`: `let c; const client = () => c ??= createClient(createTurboModuleBridge(NativeCable))` + 동일 export(`../react-native.js`, `../NativeCable.js`, `@scriptcable/react-native`).
+  - `dropin/react-native.ts`: `let c; const client = () => c ??= createClient(createTurboModuleBridge(NativeCable))` + 동일 export(`../react-native.js`, `../NativeCable.js`, `@scriptca/react-native`).
 - 생성 조건: 대상 targets에 해당 플레이버가 있을 때만. `writeGeneratedClients`를 통해 모든 호출자(CLI/플러그인)가 자동 수혜.
 
 **F-3 (core: 가로채기 안전 판정)**
 
 - `infer.ts`에 `analyzeEntryExports(source)`: 최상위 export 문 스캔 — `export function`은 추론 결과와 대조, 그 외 런타임 export(`export const/let/class`, `export {a,b}`, `export *`, re-export, `export default`)는 `{name, reason}` 수집. `export type/interface`은 제외(런타임 부재).
-- `intercept.ts`: `canInterceptEntry(config, cwd, profile)` — 엔트리 소스 읽어 (a) `skipped` 없음 (b) 비함수 export 없음 (c) export 이름 집합 == profile.exports 집합. 위반 시 reasons 배열. 플러그인은 실패 시 `[scriptcable] drop-in disabled: …` 1줄.
+- `intercept.ts`: `canInterceptEntry(config, cwd, profile)` — 엔트리 소스 읽어 (a) `skipped` 없음 (b) 비함수 export 없음 (c) export 이름 집합 == profile.exports 집합. 위반 시 reasons 배열. 플러그인은 실패 시 `[scriptca] drop-in disabled: …` 1줄.
 
 **F-2/F-4 (호스트 플러그인)**
 
 - core에 `createDropinResolvePlugin(entryBaseNoExt, dropinPath)`(webpack 계열 공용): `resolver.getHook('resolve')`에서 상대/절대 요청만 `path.resolve(request.path, request.request)` 후 확장자 제거·비교 → 엔트리면 `doResolve`로 drop-in 절대경로 리다이렉트, 그 외는 기본 해석 위임. `entryBase`는 엔트리 절대경로 확장자 제거.
 - vite: `resolveId` 확장 — `this.resolve(id, importer, {skipSelf:true})` 결과가 entryAbs면 drop-in/browser.ts 반환. 옵션 `dropin?: boolean`(기본 true). 빌드 실패·비가로채기 시 기존 동작.
 - webpack: 옵션 `dropin?: 'browser'|'node'|false`(기본 'browser'). beforeCompile 빌드 후 `canInterceptEntry` 통과 시 `compiler.options.resolve.plugins`에 플러그인 1회 푸시(플래그로 dedupe).
-- next: `withScriptcable`의 webpack 훅에서 `ctx.isServer`로 플레이버 선택(server/edge→node, client→browser) — 같은 core resolve 플러그인 사용. `withScriptcableAsync(nextConfig, opts)`: config 해석 후 `turbopack.resolveAlias` 병합 생성(TLA인 next.config.mjs에서 await).
-- react-native: `withScriptcableMetro(config, {entry?, cwd?})` — sync fs로 엔트리 추론(표준 위치) 또는 명시 경로. resolveRequest: 엔트리 귀결 요청 → `{type:'sourceFile', filePath: dropin 경로}`, 나머지는 `context.resolveRequest` 위임. dropin 경로는 `.scriptcable/generated/dropin/react-native.ts`(미빌드 시 위임=기존 동작).
+- next: `withScriptca`의 webpack 훅에서 `ctx.isServer`로 플레이버 선택(server/edge→node, client→browser) — 같은 core resolve 플러그인 사용. `withScriptcaAsync(nextConfig, opts)`: config 해석 후 `turbopack.resolveAlias` 병합 생성(TLA인 next.config.mjs에서 await).
+- react-native: `withScriptcaMetro(config, {entry?, cwd?})` — sync fs로 엔트리 추론(표준 위치) 또는 명시 경로. resolveRequest: 엔트리 귀결 요청 → `{type:'sourceFile', filePath: dropin 경로}`, 나머지는 `context.resolveRequest` 위임. dropin 경로는 `.scriptca/generated/dropin/react-native.ts`(미빌드 시 위임=기존 동작).
 
 **오류·경계**
 
@@ -84,7 +84,7 @@
 
 **호환성·롤백**
 
-- 기존 `@scriptcable/client` import 흐름 불변 — drop-in은 추가 파일+옵트아웃 가능한 리다이렉트. 생성물 내용 변화는 신규 파일뿐. 각 호스트 기능 독립 커밋으로 롤백 가능.
+- 기존 `@scriptca/client` import 흐름 불변 — drop-in은 추가 파일+옵트아웃 가능한 리다이렉트. 생성물 내용 변화는 신규 파일뿐. 각 호스트 기능 독립 커밋으로 롤백 가능.
 
 ## 태스크
 
@@ -104,7 +104,7 @@
 
 | ID | 방법 | 기대 | 실제 결과 | 판정 |
 |---|---|---|---|---|
-| V-1 | webpack 플러그인 빌드로 실제 산출 생성 → 생성 `node.ts`·`dropin/node.ts` 동적 import → `createClientSync().add(20,22)` | 42, 동기 반환 | plugin.test.ts "drops in" — `client.add(20,22)===42`, `dropin.add(20,22)===42`, 싱글톤 `getScriptcableClient().add(3,4)===7` | PASS |
+| V-1 | webpack 플러그인 빌드로 실제 산출 생성 → 생성 `node.ts`·`dropin/node.ts` 동적 import → `createClientSync().add(20,22)` | 42, 동기 반환 | plugin.test.ts "drops in" — `client.add(20,22)===42`, `dropin.add(20,22)===42`, 싱글톤 `getScriptcaClient().add(3,4)===7` | PASS |
 | V-2 | `bun test packages/core` — drop-in 3종 존재·시그니처·JSDoc·TLA/sync/lazy 형태 검사 | 신규 케이스 pass | codegen.test.ts drop-in 5 pass (paramNames 유·무, 플레이버 조건부 생성, createClientSync 구조) | PASS |
 | V-3 | intercept 단위 테스트 — 비함수 export·class·re-export·default·타입 전용·프로필 불일치·엔트리 부재 | ok:false + reasons | intercept.test.ts 7 pass (`export { … } from`이 modifier 없음을 발견해 infer.ts 수정 후 통과) | PASS |
 | V-4 | `bun test packages/vite` + vite-app 실서버 스모크(`transformRequest`로 import 재기록 확인) + `vite build` | 실제 vite가 drop-in으로 해석 | vite 2 pass; dropin-smoke OK — `dropin/browser.ts` 참조, 원본 core 미등장. `vite build`는 TLA로 실패 → 예제 `build.target: 'es2022'` 명시 후 성공 (문서에 요구사항 기재) | PASS |
@@ -120,7 +120,7 @@
 
 - Turbopack·Metro·Rspeedy 런타임 e2e는 레포에 호스트가 없어 **설정 생성+단위 수준까지만 검증** (V-6/V-7). 실제 호스트 설치 환경에서 확인 필요.
 - 브라우저 drop-in은 TLA 필수 → 앱 빌드 타깃 ES2022+ 요구(vite는 게이트가 자동 판정, 예제에 `build.target: 'es2022'`로 시연). TLA 불가 호스트는 `dropin: false`.
-- `withScriptcableAsync`의 Turbopack `resolveAlias` 절대경로 키 지원은 문서상 확인 필요(호스트 미설치).
+- `withScriptcaAsync`의 Turbopack `resolveAlias` 절대경로 키 지원은 문서상 확인 필요(호스트 미설치).
 - RN 기기에서 TurboModule drop-in 호출은 Promise 귀결(원본은 동기) — 기존 브리지 클라이언트와 동일 시맨틱, README 명시.
 
 ## G3 리뷰 결함과 수정 (독립 평가자 FAIL → 수정)
@@ -130,8 +130,8 @@
 | F-1 | P1 | vite 5/6 기본 빌드 타깃(modules→safari14)이 TLA 거부 — 기본 ON 가로채기가 `vite build`를 깸 | vite 플러그인이 `config.command==='build'`에서 `build.target`(미설정 시 vite 버전별 기본, peer 미해석 시 보수적 modules)을 `targetSupportsTla`로 판정해 미지원 시 가로채기 자동 비활성+해결 안내 1줄. webpack 옵션 문서에 CJS 서버 번들 flavor 안내 추가 | plugin.test.ts 게이트 케이스(빌드+pre-TLA→null, es2022→on, serve→on) |
 | F-2 | P2 | `analyzeEntryExports`가 enum·namespace·구조분해 export를 놓침 → 가로채기 ON에서 미제공 export로 파손 | 3종을 unmapped로 탐지 추가. 선택적/기본 매개변수 함수도 drop-in 시맨틱 보존 불가로 unmapped | intercept.test.ts 신규 2케이스 |
 | F-3 | P2 | 명시적 `exports` 선언 시 paramNames·JSDoc 소실(vite-app 등 대표 예제가 AC-2 불충족) | `resolveProfile` explicit 분기에서 소스 추론을 병합(이름 기준, 소스 부재 시 위치 인자 폴백) | profile.test.ts 신규 2케이스 |
-| F-4 | P2 | `withScriptcableAsync`가 Turbopack alias를 무게이트 설정 — unmappable 프로젝트 빌드 파손 가능 | `canInterceptEntry` + drop-in 파일 존재 확인 통과 시에만 alias 설정, 실패 시 이유 1줄 | fake-next-build(대상 예제 ok 경로) + next 플러그인 테스트 회귀 |
-| F-5 | P3 | edge 런타임에 node drop-in(node:fs) 유입 가능 | `nextRuntime==='edge'`면 가로채기 비활성(`@scriptcable/client`로 폴백) | 코드 검수 (edge 호스트 미설치) |
+| F-4 | P2 | `withScriptcaAsync`가 Turbopack alias를 무게이트 설정 — unmappable 프로젝트 빌드 파손 가능 | `canInterceptEntry` + drop-in 파일 존재 확인 통과 시에만 alias 설정, 실패 시 이유 1줄 | fake-next-build(대상 예제 ok 경로) + next 플러그인 테스트 회귀 |
+| F-5 | P3 | edge 런타임에 node drop-in(node:fs) 유입 가능 | `nextRuntime==='edge'`면 가로채기 비활성(`@scriptca/client`로 폴백) | 코드 검수 (edge 호스트 미설치) |
 | F-6 | P3 | vite `publicDir:false`인데 public/ 생성 | 명시 false면 복사 생략 | 코드 검수 |
 | F-7 | P3 | enhanced-resolve 실라이브러리 검증 부재 | 루트 devDep `enhanced-resolve@5.26.0` 추가 + 실 resolver 통합 테스트(리다이렉트·위임·/var realpath 정규화) | dropin-resolve.test.ts 통합 케이스 |
 

@@ -11,19 +11,19 @@
  *   node scripts/bench-node.ts                 # table to stdout
  *   node scripts/bench-node.ts --out run.json  # + JSON artifact
  *
- * Prereq: bun run --filter @scriptcable/example-bench-core build
+ * Prereq: bun run --filter @scriptca/example-bench-core build
  */
-import { bench, formatTable, type BenchResult } from '@scriptcable/testing';
-import { loadNativeFromOutDir } from '@scriptcable/core/native';
-import { loadWasmModule } from '@scriptcable/core/wasm';
-import { createBatchWire } from '@scriptcable/core/batch';
+import { bench, formatTable, type BenchResult } from '@scriptca/testing';
+import { loadNativeFromOutDir } from '@scriptca/core/native';
+import { loadWasmModule } from '@scriptca/core/wasm';
+import { createBatchWire } from '@scriptca/core/batch';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', '.scriptcable');
+const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', '.scriptca');
 const BATCH_N = 64;
 const isBun = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined';
 
@@ -62,7 +62,7 @@ async function main(): Promise<void> {
     record('addon:ping', bench('addon:ping', () => addon.ping(), { iterations: 2_000_000 }));
     record('addon:add', bench('addon:add', () => addon.add(20, 22), { iterations: 2_000_000 }));
     record('addon:repeat(100)', bench('addon:repeat(100)', () => addon.repeat('ab', 100), { iterations: 200_000 }));
-    const exec = addon['__scriptcable_batch'] as
+    const exec = addon['__scriptca_batch'] as
       | ((meta: Int32Array, args: Uint8Array) => Uint8Array)
       | undefined;
     if (typeof exec === 'function') {
@@ -105,7 +105,7 @@ async function main(): Promise<void> {
     const wasmBytes = await readFile(join(outDir, `${profile.name}.wasm`));
     let wasi: Parameters<typeof loadWasmModule>[1]['wasi'];
     if (isBun) {
-      const { createMinimalWasi } = await import('@scriptcable/core/wasi');
+      const { createMinimalWasi } = await import('@scriptca/core/wasi');
       wasi = createMinimalWasi();
     } else {
       const { WASI } = await import('node:wasi');
@@ -129,7 +129,7 @@ async function main(): Promise<void> {
   const runtime = isBun
     ? `bun ${process.versions.bun ?? ''} (node-compat ${process.version}) · ${process.platform}-${process.arch}`
     : `node ${process.version} · ${process.platform}-${process.arch}`;
-  console.log(`\n## scriptcable string tiers — ${runtime}\n`);
+  console.log(`\n## scriptca string tiers — ${runtime}\n`);
   console.log('| workload | ns/op |');
   console.log('| --- | --- |');
   for (const r of rows) console.log(`| ${r.name} | ${r.ns} |`);

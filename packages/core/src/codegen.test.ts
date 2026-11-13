@@ -7,7 +7,7 @@
 import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
 import { generateClients } from './codegen.js';
-import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
+import type { ResolvedConfig, ScriptcaProfile } from '@scriptca/types';
 
 const CONFIG: ResolvedConfig = {
   name: 'calc',
@@ -97,22 +97,22 @@ describe('drop-in clients', () => {
     exports: [
       { export: 'add', symbol: 'calc_add', params: ['f64', 'f64'], returns: 'f64', paramNames: ['a', 'b'], doc: 'Adds.' },
     ],
-  } as unknown as ScriptcableProfile;
+  } as unknown as ScriptcaProfile;
 
   it('browser drop-in mirrors the entry surface and awaits init once (TLA)', () => {
     const { files } = generateClients(CONFIG, ['browser'], { profile: PROFILE });
     const src = files['dropin/browser.ts']!;
-    assert.match(src, /const client: ScriptcableClient = await createClient\(\);/, 'top-level await init');
+    assert.match(src, /const client: ScriptcaClient = await createClient\(\);/, 'top-level await init');
     assert.match(src, /from '\.\.\/browser\.js'/);
     assert.match(src, /\/\*\* Adds\. \*\/\nexport function add\(a: number, b: number\): number \{\n  return client\.add\(a, b\);\n\}/);
-    assert.match(src, /getScriptcableClient/);
+    assert.match(src, /getScriptcaClient/);
   });
 
   it('node drop-in initializes synchronously — no await in code', () => {
     const { files } = generateClients(CONFIG, ['node']);
     const src = files['dropin/node.ts']!;
     assert.match(src, /from '\.\.\/node\.js'/);
-    assert.match(src, /const client: ScriptcableClient = createClientSync\(\);/);
+    assert.match(src, /const client: ScriptcaClient = createClientSync\(\);/);
     assert.doesNotMatch(src, /await\s+createClient/, 'drop-in must be top-level-await-free (CJS-safe server bundles)');
     assert.match(src, /export function add\(arg0: number, arg1: number\): number/);
   });
@@ -142,7 +142,7 @@ describe('drop-in clients', () => {
     assert.match(src, /export function createClientSync/);
     assert.match(src, /loadNativeLibrarySync/);
     assert.match(src, /loadAddonSync/);
-    assert.match(src, /Run 'scriptcable build' first/);
+    assert.match(src, /Run 'scriptca build' first/);
     // The async path stays untouched
     assert.match(src, /export async function createClient/);
   });
@@ -204,15 +204,15 @@ describe('batch surface', () => {
       { export: 'add', symbol: 'calc_add', params: ['f64', 'f64'], returns: 'f64' },
       { export: 'greet', symbol: 'calc_greet', params: ['string'], returns: 'string' },
     ],
-  } as unknown as ScriptcableProfile;
+  } as unknown as ScriptcaProfile;
 
   it('node flavor wires the addon executive into batch() with a sequential fallback', () => {
     const src = generateClients(CONFIG, ['node'], { profile: PROFILE }).files['node.ts']!;
-    assert.match(src, /import \{ createBatchWire \} from '@unikit-bridge\/scriptcable\/core\/batch';/);
+    assert.match(src, /import \{ createBatchWire \} from '@unikit-bridge\/scriptca\/core\/batch';/);
     assert.match(src, /const __wire = createBatchWire\(PROFILE\);/, 'one wire per client module');
     assert.match(
       src,
-      /const __execBatch = addonFns\['__scriptcable_batch'\] as \(\(meta: Int32Array, args: Uint8Array\) => Uint8Array\) \| undefined;/,
+      /const __execBatch = addonFns\['__scriptca_batch'\] as \(\(meta: Int32Array, args: Uint8Array\) => Uint8Array\) \| undefined;/,
     );
     assert.match(src, /return __wire\.decode\(__execBatch\(meta, args\)\);/);
     // direct-tier sequential fallback validates via the wire so unknown/argc
@@ -262,9 +262,9 @@ describe('batch surface', () => {
     assert.match(src, /return entries\.map\(\(e\) => bridge\.call\(e\[0\], e\.slice\(1\) as unknown\[\]\)\) as unknown\[\];/);
   });
 
-  it('ScriptcableClient declares batch(entries)', () => {
+  it('ScriptcaClient declares batch(entries)', () => {
     const types = generateClients(CONFIG, ['node'], { profile: PROFILE }).files['types.ts']!;
-    assert.match(types, /import type \{ BatchEntry \} from '@unikit-bridge\/scriptcable\/types';/);
+    assert.match(types, /import type \{ BatchEntry \} from '@unikit-bridge\/scriptca\/types';/);
     assert.match(types, /batch\(entries: ReadonlyArray<BatchEntry>\): unknown\[\];/);
   });
 });

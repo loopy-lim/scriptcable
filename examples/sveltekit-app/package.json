@@ -1,15 +1,15 @@
 {
-  "name": "@scriptcable/example-sveltekit-app",
+  "name": "@scriptca/example-sveltekit-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
+    "build:core": "bun run --filter @scriptca/example-calculator-core build",
     "build": "bun run build:core && bunx --bun vite build",
     "test": "bun run build && bun scripts/assert-dist.mjs"
   },
   "dependencies": {
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.0",
@@ -17,6 +17,6 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "svelte": "^5.0.0",
     "vite": "^6.0.0",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

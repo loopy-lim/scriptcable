@@ -1,19 +1,19 @@
-# 클라이언트 import 자동 적용 계획 (`@scriptcable/client` 보편화)
+# 클라이언트 import 자동 적용 계획 (`@scriptca/client` 보편화)
 
 - 날짜: 2026-10-20
 - 기준 리비전: main @ 0410642 + 미커밋 zero-config DX 변경(보존, 별도 커밋 아님)
-- 원 요청: "이거 scriptable을 알아서 잘 적용되게 하고 싶어" + 확인 답변: 클라이언트 import 자동화(1안) — "상대경로에 대해서 전혀 몰라도 되며, 같은 프로젝트에 있더라도 알아서 잘 적용"
+- 원 요청: "이거 scriptca을 알아서 잘 적용되게 하고 싶어" + 확인 답변: 클라이언트 import 자동화(1안) — "상대경로에 대해서 전혀 몰라도 되며, 같은 프로젝트에 있더라도 알아서 잘 적용"
 
 ## 목표와 범위
 
 **사용자에게 달라지는 결과**
 
 1. 어떤 호스트(Next webpack/Turbopack, Webpack/Rspack·Lynx, Vite, Bun 런타임)에서든 앱 코드는 오직
-   `import { createClient } from '@scriptcable/client'` 만 쓴다. `.scriptcable/generated/...` 상대경로를 몰라도 된다.
+   `import { createClient } from '@scriptca/client'` 만 쓴다. `.scriptca/generated/...` 상대경로를 몰라도 된다.
 2. 서버 그래프(Node 런타임)와 클라이언트 그래프(브라우저)가 **같은 import 문**으로 각각 맞는 플레이버(node/browser)를
    자동으로 받는다 — export conditions 기반, 앱 코드에 분기 없음.
-3. 에디터 TS도 `@scriptcable/client`를 해석한다(tsconfig 수정 없이 — 실제 패키지이므로).
-4. `scriptcable build` 후 어디서든 링크가 유지된다(재실행 시 idempotent, 끊어진 링크 자동 복구).
+3. 에디터 TS도 `@scriptca/client`를 해석한다(tsconfig 수정 없이 — 실제 패키지이므로).
+4. `scriptca build` 후 어디서든 링크가 유지된다(재실행 시 idempotent, 끊어진 링크 자동 복구).
 
 **제외 범위**
 
@@ -31,19 +31,19 @@
 | `codegen.ts:100-146` | node 클라이언트 — `__dirname` 기준 shared/wasm 경로. 번들러(Next) 서버 런타임에서 `__dirname`이 `.next/`로 풀려 실패할 잠재 결함 |
 | `packages/core/src/wasi-polyfill.ts` | `createMinimalWasi()` 존재 — 브라우저에서 no-arg 기본값으로 쓸 수 있음 (vite-app이 이미 사용) |
 | `packages/cli/src/commands/build.ts:37` | 기본 hosts `['node','bun','browser']` |
-| `packages/vite/src/index.ts:74-86` | 가상 모듈(`virtual:scriptcable`, `@scriptcable/client`) — 유지(호환) |
+| `packages/vite/src/index.ts:74-86` | 가상 모듈(`virtual:scriptca`, `@scriptca/client`) — 유지(호환) |
 | `packages/next/src/index.ts`, `packages/webpack/src/index.ts` | 빌드+codegen만 하고 클라이언트 해석 수단 없음 — 앱이 상대경로 import |
 | `packages/cli/src/commands/init.ts` | bun/node 스캐폴드 main.ts가 `createNodeEngine({outDir})` — outDir을 앱이 앎 |
 | `packages/core/package.json` exports | `/wasm`, `/native`, `/wasi` 서브패스 존재 — 생성 파일 import 가능 |
 
 **핵심 설계: 진짜 패키지 + export conditions (번들러별 alias 남발 대신 단일 메커니즘)**
 
-`scriptcable build`와 3개 번들러 플러그인이 공유하는 신규 core 헬퍼가:
+`scriptca build`와 3개 번들러 플러그인이 공유하는 신규 core 헬퍼가:
 
-1. `<outDir>/generated/package.json`에 `@scriptcable/client` 매니페스트를 기록:
+1. `<outDir>/generated/package.json`에 `@scriptca/client` 매니페스트를 기록:
    - `".": { "bun": "./bun.ts", "node": "./node.ts", "browser": "./browser.ts", "default": "./<기본>.ts" }` — 생성된 플레이버만 조건으로. default = browser 우선(에디터 TS 포함 비조건 환경), 없으면 node/bun 순.
    - `"./browser" | "./node" | "./bun" | "./react-native" | "./lynx" | "./tauri" | "./*.ts"` 서브패스.
-2. `<cwd>/node_modules/@scriptcable/client` 심링크(Windows junction)를 보장:
+2. `<cwd>/node_modules/@scriptca/client` 심링크(Windows junction)를 보장:
    - 이미 같은 대상 → no-op. 끊어진 심링크 → 교체. 실제 디렉터/파일 존재 → 건드리지 않음. `node_modules` 없으면 생성.
    - 실패(권한 등)는 치명적 아님 — 상태를 반환해 CLI만 한 줄 로그.
 
@@ -54,12 +54,12 @@
 
 - `genBrowserClient`: `wasi`를 옵션화, 기본 `createMinimalWasi()`(core/wasi) — 브라우저 no-arg 동작.
 - `genNodeClient`: shared/wasm 로드에 cwd 기반 폴백(`join(cwd, outDirRel, 'generated', …)`) — 번들러 서버 런타임에서 `__dirname` 왜곡 대비.
-- next: `withScriptcable`이 `transpilePackages: ['@scriptcable/client']` 자동 병합(webpack·turbopack 공통).
+- next: `withScriptca`이 `transpilePackages: ['@scriptca/client']` 자동 병합(webpack·turbopack 공통).
 - vite/next/webpack 플러그인: 각자 duplicated write 루프 → 공유 `writeGeneratedClients()`(mkdir+write+client package+link)로 교체. vite 가상 모듈 유지.
-- CLI build: 클라이언트 패키지+링크 수행, `  client: @scriptcable/client → …` 한 줄 로그.
-- doctor: 링크 상태 확인 표시 + 수정 안내(`scriptcable build` 재실행 또는 `"@scriptcable/client": "file:.scriptcable/generated"` 의존성 추가로 CI 내구화).
-- init: bun/node 스캐폴드 main.ts를 `@scriptcable/client` import로 교체(outDir 노출 제거).
-- 예제: `examples/next-app/src/server-action.ts`를 `@scriptcable/client` import로 전환(실증).
+- CLI build: 클라이언트 패키지+링크 수행, `  client: @scriptca/client → …` 한 줄 로그.
+- doctor: 링크 상태 확인 표시 + 수정 안내(`scriptca build` 재실행 또는 `"@scriptca/client": "file:.scriptca/generated"` 의존성 추가로 CI 내구화).
+- init: bun/node 스캐폴드 main.ts를 `@scriptca/client` import로 교체(outDir 노출 제거).
+- 예제: `examples/next-app/src/server-action.ts`를 `@scriptca/client` import로 전환(실증).
 - 문서: README.md/README.ko.md 새 섹션 + CHANGELOG.
 
 **오류·경계**
@@ -78,8 +78,8 @@
 
 | ID | 관찰할 결과와 적용 조건 | 담당 태스크 | 검증 ID |
 |---|---|---|---|
-| AC-1 | `scriptcable build` 후 앱에서 `import { createClient } from '@scriptcable/client'`가 Bun 런타임에서 실제 코어 함수를 호출한다 (상대경로/엔진 API/파일 경로 지식 없이) | T-1, T-2 | V-1 |
-| AC-2 | Next(webpack)에서 `withScriptcable`만 적용하면 서버·클라이언트 그래프가 같은 import로 각각 node/browser 플레이버를 해석한다 (conditions 기반, transpilePackages 자동) | T-1, T-3 | V-2 |
+| AC-1 | `scriptca build` 후 앱에서 `import { createClient } from '@scriptca/client'`가 Bun 런타임에서 실제 코어 함수를 호출한다 (상대경로/엔진 API/파일 경로 지식 없이) | T-1, T-2 | V-1 |
+| AC-2 | Next(webpack)에서 `withScriptca`만 적용하면 서버·클라이언트 그래프가 같은 import로 각각 node/browser 플레이버를 해석한다 (conditions 기반, transpilePackages 자동) | T-1, T-3 | V-2 |
 | AC-3 | Webpack/Rspack 플러그인 프로젝트에서도 동일 import가 해석된다 | T-3 | V-3 |
 | AC-4 | 브라우저에서 `createClient()` 인자 없이 동작한다 (wasi 기본 제공) | T-1 | V-4 |
 | AC-5 | 링크는 idempotent — 재빌드/끊어진 링크/외부 패키지 충돌에서 각각 안전하다 | T-1 | V-5 |
@@ -104,13 +104,13 @@
 
 | ID | 방법 | cwd·환경 | 기대 결과 |
 |---|---|---|---|
-| V-1 | `bun test packages/cli` — 통합 테스트가 tmp 프로젝트 빌드 후 `node_modules/@scriptcable/client` 링크와 Bun 서브프로세스 `import('@scriptcable/client')` → `add(2,3)=5` 실호출 | repo root (scriptc+clang) | 링크 존재 + 실호출 5 |
-| V-2 | next-app: `bun run test` (server-action = Bun 런타임 node/bun 플레이버) + fake-next-build 번들 성공 + `transpilePackages` 코드 대조 | examples/next-app | 기존 테스트 통과 + import가 `@scriptcable/client`로 전환됨 |
+| V-1 | `bun test packages/cli` — 통합 테스트가 tmp 프로젝트 빌드 후 `node_modules/@scriptca/client` 링크와 Bun 서브프로세스 `import('@scriptca/client')` → `add(2,3)=5` 실호출 | repo root (scriptc+clang) | 링크 존재 + 실호출 5 |
+| V-2 | next-app: `bun run test` (server-action = Bun 런타임 node/bun 플레이버) + fake-next-build 번들 성공 + `transpilePackages` 코드 대조 | examples/next-app | 기존 테스트 통과 + import가 `@scriptca/client`로 전환됨 |
 | V-3 | webpack 플러그인 경로: dx-app/vite 예제 빌드 + plugin.test.ts, 조사로 alias 불필요 확인 | repo root | 기존 검증 재통과 |
 | V-4 | codegen 출력 대조 테스트 — browser 클라이언트에 `wasi?` 옵션 + `createMinimalWasi` 기본 존재 | packages/core | 어설션 pass |
 | V-5 | client-package 단위 테스트 — 생성/갱신/끊어진 링크 복구/실제 디렉터 보존/node_modules 부재 생성 | packages/core | 전부 pass |
 | V-6 | tmp 프로젝트에서 `tsc --noEmit`로 `createClient()` no-arg 호출 타입 통과 (또는 생성 types 대조) | tmp project | 에러 0 |
-| V-7 | `scriptcable doctor` 실행 — 링크 상태 라인 출력 확인 | examples/dx-app 등 | 상태 라인 존재 |
+| V-7 | `scriptca doctor` 실행 — 링크 상태 라인 출력 확인 | examples/dx-app 등 | 상태 라인 존재 |
 | V-8 | init 스캐폴드·server-action.ts 소스 대조 — 상대경로/outDir 리터럴 부재 | repo root | grep 0건 |
 | V-9 | `bun run test && bun run typecheck && bun run build` + README 대조 | repo root | 전부 성공 |
 
@@ -131,7 +131,7 @@
 ### G3 2차 재판정
 
 독립 평가자 — F-1~F-5 **전부 수정 충분**(평가자가 /tmp에서 독립 재현: 플러그인 단독 경로 `createClient()` → add(2,3)=5 실호출, preferWasm 경로의 최초 런타임 증거 포함, F-5는 60-way 동시 경합에서 무손상·무오판 입증). 신설 결함 2건:
-- F-6 (P3) ci.yml에 next test 스텝 누락 → 수정: `bun run --filter @scriptcable/next test` 추가
+- F-6 (P3) ci.yml에 next test 스텝 누락 → 수정: `bun run --filter @scriptca/next test` 추가
 - F-7 (P2) 신설 통합 테스트의 `*.dylib` 전용 glob이 Linux(.so)에서 실패 예정 → 수정: `.dylib|.so|.dll` 플랫폼 무관 검사로 교체(cli 테스트 패턴과 정합)
 
 수정 후 `bun test packages/next` 재실행 — 1 pass / 0 fail. 다른 검증은 무관(평가자 확인).
@@ -142,18 +142,18 @@
 
 ### G5 완료 — PASS
 
-원 요청("scriptcable을 알아서 잘 적용되게" → 확인 범위: 클라이언트 import 자동화, 상대경로 지식 제로) 대조:
+원 요청("scriptca을 알아서 잘 적용되게" → 확인 범위: 클라이언트 import 자동화, 상대경로 지식 제로) 대조:
 
 | AC | 최종 증거 |
 |---|---|
-| AC-1 | CLI 통합 테스트 — 설정 없는 프로젝트 빌드 후 Bun 서브프로세스 `import('@scriptcable/client')` → add(2,3)=5 실호출 |
-| AC-2 | next 플러그인 단독 통합 테스트 + 평가자 /tmp 독립 재현(scriptcableBuild()만 실행 → exports 추론·dylib 복사·실호출) + withScriptcable의 transpilePackages 병합 |
+| AC-1 | CLI 통합 테스트 — 설정 없는 프로젝트 빌드 후 Bun 서브프로세스 `import('@scriptca/client')` → add(2,3)=5 실호출 |
+| AC-2 | next 플러그인 단독 통합 테스트 + 평가자 /tmp 독립 재현(scriptcaBuild()만 실행 → exports 추론·dylib 복사·실호출) + withScriptca의 transpilePackages 병합 |
 | AC-3 | 동일 emit 경로 공유(webpack beforeCompile) + 평가자 vite buildStart 단독 재현 |
 | AC-4 | browser 클라이언트 `wasi?` 옵션화 + createMinimalWasi 기본값(codegen 어설션) |
 | AC-5 | client-package.test.ts 8케이스(linked/current/repaired/blocked·실제 디렉터 보존·node_modules 자가 생성) + 평가자 60-way 경합 무손상 입증 |
 | AC-6 | tsc --strict --module nodenext로 no-arg createClient 해석 확인(에러 0) |
 | AC-7 | doctor `client: … ✓` 라인 + blocked 시 수정 안내 분기 |
-| AC-8 | init bun/node 스캐폴드·next-app server-action이 상대경로·outDir 리터럴 없이 `@scriptcable/client` 사용 |
+| AC-8 | init bun/node 스캐폴드·next-app server-action이 상대경로·outDir 리터럴 없이 `@scriptca/client` 사용 |
 | AC-9 | README.md/README.ko.md conditions 표·wasmUrl 레시피(F-3 정정 반영) + CHANGELOG + 전체 test 36 pass·typecheck·build 통과 |
 
 **잔여 한계 (환경 미검증, 결함 아님 — 문서화됨)**
@@ -162,18 +162,18 @@
 2. Windows junction, Bun-on-Windows, Metro/RN 실기기 미검증.
 3. Node < 22.18 TS config import 한계는 이전 zero-config 계획에서 수신한 것과 동일.
 
-**후속 후보**: 브라우저 실호출 e2e(playwright 등) 도입, `@scriptcable/client` file: 의존성을 doctor가 원클릭 추가, Metro 조건 실증.
+**후속 후보**: 브라우저 실호출 e2e(playwright 등) 도입, `@scriptca/client` file: 의존성을 doctor가 원클릭 추가, Metro 조건 실증.
 
 ### 추가 실증 — 브라우저 런타임 (2026-10-20, G5 이후)
 
 사용자 요청("simulator로 해야 하는 거 아니야?")으로 `vite dev` + 헤드리스 Chromium(Playwright) 실증 수행:
 
-- **결과**: `examples/vite-app`에서 `import { createClient } from '@scriptcable/client'` → browser 플레이버 → WASM 컴파일 → `add(20,22)=42`, `greet('vite-browser')` 실행 확인. 페이지 DOM에 `{"sum":42,"hi":"hello, vite-browser"}` 렌더링(스크린샷 /tmp/scriptca-browser-final.png), 콘솔 에러 0.
+- **결과**: `examples/vite-app`에서 `import { createClient } from '@scriptca/client'` → browser 플레이버 → WASM 컴파일 → `add(20,22)=42`, `greet('vite-browser')` 실행 확인. 페이지 DOM에 `{"sum":42,"hi":"hello, vite-browser"}` 렌더링(스크린샷 /tmp/scriptca-browser-final.png), 콘솔 에러 0.
 - 실증에서 발견해 수정한 결함 3건:
-  - vite 플러그인의 가상 모듈이 절대경로 재수출을 URL로 바꾸며 raw TS(미변환)를 브라우저에 제공 → resolveId가 실제 browser.ts를 그래프에 직결하도록 수정 + browser 플레이버가 `ScriptcableClient` 타입을 재수출해 기존 가상 모듈 표면 유지
+  - vite 플러그인의 가상 모듈이 절대경로 재수출을 URL로 바꾸며 raw TS(미변환)를 브라우저에 제공 → resolveId가 실제 browser.ts를 그래프에 직결하도록 수정 + browser 플레이버가 `ScriptcaClient` 타입을 재수출해 기존 가상 모듈 표면 유지
   - vite.config optimizeDeps exclude에 core 서브패스(`/wasm`, `/wasi`) 누락 → dep optimizer에서 모듈 로드 실패
   - 예제 sync-public.mjs가 generated TS까지 public에 복사 → vite public 정적 미들웨어가 같은 URL을 raw TS로 덮어씀(그림자) → 런타임 산출물(wasm·profile.json)만 복사하도록 수정
-- 회귀 재검증: 전체 36 test / typecheck 12 패키지 통과. 예제 main.ts를 `@scriptcable/client` 사용으로 전환(수동 wasm 스모크 대체).
+- 회귀 재검증: 전체 36 test / typecheck 12 패키지 통과. 예제 main.ts를 `@scriptca/client` 사용으로 전환(수동 wasm 스모크 대체).
 - 여전히 미검증: 실제 `next dev`(webpack·Turbopack), Windows, Metro 실기기.
 
 - 커밋: 미수행 (사용자 요청 시 commit 스킬로)
@@ -182,14 +182,14 @@
 
 | ID | 실제 결과·증거 | 판정 |
 |---|---|---|
-| V-1 | `bun test packages/cli` — 설정 없는 tmp 프로젝트 빌드 후 `generated/package.json`(name=@scriptcable/client) + `node_modules/@scriptcable/client` 심링크 확인, Bun 서브프로세스 `import('@scriptcable/client')` → `add(2,3)=5` 실호출 | PASS |
-| V-2 | next-app: server-action.ts가 `@scriptcable/client`만 import → `{"sum":42,"hi":"hello, next-server"}` 실호출, fake-next-build(webpack wiring + scriptcableBuild) 성공, `transpilePackages` 병합은 withScriptcable 소스로 확인 | PASS |
+| V-1 | `bun test packages/cli` — 설정 없는 tmp 프로젝트 빌드 후 `generated/package.json`(name=@scriptca/client) + `node_modules/@scriptca/client` 심링크 확인, Bun 서브프로세스 `import('@scriptca/client')` → `add(2,3)=5` 실호출 | PASS |
+| V-2 | next-app: server-action.ts가 `@scriptca/client`만 import → `{"sum":42,"hi":"hello, next-server"}` 실호출, fake-next-build(webpack wiring + scriptcaBuild) 성공, `transpilePackages` 병합은 withScriptca 소스로 확인 | PASS |
 | V-3 | `bun test packages/vite` 2 pass(HMR 게이팅 포함), example-vite-app 빌드 성공(루트 build), dx-app 빌드는 이전 SDD V-5 경로로 동일 커맨드 확인 | PASS |
 | V-4 | client-package.test.ts 어설션: browser.ts에 `wasi?:` + `createMinimalWasi` 기본값 존재 | PASS |
 | V-5 | client-package.test.ts 8케이스 — linked/current/repaired(끊어진 링크)/blocked(실제 디렉터 보존, 미생성)/node_modules 자가 생성/매니페스트 서브셋/기록 스킵 | PASS |
-| V-6 | `tsc --noEmit --strict --module nodenext` examples/next-app/src/server-action.ts — `createClient()` 무인자가 `@scriptcable/client`(node condition → node.ts)로 해석, 에러 0 | PASS |
-| V-7 | next-app에서 `scriptcable doctor` → `client: @scriptcable/client → node_modules ✓` 라인 출력 (blocked 시 수정 안내 분기 포함) | PASS |
-| V-8 | init.ts bun/node 스캐폴드 main.ts가 `@scriptcable/client` import(outDir 리터럴 제거), next-app server-action.ts 상대경로 제거 — 소스 대조 | PASS |
+| V-6 | `tsc --noEmit --strict --module nodenext` examples/next-app/src/server-action.ts — `createClient()` 무인자가 `@scriptca/client`(node condition → node.ts)로 해석, 에러 0 | PASS |
+| V-7 | next-app에서 `scriptca doctor` → `client: @scriptca/client → node_modules ✓` 라인 출력 (blocked 시 수정 안내 분기 포함) | PASS |
+| V-8 | init.ts bun/node 스캐폴드 main.ts가 `@scriptca/client` import(outDir 리터럴 제거), next-app server-action.ts 상대경로 제거 — 소스 대조 | PASS |
 | V-9 | `bun run typecheck` 전 패키지 pass · `bun run build` 전 패키지 code 0 · 전체 test 35 pass/0 fail(core 32+cli 1+vite 2 외 기존) · README.md/README.ko.md "임포트 하나" 섹션 + CHANGELOG 기록 | PASS |
 
 변경 후 재검증: codegen WASI 캐스트 추가로 node/bun 플레이버 출력이 바뀌자 V-1(core/cli 재빌드 후), V-6, next-app test를 재실행 — 전부 재통과.

@@ -1,18 +1,18 @@
 {
-  "name": "@scriptcable/bun",
+  "name": "@scriptca/bun",
   "version": "0.1.0",
   "private": true,
   "description": "Bun adapter — native via bun:ffi by default; scriptc WASM (WASI) opt-in",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "url": "git+https://github.com/loopy-lim/scriptca.git",
     "directory": "packages/bun"
   },
   "bugs": {
-    "url": "https://github.com/loopy-lim/scriptcable/issues"
+    "url": "https://github.com/loopy-lim/scriptca/issues"
   },
-  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
+  "homepage": "https://github.com/loopy-lim/scriptca#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,12 +30,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "echo \"@scriptcable/bun: no tests (skip)\""
+    "test": "echo \"@scriptca/bun: no tests (skip)\""
   },
   "dependencies": {
-    "@scriptcable/core": "workspace:*",
-    "@scriptcable/types": "workspace:*",
-    "@scriptcable/node": "workspace:*"
+    "@scriptca/core": "workspace:*",
+    "@scriptca/types": "workspace:*",
+    "@scriptca/node": "workspace:*"
   },
   "engines": {
     "bun": ">=1.2.0"

@@ -6,24 +6,24 @@
  *
  * Usage in `metro.config.js` (runs in Node, hence the dedicated subpath):
  *
- *   const { withScriptcableMetro } = require('@scriptcable/react-native/metro');
- *   module.exports = withScriptcableMetro(getDefaultConfig(__dirname));
+ *   const { withScriptcaMetro } = require('@scriptca/react-native/metro');
+ *   module.exports = withScriptcaMetro(getDefaultConfig(__dirname));
  *
- * The redirect fires only after `scriptcable build --hosts react-native`
+ * The redirect fires only after `scriptca build --hosts react-native`
  * has produced the drop-in; before that, imports resolve as usual. Run the
- * build (or `scriptcable build --watch`) alongside the Metro dev server.
+ * build (or `scriptca build --watch`) alongside the Metro dev server.
  */
 import { existsSync } from 'node:fs';
 import { dirname, extname, isAbsolute, resolve as resolvePath } from 'node:path';
 
-export type ScriptcableMetroOptions = {
+export type ScriptcaMetroOptions = {
   cwd?: string;
   /** Path to the core entry (absolute or cwd-relative) — default: standard locations */
   entry?: string;
 };
 
 const STANDARD_ENTRIES = ['src/core.ts', 'core.ts', 'src/index.ts', 'index.ts'];
-const GENERATED_DROPIN = '.scriptcable/generated/dropin/react-native.ts';
+const GENERATED_DROPIN = '.scriptca/generated/dropin/react-native.ts';
 const SOURCE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 
 export type MetroResolution = { type: 'sourceFile'; filePath: string };
@@ -56,7 +56,7 @@ function baseOf(p: string): string {
 }
 
 /** The core entry path, or null when no standard entry exists. */
-export function resolveScriptcableEntry(opts: ScriptcableMetroOptions = {}): string | null {
+export function resolveScriptcaEntry(opts: ScriptcaMetroOptions = {}): string | null {
   const cwd = opts.cwd ?? process.cwd();
   if (opts.entry) return resolvePath(cwd, opts.entry);
   for (const e of STANDARD_ENTRIES) {
@@ -101,7 +101,7 @@ function resolveGeneratedJsSpecifier(
     const origin = context.originModulePath ?? context.originPath;
     const from = origin ? dirname(origin) : cwd;
     const target = resolvePath(from, moduleName);
-    const generatedRoot = resolvePath(cwd, '.scriptcable', 'generated');
+    const generatedRoot = resolvePath(cwd, '.scriptca', 'generated');
     if (!target.startsWith(generatedRoot) && !(origin && origin.startsWith(generatedRoot))) return null;
     if (extname(target) !== '.js') return null;
     const tsSibling = target.slice(0, -3) + '.ts';
@@ -118,9 +118,9 @@ function resolveGeneratedJsSpecifier(
  * the default resolution. Returns null when the project has no entry
  * (nothing to intercept).
  */
-export function createScriptcableResolveRequest(opts: ScriptcableMetroOptions = {}): MetroResolveRequest | null {
+export function createScriptcaResolveRequest(opts: ScriptcaMetroOptions = {}): MetroResolveRequest | null {
   const cwd = opts.cwd ?? process.cwd();
-  const entryAbs = resolveScriptcableEntry(opts);
+  const entryAbs = resolveScriptcaEntry(opts);
   if (!entryAbs) return null;
   const dropinPath = resolvePath(cwd, GENERATED_DROPIN);
 
@@ -144,11 +144,11 @@ export function createScriptcableResolveRequest(opts: ScriptcableMetroOptions = 
  * declines everything hid exactly this). Every other request delegates to
  * the previous resolver, then to Metro's default resolution.
  */
-export function withScriptcableMetro<
+export function withScriptcaMetro<
   T extends { resolver?: { resolveRequest?: MetroResolveRequest } },
->(config: T, opts: ScriptcableMetroOptions = {}): T {
+>(config: T, opts: ScriptcaMetroOptions = {}): T {
   const cwd = opts.cwd ?? process.cwd();
-  const entryAbs = resolveScriptcableEntry(opts);
+  const entryAbs = resolveScriptcaEntry(opts);
   if (!entryAbs) return config;
   const dropinPath = resolvePath(cwd, GENERATED_DROPIN);
   const prev = config.resolver?.resolveRequest;

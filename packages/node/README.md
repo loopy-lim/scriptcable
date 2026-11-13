@@ -1,15 +1,15 @@
-# @scriptcable/node
+# @scriptca/node
 
 Loads the **native shared library** (`.so` / `.dylib` / `.dll`) produced by
-`scriptcable build`. Under **Bun** (the default engine) loading uses built-in
+`scriptca build`. Under **Bun** (the default engine) loading uses built-in
 `bun:ffi` — no extra dependency. Under plain Node, install `koffi` as an
 optional fallback. WASM is only used when you pass `preferWasm: true` or the
 shared library is missing.
 
 ```ts
-import { createNodeEngine } from '@scriptcable/node';
+import { createNodeEngine } from '@scriptca/node';
 
-const engine = await createNodeEngine({ outDir: '.scriptcable' });
+const engine = await createNodeEngine({ outDir: '.scriptca' });
 console.log(engine.call('add', 20, 22)); // 42
 engine.dispose?.();
 ```

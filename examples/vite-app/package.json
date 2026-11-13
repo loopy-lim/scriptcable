@@ -1,10 +1,10 @@
 {
-  "name": "@scriptcable/example-vite-app",
+  "name": "@scriptca/example-vite-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "scriptcable build --target both --hosts browser,node",
+    "build:core": "scriptca build --target both --hosts browser,node",
     "dev": "bun run build:core && bun --bun vite",
     "build": "bun run build:core && bun --bun vite build",
     "test:ssr": "bun run build:core && bun src/ssr.ts",
@@ -13,12 +13,12 @@
     "test:dropin": "bun src/dropin-smoke.ts"
   },
   "dependencies": {
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "scriptc": "^0.4.12",
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
     "vite": "^6.0.0",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

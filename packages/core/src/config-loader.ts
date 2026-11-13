@@ -1,6 +1,6 @@
 /**
- * Config loading: scriptcable.config.ts (preferred — typed, commented) or
- * scriptcable.json.
+ * Config loading: scriptca.config.ts (preferred — typed, commented) or
+ * scriptca.json.
  *
  * Zero-config: when neither file exists (or they omit `name`/`entry`),
  * values are inferred — `name` from package.json (falling back to the
@@ -12,7 +12,7 @@
  */
 import { access } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import type { ResolvedConfig, ScriptcableConfig } from '@scriptcable/types';
+import type { ResolvedConfig, ScriptcaConfig } from '@scriptca/types';
 import { loadConfig } from './profile.js';
 import { CORE_ENTRY_CANDIDATES, resolveNameEntry } from './defaults.js';
 
@@ -26,7 +26,7 @@ async function exists(path: string): Promise<boolean> {
 }
 
 /** Where a resolved config came from — `inferred` means no config file at all. */
-export type ConfigSource = 'scriptcable.config.ts' | 'scriptcable.json' | 'inferred';
+export type ConfigSource = 'scriptca.config.ts' | 'scriptca.json' | 'inferred';
 
 export type ResolvedProjectConfig = {
   config: ResolvedConfig;
@@ -44,7 +44,7 @@ export type LoadedConfig = ResolvedProjectConfig;
  * `configPath` options.
  */
 export async function loadConfigFile(path: string, cwd = process.cwd()): Promise<ResolvedConfig> {
-  let config: ScriptcableConfig;
+  let config: ScriptcaConfig;
   if (path.endsWith('.ts')) {
     const abs = resolve(path);
     const mod = await import(`${abs}?t=${Date.now()}`); // bust loader cache
@@ -62,27 +62,27 @@ export async function loadConfigFile(path: string, cwd = process.cwd()): Promise
 
 /**
  * Load the project config from `cwd` and resolve it to a complete config:
- * priority scriptcable.config.ts > scriptcable.json > inference.
+ * priority scriptca.config.ts > scriptca.json > inference.
  * Missing `name`/`entry` are filled from package.json / standard locations.
  */
 export async function resolveProjectConfig(cwd = process.cwd()): Promise<ResolvedProjectConfig> {
-  let config: ScriptcableConfig;
+  let config: ScriptcaConfig;
   let source: ConfigSource = 'inferred';
 
-  const tsPath = join(cwd, 'scriptcable.config.ts');
+  const tsPath = join(cwd, 'scriptca.config.ts');
   if (await exists(tsPath)) {
     const mod = await import(`${tsPath}?t=${Date.now()}`); // bust loader cache
     if (!mod.default) {
-      throw new Error('scriptcable.config.ts must have a default export (use defineConfig({ ... }))');
+      throw new Error('scriptca.config.ts must have a default export (use defineConfig({ ... }))');
     }
     config = loadConfig(mod.default);
-    source = 'scriptcable.config.ts';
+    source = 'scriptca.config.ts';
   } else {
-    const jsonPath = join(cwd, 'scriptcable.json');
+    const jsonPath = join(cwd, 'scriptca.json');
     if (await exists(jsonPath)) {
       const { readFile } = await import('node:fs/promises');
       config = loadConfig(JSON.parse(await readFile(jsonPath, 'utf8')));
-      source = 'scriptcable.json';
+      source = 'scriptca.json';
     } else {
       config = {};
     }
@@ -96,10 +96,10 @@ export async function resolveProjectConfig(cwd = process.cwd()): Promise<Resolve
       // No config file at all — widen the error with scaffold guidance.
       throw new Error(
         `${(err as Error).message}\n` +
-          `Create scriptcable.config.ts (typed, recommended) or scriptcable.json, ` +
+          `Create scriptca.config.ts (typed, recommended) or scriptca.json, ` +
           `or place your core at one of the searched paths.\n` +
-          `Minimal scriptcable.config.ts:\n\n` +
-          `  import { defineConfig } from "@scriptcable/core";\n` +
+          `Minimal scriptca.config.ts:\n\n` +
+          `  import { defineConfig } from "@scriptca/core";\n` +
           `  export default defineConfig({ name: "mycore", entry: "src/core.ts" });\n`,
       );
     }
@@ -109,17 +109,17 @@ export async function resolveProjectConfig(cwd = process.cwd()): Promise<Resolve
 
 /**
  * Load the project config from `cwd`.
- * Priority: scriptcable.config.ts > scriptcable.json > inference.
+ * Priority: scriptca.config.ts > scriptca.json > inference.
  */
 export async function loadProjectConfig(cwd = process.cwd()): Promise<LoadedConfig> {
   return resolveProjectConfig(cwd);
 }
 
 /**
- * Type-safe config authoring helper for scriptcable.config.ts.
+ * Type-safe config authoring helper for scriptca.config.ts.
  *
  * ```ts
- * import { defineConfig } from '@scriptcable/core';
+ * import { defineConfig } from '@scriptca/core';
  * export default defineConfig({
  *   name: 'calculator',
  *   entry: 'src/core.ts',
@@ -128,7 +128,7 @@ export async function loadProjectConfig(cwd = process.cwd()): Promise<LoadedConf
  * });
  * ```
  */
-export function defineConfig(config: ScriptcableConfig): ScriptcableConfig {
+export function defineConfig(config: ScriptcaConfig): ScriptcaConfig {
   return config;
 }
 

@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { analyzeEntryExports } from './infer.js';
 import { canInterceptEntry } from './intercept.js';
-import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
+import type { ResolvedConfig, ScriptcaProfile } from '@scriptca/types';
 
 describe('analyzeEntryExports', () => {
   it('maps plain function exports', () => {
@@ -93,7 +93,7 @@ describe('canInterceptEntry', () => {
   const profile = {
     name: 'calc',
     exports: [{ export: 'add', symbol: 'calc_add', params: ['f64', 'f64'], returns: 'f64' }],
-  } as unknown as ScriptcableProfile;
+  } as unknown as ScriptcaProfile;
 
   it('is ok when the drop-in covers the whole surface', async () => {
     const dir = await mkSrc('src', `export function add(a: number, b: number): number {\n  return a + b;\n}\n`);

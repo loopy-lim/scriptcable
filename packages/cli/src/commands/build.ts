@@ -7,8 +7,8 @@ import {
   loadConfigFile,
   writeGeneratedClients,
   collectSourceGraph,
-} from '@scriptcable/core';
-import { type CodegenTarget } from '@scriptcable/core/codegen';
+} from '@scriptca/core';
+import { type CodegenTarget } from '@scriptca/core/codegen';
 import { formatError } from '../errors.js';
 
 export type BuildCliOptions = {
@@ -18,7 +18,7 @@ export type BuildCliOptions = {
   /** Native build platform — 'android' cross-compiles (android-arm64) and
    * puts artifacts under <outDir>/android-arm64/ */
   platform?: 'host' | 'android-arm64';
-  /** Explicit config path (.ts or .json) — defaults to scriptcable.config.ts, scriptcable.json, or zero-config inference */
+  /** Explicit config path (.ts or .json) — defaults to scriptca.config.ts, scriptca.json, or zero-config inference */
   configPath?: string;
   /** Bypass the build cache */
   force?: boolean;
@@ -44,7 +44,7 @@ export async function runBuild(opts: BuildCliOptions = {}): Promise<number> {
 async function buildAndEmit(opts: BuildCliOptions, announce: boolean): Promise<void> {
   const cwd = opts.cwd ?? process.cwd();
   const config = await resolveConfig(cwd, opts.configPath);
-  const outDir = resolve(cwd, config.outDir ?? '.scriptcable');
+  const outDir = resolve(cwd, config.outDir ?? '.scriptca');
 
   const target = opts.target ?? config.target ?? 'native';
   if (announce) console.log(`Building ${config.name} (${target})…`);
@@ -87,8 +87,8 @@ async function buildAndEmit(opts: BuildCliOptions, announce: boolean): Promise<v
   console.log(`  generated: ${genDir}`);
   console.log(
     clientLink === 'blocked'
-      ? `  client:    node_modules link unavailable — run \`scriptcable doctor\` for details`
-      : `  client:    import { createClient } from '@unikit-bridge/scriptcable-client'`,
+      ? `  client:    node_modules link unavailable — run \`scriptca doctor\` for details`
+      : `  client:    import { createClient } from '@unikit-bridge/scriptca-client'`,
   );
   console.log(`  contract:  ${snap.hash}`);
 }
@@ -122,7 +122,7 @@ async function runWatch(opts: BuildCliOptions = {}): Promise<number> {
   console.log(`watching for changes — Ctrl+C to stop`);
 
   const configFiles = () => {
-    const files = [join(cwd, 'scriptcable.config.ts'), join(cwd, 'scriptcable.json')];
+    const files = [join(cwd, 'scriptca.config.ts'), join(cwd, 'scriptca.json')];
     if (opts.configPath) files.push(resolve(cwd, opts.configPath));
     return files;
   };

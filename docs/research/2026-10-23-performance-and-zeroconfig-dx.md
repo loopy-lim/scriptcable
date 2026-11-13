@@ -2,7 +2,7 @@
 
 **호스트:** WSL2 (Linux 6.18 x64) · **런타임:** Bun 1.4.4 · **툴체인:** scriptc 0.4.0, zig 0.13.0(`~/tools`, PATH 수동), cc=gcc 15.2(clang 없음)
 **기준 상태:** 커밋 `ea113ba` + 미커밋 변경(fns 라운드 결과물 — `CHANGELOG.md`, `packages/core/src/{codegen,native-loader,toolchain,wasm-loader,link-shared}.ts` 등)
-**방법:** 호출 경계는 `@scriptcable/testing` bench(200만/20만 iter, 평균·p50·p99), 월시간은 `python3 time.perf_counter` 서브프로세스 측정. 성능 수치는 부하 있는 WSL2 단일 실행 경향값 — 절대값보다 상대비 기준.
+**방법:** 호출 경계는 `@scriptca/testing` bench(200만/20만 iter, 평균·p50·p99), 월시간은 `python3 time.perf_counter` 서브프로세스 측정. 성능 수치는 부하 있는 WSL2 단일 실행 경향값 — 절대값보다 상대비 기준.
 **측정 스크립트:** 호출 경계 `/tmp/sc-perf/layers.mjs`(bench-core 안에서 실행), 스모크 일괄 `/tmp/sc-perf/run-smokes.py`, 개별 로그 `/tmp/sc-perf/*.log`
 
 ---
@@ -30,7 +30,7 @@
 
 | 항목 | 시간 |
 |---|---|
-| 동적 `import('@scriptcable/client')` (웜) | 0.5ms |
+| 동적 `import('@scriptca/client')` (웜) | 0.5ms |
 | import → `createClientSync()` 준비 완료 | **1.6ms** |
 | `createClient()` async (로드 포함) | 0.7ms |
 | 로드 후 첫 호출 | ~47µs |
@@ -49,7 +49,7 @@
 | core 패키지 단독 재빌드 | 900ms | |
 | 전체 테스트 (`bun run test`) | **6.65s** | 100 tests: core 74·rn 8·vite 6·cli 5·webpack 4·next 3 |
 | CLI 콜드 스타트 (`cli/dist/index.js --help`) | 107ms | |
-| `scriptcable doctor` | 169ms | CI-durable client-dep 힌트 출력 확인 |
+| `scriptca doctor` | 169ms | CI-durable client-dep 힌트 출력 확인 |
 
 ## 3. 호스트별 e2e 실측 (각 `build:core` 웜 포함 월시간)
 
@@ -82,15 +82,15 @@
 | `bun install` | 447ms | OK (단, 이 시점엔 `generated/`가 아직 없음) |
 | `bun run doctor` | 159ms | OK |
 | `bun run build` | 754ms | OK |
-| `bun start` | 8ms | **rc=1 — `Cannot find module '@scriptcable/client'`** |
+| `bun start` | 8ms | **rc=1 — `Cannot find module '@scriptca/client'`** |
 | `bun install` 재실행 → `bun start` | — | **OK** `{"sum":42,"hi":"hello, bun"}` |
 
 ### 발견된 DX 결함 (이번 실측에서 재현된 것)
 
 | ID | 심각도 | 내용 | 재현 |
 |---|---|---|---|
-| F-1 | **P1** | **`@scriptcable/client` 플레이스홀더 쉐도잉** — 설치 시점에 `.scriptcable/generated`가 없으면 bun이 `node_modules/@scriptcable/client`를 플레이스홀더 **실제 디렉터리**(package.json+placeholder.ts)로 생성. 이후 `scriptcable build`가 generated를 만들어도 node_modules의 플레이스홀더가 남아 해석 실패. **설치를 한 번 더 해야 복구**. README 퀵스타트 순서(install→doctor→build→start) 그대로 실패 재현. doctor의 link repair(`toolchain.ts:165-174`)는 이 케이스(디렉터리 덮어쓰기)를 다루지 않음 | §4 표 + `node_modules/@scriptcable/client/{package.json,placeholder.ts}` 관찰 |
-| F-2 | P2 | **init 절대경로 name 맹글링** — `init /tmp/sc-perf/demo`가 `name: '-tmp-sc-perf-demo'`, package.json `"name": "/tmp/sc-perf/demo"`을 생성(경로 전체를 이름으로 굽림). README 추론 규칙("디렉터리 이름")과 불일치. 상대 단일 세그먼트(`init demo`)에서는 재현 안 됨 | 생성물 `scriptcable.config.ts`·`package.json` 관찰 |
+| F-1 | **P1** | **`@scriptca/client` 플레이스홀더 쉐도잉** — 설치 시점에 `.scriptca/generated`가 없으면 bun이 `node_modules/@scriptca/client`를 플레이스홀더 **실제 디렉터리**(package.json+placeholder.ts)로 생성. 이후 `scriptca build`가 generated를 만들어도 node_modules의 플레이스홀더가 남아 해석 실패. **설치를 한 번 더 해야 복구**. README 퀵스타트 순서(install→doctor→build→start) 그대로 실패 재현. doctor의 link repair(`toolchain.ts:165-174`)는 이 케이스(디렉터리 덮어쓰기)를 다루지 않음 | §4 표 + `node_modules/@scriptca/client/{package.json,placeholder.ts}` 관찰 |
+| F-2 | P2 | **init 절대경로 name 맹글링** — `init /tmp/sc-perf/demo`가 `name: '-tmp-sc-perf-demo'`, package.json `"name": "/tmp/sc-perf/demo"`을 생성(경로 전체를 이름으로 굽림). README 추론 규칙("디렉터리 이름")과 불일치. 상대 단일 세그먼트(`init demo`)에서는 재현 안 됨 | 생성물 `scriptca.config.ts`·`package.json` 관찰 |
 
 ## 5. zeroconfig DX 연구
 
@@ -102,17 +102,17 @@
 | scriptc 자동 설치 (cwd 상승 → PATH → `bun add -d scriptc`) | `packages/core/src/toolchain.ts:80-103` |
 | 런타임 팩 자동 설치 (`@scriptc/runtime-wasm32-wasi` 등) | `toolchain.ts:225-246` |
 | drop-in — 앱 코드 변경 0 (vite/webpack/next/metro+expo) | `packages/core/src/dropin-resolve.ts`, README drop-in 표 |
-| 빌드 캐시 — 웜 301ms, 정밀 무효화 | `.scriptcable/build-cache.json`, `packages/core/src/build-cache.ts` |
-| `@scriptcable/client` — import 시 조건 해석, 호출 경로 분기 0 | 생성물 `package.json` exports |
+| 빌드 캐시 — 웜 301ms, 정밀 무효화 | `.scriptca/build-cache.json`, `packages/core/src/build-cache.ts` |
+| `@scriptca/client` — import 시 조건 해석, 호출 경로 분기 0 | 생성물 `package.json` exports |
 | doctor — 환경 진단 + 링크 수리 + 플랫폼 안내 | `toolchain.ts:126-190`, 실측 169ms |
-| 계약 게이트 (`scriptcable diff --fail-on-breaking`) | `packages/cli/src/commands/diff.ts` |
+| 계약 게이트 (`scriptca diff --fail-on-breaking`) | `packages/cli/src/commands/diff.ts` |
 
 ### 5.2 남은 마찰 → 권고 (우선순위순)
 
 | ID | 마찰 (증거) | 권고 | 비용/기각 대안 |
 |---|---|---|---|
-| R1 | F-1 플레이스홀더 쉐도잉 — 첫 실행이 실패 (P1) | `ensureClientPackageLink`가 **기존 placeholder 디렉터리를 감지해 치환**하도록 강화(build·doctor 양쪽에서). 스캐폴드에는 `postinstall: scriptcable link` 정도의 얇은 훅도 대안 | 소규모. 기각: "문서에 재설치 안내 추가" — 신규 사용자 첫 5분의 실패는 안내로 못 막음 |
-| R2 | zig PATH 의존 — wasm 빌드·vite/cli 테스트 3건 실패 실측(이번 세션 rc=1) | **zig 자동 프로비저닝**: `ensureRuntimePack`처럼 doctor/build가 `~/.../scriptcable-tools/zig-0.13`에 자동 다운로드+압축해제(bun install 스크립트 패턴 준수). 또는 최소한 "zig가 없으면 설치 명령을 그대로 실행할까요? (y/n)" 프롬프트 | 중규모(다운로드·무결성·캐시 위치 결정). 기각: zig를 optionalDependencies 바이너리로 배포 — scriptc가 zig를 실행 방식으로 요구해 패키징 복잡도가 남음 |
+| R1 | F-1 플레이스홀더 쉐도잉 — 첫 실행이 실패 (P1) | `ensureClientPackageLink`가 **기존 placeholder 디렉터리를 감지해 치환**하도록 강화(build·doctor 양쪽에서). 스캐폴드에는 `postinstall: scriptca link` 정도의 얇은 훅도 대안 | 소규모. 기각: "문서에 재설치 안내 추가" — 신규 사용자 첫 5분의 실패는 안내로 못 막음 |
+| R2 | zig PATH 의존 — wasm 빌드·vite/cli 테스트 3건 실패 실측(이번 세션 rc=1) | **zig 자동 프로비저닝**: `ensureRuntimePack`처럼 doctor/build가 `~/.../scriptca-tools/zig-0.13`에 자동 다운로드+압축해제(bun install 스크립트 패턴 준수). 또는 최소한 "zig가 없으면 설치 명령을 그대로 실행할까요? (y/n)" 프롬프트 | 중규모(다운로드·무결성·캐시 위치 결정). 기각: zig를 optionalDependencies 바이너리로 배포 — scriptc가 zig를 실행 방식으로 요구해 패키징 복잡도가 남음 |
 | R3 | native 링크가 clang/cc 요구 — cc(gcc)가 있어 통과했지만 clang-only 환경에선 실패 (`toolchain.ts:357-358`) | **zig cc 폴백 링커**: zig가 이미 있으면(wasm용) `zig cc`를 native 공유 라이브러리 링크에도 사용 → "zig 하나만 있으면 전부 됨"으로 요구 수렴 | 중규모. `link-shared.ts` 링커 선택 확장. 기각: 사용자가 sudo로 clang 설치 — sudo 불가 환경(본 호스트가 그렇다)에서 zeroconfig 아님 |
 | R4 | 빌드 전제 테스트 — dist 없으면 `Cannot find module` (294ms에 rc=1 재현) | 루트 `pretest`로 `bun run build`(웜 3.4s) — 신규 클론의 1번 함정 제거. 패키지 exports에 `development` condition(src 직결)은 electron이 컴파일 .js를 요구해 충돌 위험이 커서 기각 | 소규모(package.json 스크립트 1줄). 트레이드오프: CI에서 매번 3.4s 추가 |
 | R5 | bun 1.4.4 wrangler dev 불가 (외부 bun#39247) | 단기: 루트 `packageManager`가 이미 `bun@1.4.3`이므로 **bun 1.4.3 사용을 문서화**(troubleshooting에 이미 있음) + workers 런타임 검증은 CI에서만. 중기: node 우회 스크립트 제공 | 외부 버그라 내부 수정 불가. smoke.mjs의 친절한 에러 메시지는 이미 모범 사례 |
@@ -121,7 +121,7 @@
 
 ### 5.3 전략 결론 — "doctor 허브" 모델
 
-노스스타("scriptcable만 추가하면 알아서 다 된다")에 대한 최단 경로는 새 추론 기능이 아니라, **이미 있는 doctor를 자동 치유 허브로** 만드는 것입니다:
+노스스타("scriptca만 추가하면 알아서 다 된다")에 대한 최단 경로는 새 추론 기능이 아니라, **이미 있는 doctor를 자동 치유 허브로** 만드는 것입니다:
 
 1. **발견**(이미 있음): 런타임·scriptc·zig·clang·client 링크 상태를 169ms에 스캔.
 2. **치유**(부분): scriptc·런타임 팩은 이미 자동 설치. 여기에 R1(링크 치유 강화)·R2(zig 프로비저닝)·R6/R7(안내→자동화)을 같은 곳에 붙인다.

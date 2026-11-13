@@ -1,20 +1,20 @@
 #!/usr/bin/env bun
 /**
- * assemble — 단일 발행 패키지(@unikit-bridge/scriptcable) 조립.
+ * assemble — 단일 발행 패키지(@unikit-bridge/scriptca) 조립.
  *
- * 13개 내부 workspace 패키지(@scriptcable/*, private)의 dist를 모아
+ * 13개 내부 workspace 패키지(@scriptca/*, private)의 dist를 모아
  * `dist/<pkg>/` 트리로 복사하고, import specifier를 발행 이름으로 rewrite한다:
  *
- *   1. `@scriptcable/client` → `@unikit-bridge/scriptcable-client`
+ *   1. `@scriptca/client` → `@unikit-bridge/scriptca-client`
  *      (사용자 프로젝트에 생성되는 로컬 placeholder 패키지명)
- *   2. `@scriptcable/…`     → `@unikit-bridge/scriptcable/…`
+ *   2. `@scriptca/…`     → `@unikit-bridge/scriptca/…`
  *      (내부 workspace import → self-referencing subpath)
  *
  * 그리고 이 package.json의 `exports` 맵이 형제 패키지들의 exports에서
  * 파생된 것과 정확히 일치하는지 검사한다(drift 게이트 — 형제가 subpath를
  * 추가하면 여기도 갱신해야 빌드가 통과한다).
  *
- * dist에 `@scriptcable` 문자열이 하나라도 남으면 빌드는 실패한다.
+ * dist에 `@scriptca` 문자열이 하나라도 남으면 빌드는 실패한다.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,8 +22,8 @@ import { join } from 'node:path';
 const PKG_ROOT = import.meta.dir + '/..';
 const ROOT = join(PKG_ROOT, '..', '..');
 const DIST = join(PKG_ROOT, 'dist');
-const NAME = '@unikit-bridge/scriptcable';
-const CLIENT_NAME = '@unikit-bridge/scriptcable-client';
+const NAME = '@unikit-bridge/scriptca';
+const CLIENT_NAME = '@unikit-bridge/scriptca-client';
 
 const PKGS = [
   'bun',
@@ -80,10 +80,10 @@ function rewriteTree(dir: string): number {
     }
     if (!/\.(js|mjs|cjs|ts|d\.ts|json|map|txt)$/.test(entry)) continue;
     let text = readFileSync(p, 'utf8');
-    if (!text.includes('@scriptcable')) continue;
+    if (!text.includes('@scriptca')) continue;
     const next = text
-      .replaceAll('@scriptcable/client', CLIENT_NAME)
-      .replaceAll('@scriptcable/', `${NAME}/`);
+      .replaceAll('@scriptca/client', CLIENT_NAME)
+      .replaceAll('@scriptca/', `${NAME}/`);
     if (next !== text) {
       writeFileSync(p, next);
       touched++;
@@ -116,21 +116,21 @@ for (const pkg of PKGS) {
 
 const touched = rewriteTree(DIST);
 
-// 잔존 게이트 — 발행물에 @scriptcable이 남으면 안 된다.
+// 잔존 게이트 — 발행물에 @scriptca이 남으면 안 된다.
 let residual = 0;
 const walk = (dir: string) => {
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
     if (statSync(p).isDirectory()) walk(p);
-    else if (/\.(js|mjs|cjs|ts|d\.ts|json|map|txt)$/.test(entry) && readFileSync(p, 'utf8').includes('@scriptcable')) {
-      console.error(`[assemble] @scriptcable 잔존: ${p}`);
+    else if (/\.(js|mjs|cjs|ts|d\.ts|json|map|txt)$/.test(entry) && readFileSync(p, 'utf8').includes('@scriptca')) {
+      console.error(`[assemble] @scriptca 잔존: ${p}`);
       residual++;
     }
   }
 };
 walk(DIST);
 if (residual > 0) {
-  console.error(`[assemble] ${residual}개 파일에 @scriptcable 잔존 — rewrite 규칙 확인 필요`);
+  console.error(`[assemble] ${residual}개 파일에 @scriptca 잔존 — rewrite 규칙 확인 필요`);
   process.exit(1);
 }
 
@@ -142,7 +142,7 @@ const own = JSON.parse(readFileSync(join(PKG_ROOT, 'package.json'), 'utf8'));
 const derived = deriveExports();
 const committed = canonical(own.exports) === canonical(derived);
 if (!committed) {
-  console.error('[assemble] exports 맵이 형제 패키지와 불일치 — packages/scriptcable/package.json의 exports를 갱신할 것');
+  console.error('[assemble] exports 맵이 형제 패키지와 불일치 — packages/scriptca/package.json의 exports를 갱신할 것');
   console.error('파생된 맵:');
   console.error(JSON.stringify(derived, null, 2));
   process.exit(1);

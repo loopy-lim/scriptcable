@@ -49,12 +49,12 @@ jobs:
           curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
           echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
       - run: bun install
-      # site depends on the assembled @unikit-bridge/scriptcable workspace package
+      # site depends on the assembled @unikit-bridge/scriptca workspace package
       - run: bun run build
       # bin links are only created when dist/index.js exists — re-link after build
       - run: bun install
       - name: Build site + drop-in smoke
-        run: bun run --filter @scriptcable/site verify
+        run: bun run --filter @scriptca/site verify
       - name: Deploy to Cloudflare Pages
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: cloudflare/wrangler-action@v3

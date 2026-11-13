@@ -1,40 +1,40 @@
 /**
- * Expo config plugin — wires the generated scriptcable Android bridge into
+ * Expo config plugin — wires the generated scriptca Android bridge into
  * the prebuilt project automatically. Add it AFTER running
- * `scriptcable build --hosts react-native --platform android`:
+ * `scriptca build --hosts react-native --platform android`:
  *
  *   // app.json
- *   { "expo": { "plugins": ["@scriptcable/expo"] } }
+ *   { "expo": { "plugins": ["@scriptca/expo"] } }
  *
  * `expo prebuild` then copies the bridge .so (jniLibs + assets for
  * ARM-translation devices), the Kotlin module, and the package
  * registration into android/ — no hand-written native module.
  *
  * Requires the generated artifacts to exist first:
- *   scriptcable build --hosts react-native          (JS spec + Kotlin module)
- *   scriptcable build --platform android            (prebuilt bridge .so)
+ *   scriptca build --hosts react-native          (JS spec + Kotlin module)
+ *   scriptca build --platform android            (prebuilt bridge .so)
  */
 const { withDangerousMod, withPlugins } = require('@expo/config-plugins');
 const { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 
 function copyBridge(projectRoot, platformDir) {
-  const generated = join(projectRoot, '.scriptcable', 'generated', 'android');
-  const so = join(projectRoot, '.scriptcable', 'android-arm64', 'libcalculator.so');
+  const generated = join(projectRoot, '.scriptca', 'generated', 'android');
+  const so = join(projectRoot, '.scriptca', 'android-arm64', 'libcalculator.so');
   for (const f of ['CableModule.kt', 'CablePackage.kt']) {
     if (!existsSync(join(generated, f))) {
       throw new Error(
-        `scriptcable: generated/android/${f} missing — run \`scriptcable build --hosts react-native\` first`,
+        `scriptca: generated/android/${f} missing — run \`scriptca build --hosts react-native\` first`,
       );
     }
   }
   if (!existsSync(so)) {
     throw new Error(
-      'scriptcable: prebuilt bridge .so missing — run `scriptcable build --platform android` first',
+      'scriptca: prebuilt bridge .so missing — run `scriptca build --platform android` first',
     );
   }
 
-  const cablePkg = join(platformDir, 'app', 'src', 'main', 'java', 'com', 'scriptcable', 'cable');
+  const cablePkg = join(platformDir, 'app', 'src', 'main', 'java', 'com', 'scriptca', 'cable');
   mkdirSync(cablePkg, { recursive: true });
   copyFileSync(join(generated, 'CableModule.kt'), join(cablePkg, 'CableModule.kt'));
   copyFileSync(join(generated, 'CablePackage.kt'), join(cablePkg, 'CablePackage.kt'));
@@ -49,7 +49,7 @@ function copyBridge(projectRoot, platformDir) {
 
   // The JS side imports './NativeCable' from src/ — metro resolves it
   // statically, so the generated spec must sit where the app imports it.
-  const nativeCable = join(projectRoot, '.scriptcable', 'generated', 'NativeCable.ts');
+  const nativeCable = join(projectRoot, '.scriptca', 'generated', 'NativeCable.ts');
   if (existsSync(nativeCable)) {
     const srcDir = join(projectRoot, 'src');
     if (existsSync(srcDir)) copyFileSync(nativeCable, join(srcDir, 'NativeCable.ts'));
@@ -70,7 +70,7 @@ function copyBridge(projectRoot, platformDir) {
     if (!app.includes('CablePackage')) {
       app = app.replace(
         /( *)\/\/ Packages that cannot be autolinked yet can be added manually here, for example:\n( *)\/\/ add\(MyReactNativePackage\(\)\)/,
-        '$1// Packages that cannot be autolinked yet can be added manually here, for example:\n$1// add(MyReactNativePackage())\n$1add(com.scriptcable.cable.CablePackage())',
+        '$1// Packages that cannot be autolinked yet can be added manually here, for example:\n$1// add(MyReactNativePackage())\n$1add(com.scriptca.cable.CablePackage())',
       );
       writeFileSync(appKt, app);
     }
@@ -91,13 +91,13 @@ function copyBridge(projectRoot, platformDir) {
 function androidPackage(projectRoot) {
   try {
     const appJson = JSON.parse(readFileSync(join(projectRoot, 'app.json'), 'utf8'));
-    return appJson?.expo?.android?.package ?? 'com.scriptcable.cable';
+    return appJson?.expo?.android?.package ?? 'com.scriptca.cable';
   } catch {
-    return 'com.scriptcable.cable';
+    return 'com.scriptca.cable';
   }
 }
 
-const withScriptcableBridge = (config) =>
+const withScriptcaBridge = (config) =>
   withDangerousMod(config, [
     'android',
     (modConfig) => {
@@ -108,4 +108,4 @@ const withScriptcableBridge = (config) =>
     },
   ]);
 
-module.exports = (config) => withPlugins(config, [withScriptcableBridge]);
+module.exports = (config) => withPlugins(config, [withScriptcaBridge]);

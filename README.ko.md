@@ -1,6 +1,6 @@
 [English](./README.md) | Korean
 
-# scriptcable
+# scriptca
 
 하나의 **TypeScript** 코어 → **Bun, Node, Tauri, React Native, Lynx, Vite, Next.js**용 타입 안전 클라이언트.
 [Vercel scriptc](https://scriptc.dev)가 **네이티브** 라이브러리(기본, `.lib.a` → `.so`/`.dylib`/`.dll`)로 컴파일하고, WASM은 브라우저용 선택 사항이며, CI 계약이 깨지는 API 변경을 막습니다.
@@ -9,14 +9,14 @@
 
 ## 5분 퀵스타트
 
-**필요:** Bun ≥ 1.2와 `clang`(또는 gcc의 `cc` — 네이티브 공유 라이브러리 링크). [zig 0.13.x](https://ziglang.org/download/)는 `--target wasm` 빌드에만 필요 — scriptc 0.4.12에서 검증(CI 고정 버전), 로컬 zig 0.16.0도 빌드·실행 확인(2026-11-13) — 없어도 첫 wasm/크로스 빌드가 사용자 캐시에 **자동 설치**합니다(`SCRIPTCABLE_NO_AUTO_TOOLS=1`로 옵트아웃). 자동 설치된 `zig cc`는 clang과 `cc`가 모두 없을 때 호스트 빌드 링크도 맡습니다.
+**필요:** Bun ≥ 1.2와 `clang`(또는 gcc의 `cc` — 네이티브 공유 라이브러리 링크). [zig 0.13.x](https://ziglang.org/download/)는 `--target wasm` 빌드에만 필요 — scriptc 0.4.12에서 검증(CI 고정 버전), 로컬 zig 0.16.0도 빌드·실행 확인(2026-11-13) — 없어도 첫 wasm/크로스 빌드가 사용자 캐시에 **자동 설치**합니다(`SCRIPTCA_NO_AUTO_TOOLS=1`로 옵트아웃). 자동 설치된 `zig cc`는 clang과 `cc`가 모두 없을 때 호스트 빌드 링크도 맡습니다.
 
 **아래 명령은 끝까지 실행해 검증됐습니다 — 각 단계에서 나와야 할 출력까지 [docs/getting-started.md](./docs/getting-started.md)에 정리**되어 있습니다. 막히면 [docs/troubleshooting.md](./docs/troubleshooting.md)에서 실제 에러와 해결법을 찾으세요.
 
 ```bash
 # 이 모노레포에서 bun install && bun run build 이후
 bun packages/cli/dist/index.js init demo --host bun --from .
-# npm 발행 후: bunx @unikit-bridge/scriptcable init demo --host bun
+# npm 발행 후: bunx @unikit-bridge/scriptca init demo --host bun
 
 cd demo
 bun install
@@ -24,7 +24,7 @@ bun run doctor && bun run build && bun start
 # → {"sum":42,"hi":"hello, bun"}
 ```
 
-`src/core.ts`의 exports를 수정한 뒤 다시 빌드하세요. 설정 파일(`scriptcable.config.ts`)이 없어도 name·entry·exports는 자동 추론됩니다 — 아래 [제로 설정](#제로-설정-zero-config) 참고.
+`src/core.ts`의 exports를 수정한 뒤 다시 빌드하세요. 설정 파일(`scriptca.config.ts`)이 없어도 name·entry·exports는 자동 추론됩니다 — 아래 [제로 설정](#제로-설정-zero-config) 참고.
 
 ## 동작 방식
 
@@ -41,7 +41,7 @@ Bun은 **bun:ffi**(내장)로 공유 라이브러리를 로드합니다. 순수 
 설정 파일이 없어도 동작합니다. `package.json`과 표준 위치의 코어만 있으면 됩니다:
 
 ```bash
-bunx scriptcable build          # name은 package.json에서, entry는 src/core.ts에서 추론
+bunx scriptca build          # name은 package.json에서, entry는 src/core.ts에서 추론
 ```
 
 모든 값이 추론됩니다 (우선순위: 명시적 설정 > 추론):
@@ -52,31 +52,31 @@ bunx scriptcable build          # name은 package.json에서, entry는 src/core.
 | `name` | `package.json` `name` (스코프 `@scope/my-pkg` → `scope_my_pkg`), 없으면 디렉터리 이름 |
 | `entry` | `src/core.ts` → `core.ts` → `src/index.ts` → `index.ts` 중 첫 존재 |
 | `prefix` | `name` + `_` |
-| `outDir` | `.scriptcable` |
+| `outDir` | `.scriptca` |
 | `target` | `native` (WASM은 선택) |
 
 설정 파일은 재정의하고 싶은 값만 담습니다 — `name`/`entry`도 생략 가능:
 
 ```ts
-// scriptcable.config.ts — 전부 선택
-import { defineConfig } from '@unikit-bridge/scriptcable/core';
+// scriptca.config.ts — 전부 선택
+import { defineConfig } from '@unikit-bridge/scriptca/core';
 export default defineConfig({});            // 전부 추론
 export default defineConfig({ name: 'mycore' }); // entry는 추론
 ```
 
-Vite / Next.js / Webpack 플러그인도 같은 해석을 씁니다 (`scriptcable.config.ts` 포함), 어댑터는 `.scriptcable`이 기본값:
+Vite / Next.js / Webpack 플러그인도 같은 해석을 씁니다 (`scriptca.config.ts` 포함), 어댑터는 `.scriptca`이 기본값:
 
 ```ts
-import { createBunEngineFromOutDir } from '@unikit-bridge/scriptcable/bun';
-const engine = await createBunEngineFromOutDir(); // → ./.scriptcable
+import { createBunEngineFromOutDir } from '@unikit-bridge/scriptca/bun';
+const engine = await createBunEngineFromOutDir(); // → ./.scriptca
 ```
 
-## 임포트 하나: `@unikit-bridge/scriptcable-client`
+## 임포트 하나: `@unikit-bridge/scriptca-client`
 
-모든 빌드는 생성된 클라이언트를 **실제 패키지**로 내보냅니다. `scriptcable build`가 `.scriptcable/generated/`에 패키지 매니페스트를 쓰고 `node_modules/@unikit-bridge/scriptcable-client`로 링크합니다. 앱 코드는 `.scriptcable/` 경로를 전혀 참조하지 않습니다:
+모든 빌드는 생성된 클라이언트를 **실제 패키지**로 내보냅니다. `scriptca build`가 `.scriptca/generated/`에 패키지 매니페스트를 쓰고 `node_modules/@unikit-bridge/scriptca-client`로 링크합니다. 앱 코드는 `.scriptca/` 경로를 전혀 참조하지 않습니다:
 
 ```ts
-import { createClient } from '@unikit-bridge/scriptcable-client';
+import { createClient } from '@unikit-bridge/scriptca-client';
 
 const client = await createClient();
 client.add(20, 22); // 42
@@ -95,9 +95,9 @@ export conditions가 환경별로 알맞은 플레이버를 골라 줍니다 —
 
 `browser` 플레이버는 WASM 위치를 자동으로 찾습니다: 모듈 상대 위치를 먼저 프로브하고(번들러가 프로젝트 파일을 서빙하는 곳 — `vite dev` — 에서 동작), 다음으로 오리진 루트를 확인합니다. Vite / Next.js / Webpack 플러그인이 빌드마다 `<name>.wasm`을 정적 디렉터리(`public/`)에 복사하므로, 클라이언트 그래프에서도 `createClient()`가 수동 복사 없이 동작합니다. `createClient({ wasmUrl })`을 명시하면 항상 우선합니다(베이스 경로 뒤 배포, CDN 등). 서버 코드는 아무 것도 필요 없습니다 — node 플레이버가 공유 라이브러리를 자동 로드합니다.
 
-플레이버를 고정하려면 서브패스를 씁니다: `@unikit-bridge/scriptcable-client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`, `/deno`, `/workerd`. 에디터도 같은 패키지를 해석하므로 `paths` 설정 없이 TypeScript가 동작합니다. 번들러 플러그인도 같은 emit을 씁니다. `withScriptcable`(자동 `transpilePackages` 포함)과 Webpack/Rspack 플러그인은 `next dev` / `next build` 중에 링크를 만들고, Turbopack은 predev의 `scriptcableBuild()`가 처리합니다.
+플레이버를 고정하려면 서브패스를 씁니다: `@unikit-bridge/scriptca-client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`, `/deno`, `/workerd`. 에디터도 같은 패키지를 해석하므로 `paths` 설정 없이 TypeScript가 동작합니다. 번들러 플러그인도 같은 emit을 씁니다. `withScriptca`(자동 `transpilePackages` 포함)과 Webpack/Rspack 플러그인은 `next dev` / `next build` 중에 링크를 만들고, Turbopack은 predev의 `scriptcaBuild()`가 처리합니다.
 
-링크가 없으면(첫 빌드 전 새 체크아웃) `scriptcable doctor`가 상태를 보고하고 복구합니다. `scriptcable init`은 CI 내구성을 기본으로 스캐폴드합니다: 의존성에 `"@unikit-bridge/scriptcable-client": "file:.scriptcable/generated"`을 기록하고, 첫 빌드 전에도 `bun install`이 깨지지 않도록 플레이스홀더 매니페스트와 gitignore 부정 패턴을 함께 만듭니다. `init` 외 경로로 만든 프로젝트는 `doctor`가 정확한 스니펫을 안내합니다.
+링크가 없으면(첫 빌드 전 새 체크아웃) `scriptca doctor`가 상태를 보고하고 복구합니다. `scriptca init`은 CI 내구성을 기본으로 스캐폴드합니다: 의존성에 `"@unikit-bridge/scriptca-client": "file:.scriptca/generated"`을 기록하고, 첫 빌드 전에도 `bun install`이 깨지지 않도록 플레이스홀더 매니페스트와 gitignore 부정 패턴을 함께 만듭니다. `init` 외 경로로 만든 프로젝트는 `doctor`가 정확한 스니펫을 안내합니다.
 
 ### 변경 0: drop-in
 
@@ -114,28 +114,28 @@ add(20, 22); // 42, 네이티브 애드온 속도
 | **Vite** | 자동 — `resolveId` (내장 리졸버보다 먼저 실행) | Vite 6 dev + build (2026-10-21) |
 | **Webpack** | 자동 — `enhanced-resolve` 플러그인 | webpack 플러그인 테스트 + Next webpack 그래프(아래) |
 | **Next.js (webpack)** | 자동 — client 그래프는 브라우저 drop-in, server/edge는 node | Next 16.4.2 `next build --webpack` + `next start` 런타임 호출 (2026-10-21) |
-| **Next.js (Turbopack)** | 엔트리 drop-in 불가 — Turbopack에는 그래프별 resolve 훅이 없고, `resolveAlias`는 해석된 경로가 아니라 요청 specifier를 매칭합니다(절대경로 키는 아무 일도 안 함 — 검증). `@unikit-bridge/scriptcable-client`를 쓰거나(`transpilePackages`로 export conditions 동작), `next dev/build --webpack`으로 drop-in import | Next 16.4.2 turbopack 빌드 |
-| **Rspack / Rspeedy (Lynx)** | Rspack의 Rust 리졸버에는 JS resolve 플러그인 훅이 없습니다(`resolve.plugins`가 설정 스키마에 없음 — 넣어도 조용히 무시). 플러그인은 빌드·패키지 링크를 계속 하고, import는 `@unikit-bridge/scriptcable-client` export conditions으로 해석 | Rspeedy 0.18.2 빌드 (번들에 browser 클라이언트 포함) |
-| **React Native (Metro)** | `metro.config.js`에서 `@unikit-bridge/scriptcable/react-native/metro`의 `withScriptcableMetro()` | Metro 0.87 / RN 0.88 실번들 (2026-10-21) |
-| **Expo** | 동일한 `withScriptcableMetro()` — Expo의 번들러는 Metro 그 자체입니다. `@expo/metro-config` 기본 설정 위에 등록하세요 (`metro.config.js`) | Expo 58 실제 metro 설정(`getDefaultConfig`) 번들 — drop-in 브리지 포함, 엔트리 소스 배제 (2026-10-22) |
-| **Electron** | main: `import { createClient } from '@unikit-bridge/scriptcable-client'` (node conditions — 생성 패키지는 런타임 플레이버의 **컴파일된 `.js`를 함께 내보냅니다**. Electron의 Node는 `.ts`를 로드하지 못함), renderer: 기존처럼 Vite/Webpack 플러그인 | Electron 33 실런타임: main은 네이티브 코어 호출, vite 빌드 renderer는 커스텀 프로토콜로 WASM drop-in 호출 (2026-10-22) |
-| **Astro / SvelteKit / Nuxt / Remix (React Router) / SolidStart** | 전부 Vite 내장 — `@unikit-bridge/scriptcable/vite`를 각자의 `vite.plugins`에 등록. Nuxt 4는 vite root를 `srcDir`(`app/`)로 옮기므로 프로젝트 루트를 명시하세요: `scriptcable({ root: import.meta.dirname })` | Astro 5.18, SvelteKit 2, Nuxt 4.6, React Router 8.5 (SPA 모드), SolidStart 2.0 (`@solidjs/start` + vite 8) — 실빌드: client 번들에 drop-in 포함, WASM 정적 산출 (2026-10-22) |
+| **Next.js (Turbopack)** | 엔트리 drop-in 불가 — Turbopack에는 그래프별 resolve 훅이 없고, `resolveAlias`는 해석된 경로가 아니라 요청 specifier를 매칭합니다(절대경로 키는 아무 일도 안 함 — 검증). `@unikit-bridge/scriptca-client`를 쓰거나(`transpilePackages`로 export conditions 동작), `next dev/build --webpack`으로 drop-in import | Next 16.4.2 turbopack 빌드 |
+| **Rspack / Rspeedy (Lynx)** | Rspack의 Rust 리졸버에는 JS resolve 플러그인 훅이 없습니다(`resolve.plugins`가 설정 스키마에 없음 — 넣어도 조용히 무시). 플러그인은 빌드·패키지 링크를 계속 하고, import는 `@unikit-bridge/scriptca-client` export conditions으로 해석 | Rspeedy 0.18.2 빌드 (번들에 browser 클라이언트 포함) |
+| **React Native (Metro)** | `metro.config.js`에서 `@unikit-bridge/scriptca/react-native/metro`의 `withScriptcaMetro()` | Metro 0.87 / RN 0.88 실번들 (2026-10-21) |
+| **Expo** | 동일한 `withScriptcaMetro()` — Expo의 번들러는 Metro 그 자체입니다. `@expo/metro-config` 기본 설정 위에 등록하세요 (`metro.config.js`) | Expo 58 실제 metro 설정(`getDefaultConfig`) 번들 — drop-in 브리지 포함, 엔트리 소스 배제 (2026-10-22) |
+| **Electron** | main: `import { createClient } from '@unikit-bridge/scriptca-client'` (node conditions — 생성 패키지는 런타임 플레이버의 **컴파일된 `.js`를 함께 내보냅니다**. Electron의 Node는 `.ts`를 로드하지 못함), renderer: 기존처럼 Vite/Webpack 플러그인 | Electron 33 실런타임: main은 네이티브 코어 호출, vite 빌드 renderer는 커스텀 프로토콜로 WASM drop-in 호출 (2026-10-22) |
+| **Astro / SvelteKit / Nuxt / Remix (React Router) / SolidStart** | 전부 Vite 내장 — `@unikit-bridge/scriptca/vite`를 각자의 `vite.plugins`에 등록. Nuxt 4는 vite root를 `srcDir`(`app/`)로 옮기므로 프로젝트 루트를 명시하세요: `scriptca({ root: import.meta.dirname })` | Astro 5.18, SvelteKit 2, Nuxt 4.6, React Router 8.5 (SPA 모드), SolidStart 2.0 (`@solidjs/start` + vite 8) — 실빌드: client 번들에 drop-in 포함, WASM 정적 산출 (2026-10-22) |
 | **Rollup** | 동일 플러그인 (`root` 옵션) — `resolveId`는 rollup 표준 훅 형태. TS 변환과 `.js`→`.ts` 형제 해석은 호스트 몫(ts/esbuild 플러그인과 짝) | rollup 4 실빌드 — 엔트리 import가 drop-in으로 리다이렉트 (2026-10-22) |
-| **Deno** | 플러그인 불필요 — export conditions가 `deno` 플레이버를 고릅니다(컴파일된 `.js`로 emit되고, Deno가 스스로 켜는 `node` 조건보다 **앞서** 매니페스트에 배치). 먼저 `scriptcable build --target wasm --hosts deno` (코드젠 CLI는 Bun에서 실행) | Deno 2.9 실런타임 — bare `@unikit-bridge/scriptcable-client` import + `deno run -A`, 플래그·설정 0 (2026-10-22) |
+| **Deno** | 플러그인 불필요 — export conditions가 `deno` 플레이버를 고릅니다(컴파일된 `.js`로 emit되고, Deno가 스스로 켜는 `node` 조건보다 **앞서** 매니페스트에 배치). 먼저 `scriptca build --target wasm --hosts deno` (코드젠 CLI는 Bun에서 실행) | Deno 2.9 실런타임 — bare `@unikit-bridge/scriptca-client` import + `deno run -A`, 플래그·설정 0 (2026-10-22) |
 | **Cloudflare Workers** | 플러그인 불필요 — wrangler는 `workerd` 조건으로 번들을 해석하고, workers 플레이버는 wasm을 정적 import(wrangler 기본 CompiledWasm 규칙)하므로 fetch도 TLA도 없음 | wrangler 4.151 — dry-run 번들 + 실제 `wrangler dev`(workerd) HTTP 호출 42 (2026-10-22) |
 
 drop-in 플레이버: 브라우저 그래프는 모듈 로드 시 top-level await로 WASM을 1회 초기화합니다(빌드 타깃 **ES2022+** 필요, 예: vite `build.target: 'es2022'`). 서버 그래프는 **await이 전혀 없습니다**(`createClientSync()` — CommonJS 출력 서버 번들에도 안전). Metro는 첫 호출 때 브리지 클라이언트를 lazy 생성합니다.
 
-정확성이 우선입니다. 엔트리가 drop-in이 제공할 수 없는 것을 하나라도 export하면 — 함수 아닌 값, 클래스, `default`/re-export, 매핑 불가 타입의 함수, 또는 표면을 줄여 선언한 `exports` — 그 프로젝트는 가로채지 않고 이유 1줄을 알립니다. `dropin: false`(Vite/Webpack) 또는 `{ dropin: false }`(`withScriptcable`)로 완전히 끌 수 있습니다.
+정확성이 우선입니다. 엔트리가 drop-in이 제공할 수 없는 것을 하나라도 export하면 — 함수 아닌 값, 클래스, `default`/re-export, 매핑 불가 타입의 함수, 또는 표면을 줄여 선언한 `exports` — 그 프로젝트는 가로채지 않고 이유 1줄을 알립니다. `dropin: false`(Vite/Webpack) 또는 `{ dropin: false }`(`withScriptca`)로 완전히 끌 수 있습니다.
 
 ### 이전 → 이후: 알아야 했던 것
 
-scriptcable을 쓰려면 일곱 가지를 알아야 했지만, 이제는 하나(`scriptcable build` 또는 이를 대신 돌려 주는 번들러 플러그인)면 됩니다:
+scriptca을 쓰려면 일곱 가지를 알아야 했지만, 이제는 하나(`scriptca build` 또는 이를 대신 돌려 주는 번들러 플러그인)면 됩니다:
 
 | 알아야 했던 것 | 이전 | 이제 |
 | --- | --- | --- |
-| 설정 파일 | `scriptcable.config.ts` 필수 (`name`, `entry`) | 선택 — package.json·표준 위치에서 추론 |
-| 생성물 경로 | `.scriptcable/generated/` 상대경로, `outDir` 옵션 | 없음 — bare import 하나, 또는 아예 없음(drop-in) |
+| 설정 파일 | `scriptca.config.ts` 필수 (`name`, `entry`) | 선택 — package.json·표준 위치에서 추론 |
+| 생성물 경로 | `.scriptca/generated/` 상대경로, `outDir` 옵션 | 없음 — bare import 하나, 또는 아예 없음(drop-in) |
 | 플레이버 선택 | 호스트별 어댑터/파일 직접 선택 | 환경별 자동 (export conditions) |
 | 브라우저 WASI 어댑터 | `createMinimalWasi()` 구성·전달 | `createClient()` 무인자 |
 | 번들러 설정 | 수동 alias/transpile (Next), JSON 전용 플러그인 설정 | 플러그인이 전부 처리 |
@@ -144,10 +144,10 @@ scriptcable을 쓰려면 일곱 가지를 알아야 했지만, 이제는 하나(
 
 ```ts
 // 이전 — 호스트별 import, 경로, 어댑터
-const engine = await createNodeEngine({ outDir: '.scriptcable' });
+const engine = await createNodeEngine({ outDir: '.scriptca' });
 
 // 이후 — Bun, Node, Next 서버 코드, 브라우저에서 동일
-import { createClient } from '@unikit-bridge/scriptcable-client';
+import { createClient } from '@unikit-bridge/scriptca-client';
 const client = await createClient();
 ```
 
@@ -155,45 +155,45 @@ const client = await createClient();
 
 ## 패키지
 
-발행물은 하나 — **`@unikit-bridge/scriptcable`** — 호스트/플러그인 서브패스입니다(모노레포 `@scriptcable/*`는 private로 조립에만 사용):
+발행물은 하나 — **`@unikit-bridge/scriptca`** — 호스트/플러그인 서브패스입니다(모노레포 `@scriptca/*`는 private로 조립에만 사용):
 
 | 서브패스 | 역할 |
 |---------|------|
-| `@unikit-bridge/scriptcable` / `/core` | profile, toolchain, WASM 로더, contract hash, codegen |
-| `@unikit-bridge/scriptcable/cli` | `init` / `build` / `diff` / `doctor` (`scriptcable` bin) |
-| `@unikit-bridge/scriptcable/types` | 공유 타입 / 에러 |
-| `@unikit-bridge/scriptcable/node` | Node 어댑터 (네이티브 공유 라이브러리; koffi 선택) |
-| `@unikit-bridge/scriptcable/bun` | Bun 어댑터 (기본 bun:ffi) |
-| `@unikit-bridge/scriptcable/tauri` | Tauri invoke 브리지 |
-| `@unikit-bridge/scriptcable/react-native` | RN 브리지 (mock + host) |
-| `@unikit-bridge/scriptcable/lynx` | Lynx + Rspeedy 헬퍼 |
-| `@unikit-bridge/scriptcable/vite` | Vite 플러그인 (빌드 + HMR rebuild) |
-| `@unikit-bridge/scriptcable/next` | Next.js webpack 플러그인 + Turbopack `scriptcableBuild()` |
-| `@unikit-bridge/scriptcable/webpack` | Webpack / Rspack / Rsbuild 플러그인 |
-| `@unikit-bridge/scriptcable/expo` | Expo config 플러그인 |
-| `@unikit-bridge/scriptcable/testing` | contract assert 헬퍼 |
+| `@unikit-bridge/scriptca` / `/core` | profile, toolchain, WASM 로더, contract hash, codegen |
+| `@unikit-bridge/scriptca/cli` | `init` / `build` / `diff` / `doctor` (`scriptca` bin) |
+| `@unikit-bridge/scriptca/types` | 공유 타입 / 에러 |
+| `@unikit-bridge/scriptca/node` | Node 어댑터 (네이티브 공유 라이브러리; koffi 선택) |
+| `@unikit-bridge/scriptca/bun` | Bun 어댑터 (기본 bun:ffi) |
+| `@unikit-bridge/scriptca/tauri` | Tauri invoke 브리지 |
+| `@unikit-bridge/scriptca/react-native` | RN 브리지 (mock + host) |
+| `@unikit-bridge/scriptca/lynx` | Lynx + Rspeedy 헬퍼 |
+| `@unikit-bridge/scriptca/vite` | Vite 플러그인 (빌드 + HMR rebuild) |
+| `@unikit-bridge/scriptca/next` | Next.js webpack 플러그인 + Turbopack `scriptcaBuild()` |
+| `@unikit-bridge/scriptca/webpack` | Webpack / Rspack / Rsbuild 플러그인 |
+| `@unikit-bridge/scriptca/expo` | Expo config 플러그인 |
+| `@unikit-bridge/scriptca/testing` | contract assert 헬퍼 |
 
 ## 어댑터 퀵스타트
 
 ### Bun
 
 ```bash
-bun run --filter @scriptcable/example-calculator-core build
-bun run --filter @scriptcable/example-bun-app start
+bun run --filter @scriptca/example-calculator-core build
+bun run --filter @scriptca/example-bun-app start
 ```
 
 ### Node
 
 ```bash
-bun run --filter @scriptcable/example-node-app start
+bun run --filter @scriptca/example-node-app start
 ```
 
 ### Vite
 
 ```ts
-import scriptcable from '@unikit-bridge/scriptcable/vite';
+import scriptca from '@unikit-bridge/scriptca/vite';
 export default {
-  plugins: [scriptcable()], // ./core import가 컴파일된 클라이언트로 해석됨
+  plugins: [scriptca()], // ./core import가 컴파일된 클라이언트로 해석됨
   build: { target: 'es2022' }, // drop-in 브라우저 클라이언트는 top-level await 사용
 };
 ```
@@ -203,35 +203,35 @@ export default {
 ### Next.js
 
 ```js
-import { withScriptcable } from '@unikit-bridge/scriptcable/next';
-export default withScriptcable({}); // transpilePackages 자동 추가 + 그래프별 drop-in
+import { withScriptca } from '@unikit-bridge/scriptca/next';
+export default withScriptca({}); // transpilePackages 자동 추가 + 그래프별 drop-in
 // `next build --webpack` / `next dev` 로 실행하면 drop-in import가 켜집니다
 ```
 
 Turbopack(Next 16 기본 번들러)에는 그래프별 resolve 훅이 없고, `resolveAlias`는
 해석된 경로가 아닌 요청 specifier를 매칭합니다 — 절대경로 키는 아무 일도 하지
 않습니다(16.4.2에서 검증: TS 엔트리가 그대로 그래프에 남았습니다). 이격 없는
-가짜 alias는 설정하지 않습니다 — `withScriptcableAsync()`가 한 번 정확히 알려주고
-import는 그대로 둡니다. 앱 코드는 `@unikit-bridge/scriptcable-client`를 import하면 되고,
+가짜 alias는 설정하지 않습니다 — `withScriptcaAsync()`가 한 번 정확히 알려주고
+import는 그대로 둡니다. 앱 코드는 `@unikit-bridge/scriptca-client`를 import하면 되고,
 export conditions가 두 그래프 모두에서 컴파일된 클라이언트를 전달합니다:
 
 ```js
-import { withScriptcableAsync } from '@unikit-bridge/scriptcable/next';
-export default await withScriptcableAsync({}); // 아티팩트 빌드 + @unikit-bridge/scriptcable-client 링크
+import { withScriptcaAsync } from '@unikit-bridge/scriptca/next';
+export default await withScriptcaAsync({}); // 아티팩트 빌드 + @unikit-bridge/scriptca-client 링크
 ```
 
 ### Tauri
 
-Tauri Rust 셸에서 `scriptcable build`의 `lib{name}.a`를 링크(build script / `cc`)하고 C ABI 심볼을 `#[tauri::command]`로 래핑하세요. 웹뷰는 `createTauriSidecarEngine`으로 브리지. Vite로 빌드하는 Tauri v2 프런트엔드는 일반 웹 앱과 동일하게 Vite 플러그인의 drop-in 브라우저 클라이언트를 받습니다.
+Tauri Rust 셸에서 `scriptca build`의 `lib{name}.a`를 링크(build script / `cc`)하고 C ABI 심볼을 `#[tauri::command]`로 래핑하세요. 웹뷰는 `createTauriSidecarEngine`으로 브리지. Vite로 빌드하는 Tauri v2 프런트엔드는 일반 웹 앱과 동일하게 Vite 플러그인의 drop-in 브라우저 클라이언트를 받습니다.
 
 ### Electron
 
-새 패키지가 필요 없습니다 — Electron은 scriptcable 호스트 둘입니다 (`examples/electron-app`이 검증된 엔드투엔드 샘플):
+새 패키지가 필요 없습니다 — Electron은 scriptca 호스트 둘입니다 (`examples/electron-app`이 검증된 엔드투엔드 샘플):
 
 ```ts
 // main 프로세스 (Node 런타임) — import 하나, export conditions가 네이티브
 // node 플레이버를 선택; 호출은 동기
-import { createClient } from '@unikit-bridge/scriptcable-client';
+import { createClient } from '@unikit-bridge/scriptca-client';
 const client = await createClient();
 client.add(20, 22); // 42
 
@@ -239,22 +239,22 @@ client.add(20, 22); // 42
 // 브라우저 drop-in으로 해석됨
 ```
 
-Electron 관련 참고 두 가지: 생성 패키지의 `bun`/`node` conditions은 **컴파일된 `.js`**를 가리킵니다(Electron의 Node 20은 `.ts`를 로드할 수 없어 빌드가 둘 다 내보냅니다). 그리고 `dist/`를 서빙하는 renderer는 커스텀 프로토콜이 필요합니다 — ready 전에 `protocol.registerSchemesAsPrivileged([{ scheme: 'scriptcable', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }])`, 이후 `protocol.handle('scriptcable', …)`로 dist를 서빙하면 WASM `fetch()`가 동작합니다.
+Electron 관련 참고 두 가지: 생성 패키지의 `bun`/`node` conditions은 **컴파일된 `.js`**를 가리킵니다(Electron의 Node 20은 `.ts`를 로드할 수 없어 빌드가 둘 다 내보냅니다). 그리고 `dist/`를 서빙하는 renderer는 커스텀 프로토콜이 필요합니다 — ready 전에 `protocol.registerSchemesAsPrivileged([{ scheme: 'scriptca', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }])`, 이후 `protocol.handle('scriptca', …)`로 dist를 서빙하면 WASM `fetch()`가 동작합니다.
 
 ### React Native / Lynx
 
-scriptc iOS/Android 아카이브를 네이티브 모듈(Xcode / NDK CMake)에 링크하고 `createReactNativeEngine` / `createLynxEngine`으로 브리지하세요. Lynx 번들링은 `@unikit-bridge/scriptcable/webpack`의 `ScriptcaRspackPlugin` 사용 — Rspack도 enhanced-resolve drop-in이 자동 연결됩니다.
+scriptc iOS/Android 아카이브를 네이티브 모듈(Xcode / NDK CMake)에 링크하고 `createReactNativeEngine` / `createLynxEngine`으로 브리지하세요. Lynx 번들링은 `@unikit-bridge/scriptca/webpack`의 `ScriptcaRspackPlugin` 사용 — Rspack도 enhanced-resolve drop-in이 자동 연결됩니다.
 
-**Android는 네이티브 쪽도 생성·완성됩니다**: `scriptcable build --platform android`가 android-arm64용 아카이브를 크로스컴파일(scriptc의 `@scriptc/runtime-android-arm64`)하고 생성된 JNI dispatch와 함께 하나의 `lib{name}_cable.so`로 링크합니다 — Kotlin 모듈(`CableModule.kt` + 패키지)이 함께 나옵니다. Expo 프로젝트는 `@unikit-bridge/scriptcable/expo` config plugin이 `expo prebuild` 때 전부 연결합니다 — 손으로 쓰는 네이티브 모듈도 CMake도 없습니다:
+**Android는 네이티브 쪽도 생성·완성됩니다**: `scriptca build --platform android`가 android-arm64용 아카이브를 크로스컴파일(scriptc의 `@scriptc/runtime-android-arm64`)하고 생성된 JNI dispatch와 함께 하나의 `lib{name}_cable.so`로 링크합니다 — Kotlin 모듈(`CableModule.kt` + 패키지)이 함께 나옵니다. Expo 프로젝트는 `@unikit-bridge/scriptca/expo` config plugin이 `expo prebuild` 때 전부 연결합니다 — 손으로 쓰는 네이티브 모듈도 CMake도 없습니다:
 
 ```json
 // app.json
-{ "expo": { "plugins": ["@unikit-bridge/scriptcable/expo"] } }
+{ "expo": { "plugins": ["@unikit-bridge/scriptca/expo"] } }
 ```
 
 ```bash
-scriptcable build --hosts react-native
-scriptcable build --platform android
+scriptca build --hosts react-native
+scriptca build --platform android
 bunx expo prebuild -p android
 cd android && ./gradlew assembleDebug
 ```
@@ -263,11 +263,11 @@ cd android && ./gradlew assembleDebug
 
 ⚠️ 앱 gradle에 `externalNativeBuild` 블록을 절대 추가하지 마세요 — RN 0.88 gradle 플러그인이 자체 cmake(libappmodules.so = 코어 TurboModule 바인딩)를 주입하는데, 두 번째 블록이 그 경로를 덮어써 앱이 기동 시 "'PlatformConstants' could not be found"로 죽습니다. 플러그인 없이 쓰려면 `examples/react-native-app/scripts/wire-android.mjs`(완성 .so를 jniLib로 복사 — CMake 없음). ARM 번역 에뮬레이터에서는 앱을 arm64로 빌드하세요(`-PreactNativeArchitectures=arm64-v8a` — 프로세스 전체가 번역으로 실행).
 
-Metro drop-in (`metro.config.js`, `scriptcable build --watch`를 Metro와 함께 실행):
+Metro drop-in (`metro.config.js`, `scriptca build --watch`를 Metro와 함께 실행):
 
 ```js
-import { withScriptcableMetro } from '@unikit-bridge/scriptcable/react-native/metro';
-export default withScriptcableMetro(getDefaultConfig(__dirname));
+import { withScriptcaMetro } from '@unikit-bridge/scriptca/react-native/metro';
+export default withScriptcaMetro(getDefaultConfig(__dirname));
 ```
 
 기기에서 TurboModule drop-in 호출은 Promise로 귀결됩니다 — 위 브리지 클라이언트와 동일한 시맨틱입니다.
@@ -277,8 +277,8 @@ export default withScriptcableMetro(getDefaultConfig(__dirname));
 ```js
 // metro.config.js (Expo)
 const { getDefaultConfig } = require('expo/metro-config');
-const { withScriptcableMetro } = require('@unikit-bridge/scriptcable/react-native/metro');
-module.exports = withScriptcableMetro(getDefaultConfig(__dirname));
+const { withScriptcaMetro } = require('@unikit-bridge/scriptca/react-native/metro');
+module.exports = withScriptcaMetro(getDefaultConfig(__dirname));
 ```
 
 ### Deno / Cloudflare Workers
@@ -286,30 +286,30 @@ module.exports = withScriptcableMetro(getDefaultConfig(__dirname));
 둘 다 번들러 플러그인 없이 생성 클라이언트를 실행합니다 — export conditions가 플레이버를 고르는, 다른 런타임과 같은 한 줄 import DX입니다:
 
 ```bash
-scriptcable build --target wasm --hosts deno    # workers도 동일 (--hosts workers)
-deno run -A src/main.ts                          # 안에서 @unikit-bridge/scriptcable-client를 bare import
+scriptca build --target wasm --hosts deno    # workers도 동일 (--hosts workers)
+deno run -A src/main.ts                          # 안에서 @unikit-bridge/scriptca-client를 bare import
 ```
 
 - **Deno** (`examples/deno-app`): `deno` 플레이버는 **컴파일된 `.js`**로 emit됩니다(Deno는 `node_modules` 하위 타입 제거를 거부함) — 그리고 매니페스트는 `deno` 조건을 `node`보다 앞에 둡니다(Deno가 `node`를 스스로 켜므로). wasm은 생성 디렉터리에서 직접 읽어 URL 프로브가 없습니다. 일반 `deno run -A` — 플래그도 `deno.json`도 없습니다.
 - **Cloudflare Workers** (`examples/workers-app`): `workerd` 플레이버는 wasm을 정적 import합니다 — wrangler의 기본 CompiledWasm 규칙이 컴파일된 모듈을 번들에 넣어주므로 `createClient()`에 fetch도 top-level await도 필요 없습니다. 실제 `wrangler dev`(workerd) 호출로 검증됐습니다.
 
-공통 전제: 코드젠 CLI 자체는 **Bun**에서 실행됩니다(오늘날 모든 호스트와 동일) — CI나 개발 머신에서 `scriptcable build`를 실행하면, 생성된 클라이언트가 Deno/workerd에서 실행됩니다. 런타임에는 Bun이 필요 없습니다.
+공통 전제: 코드젠 CLI 자체는 **Bun**에서 실행됩니다(오늘날 모든 호스트와 동일) — CI나 개발 머신에서 `scriptca build`를 실행하면, 생성된 클라이언트가 Deno/workerd에서 실행됩니다. 런타임에는 Bun이 필요 없습니다.
 
 ## 워치 모드
 
 자체 워처가 없는 호스트(Turbopack predev 스크립트를 쓰는 Next.js, 일반 Bun/Node 앱)에서는:
 
 ```bash
-scriptcable build --watch
+scriptca build --watch
 ```
 
-빌드 캐시가 해시하는 것과 같은 입력 — 코어 엔트리와 같은 디렉터리의 형제 파일, 설정 파일 — 을 감시하고, 변경 시 재빌드합니다(코드젠과 `@unikit-bridge/scriptcable-client` 링크 포함). 오류로 감시가 멈추지 않습니다: 파일을 고치면 다시 빌드합니다.
+빌드 캐시가 해시하는 것과 같은 입력 — 코어 엔트리와 같은 디렉터리의 형제 파일, 설정 파일 — 을 감시하고, 변경 시 재빌드합니다(코드젠과 `@unikit-bridge/scriptca-client` 링크 포함). 오류로 감시가 멈추지 않습니다: 파일을 고치면 다시 빌드합니다.
 
 ## CI 계약 게이트
 
 ```bash
-scriptcable build                       # .scriptcable/contract.json 생성
-scriptcable diff --fail-on-breaking     # 제거/시그니처 변경 시 exit 1
+scriptca build                       # .scriptca/contract.json 생성
+scriptca diff --fail-on-breaking     # 제거/시그니처 변경 시 exit 1
 ```
 
 ## 모노레포 스크립트
@@ -324,19 +324,19 @@ bun run test
 
 ## 발행 (메인테이너)
 
-릴리스는 태그 기반입니다 — 버전 태그를 푸시하면 CI가 단일 패키지 **`@unikit-bridge/scriptcable`**을 발행합니다.
+릴리스는 태그 기반입니다 — 버전 태그를 푸시하면 CI가 단일 패키지 **`@unikit-bridge/scriptca`**을 발행합니다.
 
 ```bash
-# 1. packages/scriptcable/package.json 버전을 맞춤
+# 1. packages/scriptca/package.json 버전을 맞춤
 # 2. 커밋 후 태그 푸시
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
 `Release` 워크플로(`.github/workflows/release.yml`)는 먼저 전체 테스트를 통과시키고(CI와 동일 툴체인의 `test` job — clang, zig, `bun run test`; `publish`가 `needs: test`) 이어서 수행합니다:
 
-1. 태그와 `packages/scriptcable` 버전 일치 검사(`scripts/check-release-version.ts`),
-2. 빌드 후 **발행 형태 게이트**(`scripts/pack-smoke.ts`): 조립 패키지를 pack해 `workspace:` / `@scriptcable` 잔존과 `files`·exports 산출물 실재를 단언하고, 클린룸에 설치해 모든 공개 서브패스와 cli bin `--help`까지 임포트,
-3. 한 번 발행(`packages/scriptcable`에서 `bun publish --access public`).
+1. 태그와 `packages/scriptca` 버전 일치 검사(`scripts/check-release-version.ts`),
+2. 빌드 후 **발행 형태 게이트**(`scripts/pack-smoke.ts`): 조립 패키지를 pack해 `workspace:` / `@scriptca` 잔존과 `files`·exports 산출물 실재를 단언하고, 클린룸에 설치해 모든 공개 서브패스와 cli bin `--help`까지 임포트,
+3. 한 번 발행(`packages/scriptca`에서 `bun publish --access public`).
 
 `NPM_TOKEN` 시크릿(`@unikit-bridge` 발행 권한 있는 npm Automation 토큰)이 필요합니다. 이미 발행된 버전 재발행은 npm이 거부하므로 버전을 올리고 새 태그를 푸세요. provenance는 `bun publish` 지원 후 과제입니다.
 

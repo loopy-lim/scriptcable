@@ -10,10 +10,10 @@
  *   bun scripts/bench-gate.ts            # compare against the baseline
  *   bun scripts/bench-gate.ts --update   # rewrite the baseline from this run
  *
- * Prereq: bun run --filter @scriptcable/example-bench-core build
+ * Prereq: bun run --filter @scriptca/example-bench-core build
  */
-import { loadNativeFromOutDir } from '@scriptcable/core/native';
-import { createBatchWire } from '@scriptcable/core/batch';
+import { loadNativeFromOutDir } from '@scriptca/core/native';
+import { createBatchWire } from '@scriptca/core/batch';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 const exampleRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = join(exampleRoot, '..', '..');
-const outDir = join(exampleRoot, '.scriptcable');
+const outDir = join(exampleRoot, '.scriptca');
 const baselinePath = join(exampleRoot, 'scripts', 'bench-baseline.json');
 const TOLERANCE = 2.5;
 
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
       // The batch executive — 64 × repeat('ab',100) across one crossing,
       // recorded per-op (encode + executive + decode ÷ 64). Steady-state:
       // entries are built once, matching the amortized calling pattern.
-      const exec = addon['__scriptcable_batch'] as
+      const exec = addon['__scriptca_batch'] as
         | ((meta: Int32Array, args: Uint8Array) => Uint8Array)
         | undefined;
       if (typeof exec === 'function') {

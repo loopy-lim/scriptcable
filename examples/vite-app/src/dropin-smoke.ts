@@ -4,10 +4,10 @@
  * client. This is the observable "register the plugin → imports get fast"
  * contract, asserted without a browser:
  *
- *   - the transformed module references .scriptcable/generated/dropin/browser.ts
+ *   - the transformed module references .scriptca/generated/dropin/browser.ts
  *   - the TS source module no longer appears in the graph
  *
- * Run after `scriptcable build` (the plugin's buildStart also rebuilds —
+ * Run after `scriptca build` (the plugin's buildStart also rebuilds —
  * this only asserts the resolver, so it works cold too).
  */
 import { createServer } from 'vite';

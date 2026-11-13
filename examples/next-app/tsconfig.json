@@ -25,7 +25,7 @@
   },
   "include": [
     "next.config.mjs",
-    "scriptcable.json",
+    "scriptca.json",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

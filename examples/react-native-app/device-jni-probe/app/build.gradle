@@ -3,10 +3,10 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 android {
-    namespace 'com.scriptcable.cable'
+    namespace 'com.scriptca.cable'
     compileSdk 34
     defaultConfig {
-        applicationId "com.scriptcable.cable"
+        applicationId "com.scriptca.cable"
         minSdk 24
         targetSdk 34
         ndk { abiFilters "arm64-v8a" }

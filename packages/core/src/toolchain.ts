@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process';
 import { access, constants, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { basename, delimiter, dirname, join, relative, resolve } from 'node:path';
-import { ScriptcableToolchainError } from '@scriptcable/types';
-import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
+import { ScriptcaToolchainError } from '@scriptca/types';
+import type { ResolvedConfig, ScriptcaProfile } from '@scriptca/types';
 import { configToProfile } from './profile.js';
 import { generateClients } from './codegen.js';
 import { linkSharedLibrary, sharedLibraryFileName, buildCompleteStaticArchive } from './link-shared.js';
@@ -29,7 +29,7 @@ export type ToolchainInfo = {
   clangPath?: string;
   ccPath?: string;
   denoPath?: string;
-  /** State of the `node_modules/@unikit-bridge/scriptcable-client` link — absent when nothing was generated yet. */
+  /** State of the `node_modules/@unikit-bridge/scriptca-client` link — absent when nothing was generated yet. */
   clientLink?: 'current' | 'linked' | 'repaired' | 'blocked';
 };
 
@@ -98,7 +98,7 @@ export async function resolveScriptc(cwd = process.cwd()): Promise<string> {
   // in the root package.json.
   const install = await run('bun', ['add', '--dev', 'scriptc@^0.4.12'], { cwd });
   if (install.code !== 0) {
-    throw new ScriptcableToolchainError(
+    throw new ScriptcaToolchainError(
       'scriptc is not installed and auto-install failed.',
       'Install Bun 1.2+ (https://bun.sh), then run: bun add -d scriptc\n' +
         'Bun runs scriptc install scripts for trusted deps; keep them enabled.\n' +
@@ -113,7 +113,7 @@ export async function scriptcVersion(bin: string): Promise<string> {
   if (r.code !== 0) {
     // bin may be a native binary
     const r2 = await run(bin, ['--version']);
-    if (r2.code !== 0) throw new ScriptcableToolchainError(`scriptc --version failed: ${r2.stderr}`);
+    if (r2.code !== 0) throw new ScriptcaToolchainError(`scriptc --version failed: ${r2.stderr}`);
     return r2.stdout.trim();
   }
   return r.stdout.trim();
@@ -136,8 +136,8 @@ export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: bool
 
   // Bun is the primary engine; plain Node >= 24 is still accepted for adapters.
   if (runtime === 'bun' && compareVersions(bunVersion, '1.2.0') < 0) {
-    throw new ScriptcableToolchainError(
-      `Bun ${bunVersion} is too old (scriptcable requires >= 1.2.0).`,
+    throw new ScriptcaToolchainError(
+      `Bun ${bunVersion} is too old (scriptca requires >= 1.2.0).`,
       'Upgrade: curl -fsSL https://bun.sh/install | bash',
     );
   }
@@ -149,7 +149,7 @@ export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: bool
   if (!opts.skipRuntimeGate && runtime === 'node') {
     const major = Number(nodeVersion.slice(1).split('.')[0]);
     if (major < 24) {
-      throw new ScriptcableToolchainError(
+      throw new ScriptcaToolchainError(
         `Node.js ${nodeVersion} is too old (scriptc requires >= 24).`,
         'Prefer Bun (https://bun.sh) or install Node 24+: https://nodejs.org/',
       );
@@ -172,9 +172,9 @@ export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: bool
   const denoPath = (await which('deno')) ?? undefined;
 
   // Doctor doubles as the link repairer: if a previous build generated
-  // clients, make sure `@unikit-bridge/scriptcable-client` resolves (no-op when current).
+  // clients, make sure `@unikit-bridge/scriptca-client` resolves (no-op when current).
   let clientLink: ToolchainInfo['clientLink'];
-  const genDir = join(cwd, '.scriptcable', 'generated');
+  const genDir = join(cwd, '.scriptca', 'generated');
   try {
     await access(genDir);
     clientLink = await ensureClientPackageLink(cwd, genDir);
@@ -228,7 +228,7 @@ export type BuildResult = {
   sharedPath?: string;
   /** Typed N-API direct-binding addon (.node) — preferred by generated clients, soft-failed */
   addonPath?: string;
-  profile: ScriptcableProfile;
+  profile: ScriptcaProfile;
   /** True when this result came from the build cache (no recompile) */
   cached?: boolean;
 };
@@ -245,7 +245,7 @@ async function ensureRuntimePack(cwd: string, target: 'wasm' | 'android-arm64'):
     const ver = info.version.replace(/^v/, '');
     const r = await run('bun', ['add', '--dev', `${pack}@${ver}`], { cwd });
     if (r.code !== 0) {
-      throw new ScriptcableToolchainError(
+      throw new ScriptcaToolchainError(
         `Failed to install ${pack} (required for ${target} builds).`,
         r.stderr.slice(0, 500) +
           (target === 'wasm'
@@ -272,7 +272,7 @@ export async function buildCore(
   options: BuildOptions = {},
 ): Promise<BuildResult> {
   const cwd = options.cwd ?? process.cwd();
-  const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptcable');
+  const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptca');
   const target = options.target ?? config.target ?? 'native';
   const androidArm64 = options.platform === 'android-arm64';
   // Android artifacts live under outDir/android-arm64/ so a host .so and the
@@ -287,15 +287,15 @@ export async function buildCore(
 
   const info = await doctor(cwd, { skipRuntimeGate: options.doctorRuntimeGate === 'skip' });
   // wasm/cross builds drive zig off PATH — resolve it once per build (the
-  // provision cache auto-populates unless SCRIPTCABLE_NO_AUTO_TOOLS=1), and
+  // provision cache auto-populates unless SCRIPTCA_NO_AUTO_TOOLS=1), and
   // ride the resolved binary's directory on the scriptc subprocess PATH.
   const needsZig = target === 'wasm' || target === 'both' || androidArm64;
   const buildZig = needsZig ? await ensureZig((m) => console.log(`  ${m}`)) : undefined;
-  // Infer exports from the TS entry when not declared in scriptcable.json.
+  // Infer exports from the TS entry when not declared in scriptca.json.
   const { resolveProfile } = await import('./profile.js');
   const { profile, inferred, skipped } = await resolveProfile(config, cwd);
   if (inferred) {
-    console.log(`  inferred:  ${profile.exports.length} exports from ${config.entry} (no scriptcable.json exports declared)`);
+    console.log(`  inferred:  ${profile.exports.length} exports from ${config.entry} (no scriptca.json exports declared)`);
     for (const s of skipped) {
       console.log(`  skipped:   ${s.name} — ${s.reason}`);
     }
@@ -315,7 +315,7 @@ export async function buildCore(
 
   // — build cache: skip scriptc + link when inputs are unchanged —
   const { computeBuildHash, isCachedBuild, markBuildDone } = await import('./build-cache.js');
-  const configInputs = [join(cwd, 'scriptcable.config.ts'), join(cwd, 'scriptcable.json')]
+  const configInputs = [join(cwd, 'scriptca.config.ts'), join(cwd, 'scriptca.json')]
     .filter((p) => p.startsWith(outDir) === false);
   const buildHash = await computeBuildHash({
     cwd,
@@ -365,9 +365,9 @@ export async function buildCore(
   const runBuild = async (kind: 'wasm' | 'native') => {
     if (kind === 'wasm') {
       if (!buildZig) {
-        throw new ScriptcableToolchainError(
+        throw new ScriptcaToolchainError(
           'zig is required for WASM (wasm32-wasi) library builds.',
-          'scriptcable provisions zig 0.13.x automatically — that was skipped (download failed, or SCRIPTCABLE_NO_AUTO_TOOLS=1).\n' +
+          'scriptca provisions zig 0.13.x automatically — that was skipped (download failed, or SCRIPTCA_NO_AUTO_TOOLS=1).\n' +
             'Retry without the env, or install zig 0.13.x and put it on PATH.\n' +
             '  curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ\n' +
             'Note: CI pins zig 0.13.0 — zig 0.16 is verified with scriptc 0.4.12 too\n' +
@@ -377,15 +377,15 @@ export async function buildCore(
       await ensureRuntimePack(cwd, 'wasm');
     } else if (androidArm64) {
       if (!buildZig) {
-        throw new ScriptcableToolchainError(
+        throw new ScriptcaToolchainError(
           'zig is required for android-arm64 cross builds (SCRIPTC_TARGET + zig cc link).',
-          'scriptcable provisions zig 0.13.x automatically — that was skipped (download failed, or SCRIPTCABLE_NO_AUTO_TOOLS=1).\n' +
+          'scriptca provisions zig 0.13.x automatically — that was skipped (download failed, or SCRIPTCA_NO_AUTO_TOOLS=1).\n' +
             'Retry without the env, or install zig 0.13.x and put it on PATH.',
         );
       }
       await ensureRuntimePack(cwd, 'android-arm64');
     } else if (!info.hasClang && !info.hasCc && !info.hasZig && !buildZig && process.platform === 'linux') {
-      throw new ScriptcableToolchainError(
+      throw new ScriptcaToolchainError(
         'clang (or cc) — or zig — is required for native library builds on Linux.',
         'Install clang (`sudo apt install clang`; gcc\'s cc also works), or run a wasm build once so the\n' +
           'provisioned zig cc can link the shared library — or use target: "wasm".',
@@ -407,9 +407,9 @@ export async function buildCore(
     };
     const r = await run(inv.cmd, inv.args, { cwd, env });
     if (r.code !== 0) {
-      throw new ScriptcableToolchainError(
+      throw new ScriptcaToolchainError(
         `scriptc ${kind} build failed:\n${r.stderr || r.stdout}`,
-        'Run `scriptcable doctor` and `scriptc coverage <entry>` for details.',
+        'Run `scriptca doctor` and `scriptc coverage <entry>` for details.',
       );
     }
     return outPath;
@@ -522,7 +522,7 @@ export async function ensureWasmArtifact(
   options: { cwd?: string; outDir?: string } = {},
 ): Promise<string | undefined> {
   const cwd = options.cwd ?? process.cwd();
-  const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptcable');
+  const outDir = resolve(cwd, options.outDir ?? config.outDir ?? '.scriptca');
   const existing = join(outDir, `${config.name}.wasm`);
   try {
     await access(existing);
@@ -536,7 +536,7 @@ export async function ensureWasmArtifact(
   } catch (e) {
     const reason = e instanceof Error ? e.message.split('\n')[0] : String(e);
     console.warn(`  wasm:      browser flavor unavailable — ${reason}`);
-    console.warn('             run `scriptcable build --target wasm` to enable it (needs zig 0.13)');
+    console.warn('             run `scriptca build --target wasm` to enable it (needs zig 0.13)');
     return undefined;
   }
 }

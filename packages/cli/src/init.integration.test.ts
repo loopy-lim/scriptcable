@@ -1,7 +1,7 @@
 /**
- * Integration test: `scriptcable init` scaffolds a CI-durable client dep —
+ * Integration test: `scriptca init` scaffolds a CI-durable client dep —
  * placeholder manifest + package.json dep + gitignore negations — so a fresh
- * clone's `bun install` resolves `@unikit-bridge/scriptcable-client` before the first build.
+ * clone's `bun install` resolves `@unikit-bridge/scriptca-client` before the first build.
  * Uses `--from` (local checkout) so the install never touches npm.
  */
 import { describe, it, afterAll } from 'bun:test';
@@ -31,17 +31,17 @@ describe('init CI-durable client dep (integration)', () => {
 
     // package.json carries the file: dep — even under --from overrides
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-    assert.equal(pkg.dependencies['@unikit-bridge/scriptcable-client'], 'file:.scriptcable/generated');
+    assert.equal(pkg.dependencies['@unikit-bridge/scriptca-client'], 'file:.scriptca/generated');
 
     // Placeholder manifest stands in until the first build overwrites it
-    const placeholderPkg = JSON.parse(await readFile(join(root, '.scriptcable', 'generated', 'package.json'), 'utf8'));
-    assert.equal(placeholderPkg.name, '@unikit-bridge/scriptcable-client');
-    await readFile(join(root, '.scriptcable', 'generated', 'placeholder.ts'), 'utf8');
+    const placeholderPkg = JSON.parse(await readFile(join(root, '.scriptca', 'generated', 'package.json'), 'utf8'));
+    assert.equal(placeholderPkg.name, '@unikit-bridge/scriptca-client');
+    await readFile(join(root, '.scriptca', 'generated', 'placeholder.ts'), 'utf8');
 
-    // The two placeholder files are the committed surface of .scriptcable
+    // The two placeholder files are the committed surface of .scriptca
     const gitignore = await readFile(join(root, '.gitignore'), 'utf8');
-    assert.match(gitignore, /!\.scriptcable\/generated\/package\.json/);
-    assert.match(gitignore, /!\.scriptcable\/generated\/placeholder\.ts/);
+    assert.match(gitignore, /!\.scriptca\/generated\/package\.json/);
+    assert.match(gitignore, /!\.scriptca\/generated\/placeholder\.ts/);
 
     // Fresh install succeeds (bun fails a file: dep without a package.json)
     const install = Bun.spawnSync({ cmd: ['bun', 'install'], cwd: root, stdout: 'pipe', stderr: 'pipe' });
@@ -49,7 +49,7 @@ describe('init CI-durable client dep (integration)', () => {
 
     // And the bare specifier resolves to the placeholder until the first build
     const probe = Bun.spawnSync({
-      cmd: ['bun', '-e', `import('@unikit-bridge/scriptcable-client').then((m) => console.log(typeof m.createClient))`],
+      cmd: ['bun', '-e', `import('@unikit-bridge/scriptca-client').then((m) => console.log(typeof m.createClient))`],
       cwd: root,
       stdout: 'pipe',
       stderr: 'pipe',
@@ -72,8 +72,8 @@ describe('init name derivation (F-2 regression)', () => {
     const pkg = JSON.parse(await readFile(join(target, 'package.json'), 'utf8'));
     assert.equal(pkg.name, 'sc-perfdemo');
 
-    // scriptcable.config.ts의 name·prefix도 basename 기반
-    const cfg = await readFile(join(target, 'scriptcable.config.ts'), 'utf8');
+    // scriptca.config.ts의 name·prefix도 basename 기반
+    const cfg = await readFile(join(target, 'scriptca.config.ts'), 'utf8');
     assert.match(cfg, /name: 'sc-perfdemo'/);
     assert.match(cfg, /prefix: 'sc_perfdemo_'/);
   });

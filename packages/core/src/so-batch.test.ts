@@ -18,9 +18,9 @@ import { linkSharedLibrary } from './link-shared.js';
 import { loadNativeLibrarySync, bindKoffiSync, type NativeModule } from './native-loader.js';
 import { generateSharedBatchSource } from './napi-addon.js';
 import { createBatchWire } from './batch-wire.js';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import type { ScriptcaProfile } from '@scriptca/types';
 
-const PROFILE: ScriptcableProfile = {
+const PROFILE: ScriptcaProfile = {
   profile_format: 2,
   name: 'probe',
   entry: 'native.c',

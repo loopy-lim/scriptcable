@@ -1,18 +1,18 @@
-import { withScriptcable, scriptcableBuild, withScriptcableAsync } from '@scriptcable/next';
+import { withScriptca, scriptcaBuild, withScriptcaAsync } from '@scriptca/next';
 import { access } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { sharedLibraryFileName } from '@scriptcable/core';
+import { sharedLibraryFileName } from '@scriptca/core';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const gen = await scriptcableBuild({ cwd: root });
-await access(join(root, '.scriptcable', sharedLibraryFileName('calculator')));
+const gen = await scriptcaBuild({ cwd: root });
+await access(join(root, '.scriptca', sharedLibraryFileName('calculator')));
 
 // Drop-in flavors are emitted for both graphs
-await access(join(root, '.scriptcable', 'generated', 'dropin', 'browser.ts'));
-await access(join(root, '.scriptcable', 'generated', 'dropin', 'node.ts'));
+await access(join(root, '.scriptca', 'generated', 'dropin', 'browser.ts'));
+await access(join(root, '.scriptca', 'generated', 'dropin', 'node.ts'));
 
-const cfg = withScriptcable({ reactStrictMode: true });
+const cfg = withScriptca({ reactStrictMode: true });
 if (typeof cfg.webpack !== 'function') throw new Error('missing webpack hook');
 
 async function runGraph(isServer) {
@@ -50,10 +50,10 @@ await runGraph(true); // server graph → node drop-in
 // Turbopack: no resolveAlias — absolute-path alias keys are inert in
 // Turbopack (verified against Next 16), so the async variant must NOT set
 // one. The compiled client still works there via export conditions.
-const turboCfg = await withScriptcableAsync({ reactStrictMode: true }, { cwd: root });
+const turboCfg = await withScriptcaAsync({ reactStrictMode: true }, { cwd: root });
 if (turboCfg.turbopack?.resolveAlias) {
   throw new Error('turbopack.resolveAlias must not be set (absolute-path keys are inert): ' + JSON.stringify(turboCfg.turbopack));
 }
-if (!turboCfg.transpilePackages?.includes('@scriptcable/client')) throw new Error('missing transpilePackages');
+if (!turboCfg.transpilePackages?.includes('@scriptca/client')) throw new Error('missing transpilePackages');
 
 console.log('next build wiring OK', gen);

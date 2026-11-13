@@ -1,19 +1,19 @@
 {
-  "name": "@scriptcable/example-nuxt-app",
+  "name": "@scriptca/example-nuxt-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "bun run --filter @scriptcable/example-calculator-core build",
-    "build": "bun run build:core && bun run --filter @scriptcable/example-calculator-core build:wasm && mkdir -p public && cp ../calculator-core/.scriptcable/calculator.wasm public/ && bunx --bun nuxt build",
+    "build:core": "bun run --filter @scriptca/example-calculator-core build",
+    "build": "bun run build:core && bun run --filter @scriptca/example-calculator-core build:wasm && mkdir -p public && cp ../calculator-core/.scriptca/calculator.wasm public/ && bunx --bun nuxt build",
     "test": "bun run build && bun scripts/assert-output.mjs"
   },
   "dependencies": {
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   },
   "devDependencies": {
     "nuxt": "^4.6.2",
     "vue": "^3.5.0",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

@@ -1,7 +1,7 @@
 /**
- * @scriptcable/webpack — Webpack / Rspack / Rsbuild plugin.
+ * @scriptca/webpack — Webpack / Rspack / Rsbuild plugin.
  *
- * Zero-config: reads scriptcable.config.ts > scriptcable.json > inference
+ * Zero-config: reads scriptca.config.ts > scriptca.json > inference
  * (package.json name + standard entry locations) unless `configPath` is set.
  *
  * Drop-in interception (default on): a resolve plugin redirects module
@@ -19,10 +19,10 @@ import {
   ensureWasmArtifact,
   copyWasmToPublicDir,
   canInterceptEntry,
-  ScriptcableDropinResolvePlugin,
-} from '@scriptcable/core';
+  ScriptcaDropinResolvePlugin,
+} from '@scriptca/core';
 
-export type ScriptcableWebpackOptions = {
+export type ScriptcaWebpackOptions = {
   /** Explicit config file (.ts or .json) — default: auto-discover or infer */
   configPath?: string;
   /**
@@ -34,8 +34,8 @@ export type ScriptcableWebpackOptions = {
   dropin?: 'browser' | 'node' | false;
 };
 
-export class ScriptcableWebpackPlugin {
-  constructor(private options: ScriptcableWebpackOptions = {}) {}
+export class ScriptcaWebpackPlugin {
+  constructor(private options: ScriptcaWebpackOptions = {}) {}
 
   apply(compiler: {
     context?: string;
@@ -51,12 +51,12 @@ export class ScriptcableWebpackPlugin {
     const resolveOptions = ((compiler.options ??= {}).resolve ??= {});
     const extensionAlias = (resolveOptions.extensionAlias ??= {});
     extensionAlias['.js'] = [...new Set([...(extensionAlias['.js'] ?? []), '.js', '.ts', '.tsx'])];
-    compiler.hooks.beforeCompile.tapPromise('ScriptcableWebpackPlugin', async () => {
+    compiler.hooks.beforeCompile.tapPromise('ScriptcaWebpackPlugin', async () => {
       const root = compiler.context || process.cwd();
       const config = configPath
         ? await loadConfigFile(resolve(root, configPath), root)
         : (await loadProjectConfig(root)).config;
-      const outDir = resolve(root, config.outDir ?? '.scriptcable');
+      const outDir = resolve(root, config.outDir ?? '.scriptca');
       const result = await buildCore(config, { cwd: root, outDir, target: 'native', doctorRuntimeGate: 'skip' });
       // Browser flavor needs the WASM artifact — ensure + copy to public/ so
       // the generated client's root-URL candidate resolves with no manual step.
@@ -68,7 +68,7 @@ export class ScriptcableWebpackPlugin {
           wasmName: `${config.name}.wasm`,
         });
         if (copied === 'written') {
-          console.log(`[scriptcable] browser wasm → public/${config.name}.wasm (served at /${config.name}.wasm)`);
+          console.log(`[scriptca] browser wasm → public/${config.name}.wasm (served at /${config.name}.wasm)`);
         }
       }
       const { genDir, clientLink } = await writeGeneratedClients({
@@ -81,7 +81,7 @@ export class ScriptcableWebpackPlugin {
         profile: result.profile,
       });
       if (clientLink === 'blocked') {
-        console.warn('[scriptcable] could not link node_modules/@unikit-bridge/scriptcable-client — run `scriptcable doctor`');
+        console.warn('[scriptca] could not link node_modules/@unikit-bridge/scriptca-client — run `scriptca doctor`');
       }
       // Drop-in: imports of the entry resolve to the compiled client. Only
       // when the drop-in can provide the entry's whole runtime export surface.
@@ -90,11 +90,11 @@ export class ScriptcableWebpackPlugin {
         // JS plugins) is not in its config schema at all — verified against
         // Rspack 2.2.9, where a pushed plugin is silently ignored. Redirect
         // is a webpack mechanism; under Rspack/Rsbuild/Rspeedy say so and
-        // keep everything else (build, artifacts, @unikit-bridge/scriptcable-client link).
+        // keep everything else (build, artifacts, @unikit-bridge/scriptca-client link).
         if ('rspack' in compiler) {
           console.log(
-            '[scriptcable] rspack has no JS resolver hooks — entry drop-in unavailable here;' +
-              " use `import { createClient } from '@unikit-bridge/scriptcable-client'` (export conditions pick the compiled client)",
+            '[scriptca] rspack has no JS resolver hooks — entry drop-in unavailable here;' +
+              " use `import { createClient } from '@unikit-bridge/scriptca-client'` (export conditions pick the compiled client)",
           );
         } else {
           const check = await canInterceptEntry(config, root, result.profile);
@@ -102,16 +102,16 @@ export class ScriptcableWebpackPlugin {
             const webpackOptions = (compiler.options ??= {});
             webpackOptions.resolve ??= {};
             const plugins = (webpackOptions.resolve.plugins ??= []);
-            if (!plugins.some((p) => p instanceof ScriptcableDropinResolvePlugin)) {
+            if (!plugins.some((p) => p instanceof ScriptcaDropinResolvePlugin)) {
               plugins.push(
-                new ScriptcableDropinResolvePlugin(resolve(root, config.entry), join(genDir, 'dropin', `${dropinFlavor}.ts`)),
+                new ScriptcaDropinResolvePlugin(resolve(root, config.entry), join(genDir, 'dropin', `${dropinFlavor}.ts`)),
               );
               console.log(
-                `[scriptcable] drop-in: imports of ${config.entry} resolve to the compiled ${dropinFlavor} client`,
+                `[scriptca] drop-in: imports of ${config.entry} resolve to the compiled ${dropinFlavor} client`,
               );
             }
           } else {
-            console.warn(`[scriptcable] drop-in disabled — ${check.reasons.join('; ')}`);
+            console.warn(`[scriptca] drop-in disabled — ${check.reasons.join('; ')}`);
           }
         }
       }
@@ -120,5 +120,5 @@ export class ScriptcableWebpackPlugin {
 }
 
 /** Alias for Rspack / Rsbuild (same compiler hooks). */
-export const ScriptcableRspackPlugin = ScriptcableWebpackPlugin;
-export default ScriptcableWebpackPlugin;
+export const ScriptcaRspackPlugin = ScriptcaWebpackPlugin;
+export default ScriptcaWebpackPlugin;

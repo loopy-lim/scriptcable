@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 /**
- * pack-smoke — 발행 형태(tarball) 검증 (단일 패키지 @unikit-bridge/scriptcable).
+ * pack-smoke — 발행 형태(tarball) 검증 (단일 패키지 @unikit-bridge/scriptca).
  *
  * 1. `bun pm pack`으로 발행물과 동일한 tarball을 만든다
  * 2. manifest에 `workspace:` 잔존 없음 · publishConfig.access=public · files 산출물 실재
- * 3. tarball 내부에 구(@) `@scriptcable` 지정자 잔존 없음 (조립 rewrite 게이트)
+ * 3. tarball 내부에 구(@) `@scriptca` 지정자 잔존 없음 (조립 rewrite 게이트)
  * 4. 클린룸 프로젝트에 tarball만으로 설치해 exports 맵의 모든 subpath import가 해석됨
  * 5. 설치된 cli bin이 `--help`로 응답
  *
@@ -15,8 +15,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const PKG_DIR = join(import.meta.dir, '..', 'packages', 'scriptcable');
-const NAME = '@unikit-bridge/scriptcable';
+const PKG_DIR = join(import.meta.dir, '..', 'packages', 'scriptca');
+const NAME = '@unikit-bridge/scriptca';
 
 const failures: string[] = [];
 
@@ -31,15 +31,15 @@ function run(cmd: string[], opts: { cwd?: string } = {}) {
 }
 
 if (!existsSync(join(PKG_DIR, 'dist'))) {
-  console.error('packages/scriptcable/dist 없음 — 먼저 `bun run build`를 실행하세요.');
+  console.error('packages/scriptca/dist 없음 — 먼저 `bun run build`를 실행하세요.');
   process.exit(1);
 }
 
 const manifest = JSON.parse(readFileSync(join(PKG_DIR, 'package.json'), 'utf8'));
 const version = manifest.version as string;
-const tgzName = 'unikit-bridge-scriptcable-' + version + '.tgz';
+const tgzName = 'unikit-bridge-scriptca-' + version + '.tgz';
 
-const work = mkdtempSync(join(tmpdir(), 'scriptcable-pack-smoke-'));
+const work = mkdtempSync(join(tmpdir(), 'scriptca-pack-smoke-'));
 
 try {
   // 1) pack
@@ -54,7 +54,7 @@ try {
   const packed = JSON.parse(manifestRaw);
   if (packed.publishConfig?.access !== 'public') failures.push('manifest: publishConfig.access=public 누락');
   for (const dep of Object.keys(packed.dependencies ?? {})) {
-    if (dep.startsWith('@scriptcable')) failures.push(`manifest: 내부 의존 잔존 (${dep}) — 조립 rewrite 누락`);
+    if (dep.startsWith('@scriptca')) failures.push(`manifest: 내부 의존 잔존 (${dep}) — 조립 rewrite 누락`);
   }
   const listing = run(['tar', '-tzf', tgz]).stdout;
   for (const required of packed.files ?? []) {
@@ -74,7 +74,7 @@ try {
   }
   console.log(`check manifest/files/exports — ${Object.keys(packed.exports ?? {}).length} subpath`);
 
-  // 3) 잔존 지정자 게이트 — tarball 전체 파일에서 구 @scriptcable 지정자 0건
+  // 3) 잔존 지정자 게이트 — tarball 전체 파일에서 구 @scriptca 지정자 0건
   const extracted = join(work, 'extracted');
   mkdirSync(extracted);
   run(['tar', '-xzf', tgz, '-C', extracted, '--strip-components=1']);
@@ -83,13 +83,13 @@ try {
       const p = join(dir, entry);
       if (statSync(p).isDirectory()) { walk(p); continue; }
       if (!/\.(js|mjs|cjs|ts|json|map)$/.test(entry)) continue;
-      if (readFileSync(p, 'utf8').includes('@scriptcable')) {
-        failures.push(`잔존 지정자 @scriptcable: ${entry}`);
+      if (readFileSync(p, 'utf8').includes('@scriptca')) {
+        failures.push(`잔존 지정자 @scriptca: ${entry}`);
       }
     }
   };
   walk(extracted);
-  console.log('check legacy @scriptcable 지정자 — 0건이어야 함');
+  console.log('check legacy @scriptca 지정자 — 0건이어야 함');
 
   // 4) 클린룸 설치 + subpath import
   const projectDir = join(work, 'project');
@@ -114,8 +114,8 @@ try {
   console.log(`import ok  ${importOk.length} subpath` + (importSkip.length ? ` (skip: ${importSkip.join(', ')})` : ''));
 
   // 5) cli bin
-  const help = run(['bun', join(projectDir, 'node_modules', '.bin', 'scriptcable'), '--help'], { cwd: projectDir });
-  if (!/usage|scriptcable/i.test(help.stdout ?? '')) failures.push('cli bin --help 응답 이상');
+  const help = run(['bun', join(projectDir, 'node_modules', '.bin', 'scriptca'), '--help'], { cwd: projectDir });
+  if (!/usage|scriptca/i.test(help.stdout ?? '')) failures.push('cli bin --help 응답 이상');
   console.log('cli bin --help ok');
 } catch (err) {
   failures.push(String(err));

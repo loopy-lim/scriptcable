@@ -14,11 +14,11 @@ import { which } from './which.js';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
-import type { AbiClass, ScriptcableProfile } from '@scriptcable/types';
-import { ScriptcableToolchainError } from '@scriptcable/types';
+import type { AbiClass, ScriptcaProfile } from '@scriptca/types';
+import { ScriptcaToolchainError } from '@scriptca/types';
 import { STUB_SOURCE } from './link-shared.js';
 
-export function canBuildNodeAddon(profile: ScriptcableProfile): boolean {
+export function canBuildNodeAddon(profile: ScriptcaProfile): boolean {
   return profile.exports.length > 0 && !profile.callbacks?.length;
 }
 
@@ -45,7 +45,7 @@ function cParamType(cls: AbiClass): string {
   }
 }
 
-function cSignature(e: ScriptcableProfile['exports'][number]): string {
+function cSignature(e: ScriptcaProfile['exports'][number]): string {
   const params: string[] = [];
   for (const p of e.params) {
     if (p === 'string' || p === 'bytes') params.push('const uint8_t*', 'int64_t');
@@ -100,7 +100,7 @@ function cReadArg(cls: AbiClass, i: number, check: string): string {
         `  s${i}_cap = 0;`,
         `  size_t s${i}_next = s${i}_len + 1 < 256 ? 256 : s${i}_len + 1;`,
         `  char* s${i}_grown = (char*)malloc(s${i}_next);`,
-        `  if (s${i}_grown == NULL) { napi_throw_error(env, NULL, "scriptcable addon: out of memory"); goto cleanup; }`,
+        `  if (s${i}_grown == NULL) { napi_throw_error(env, NULL, "scriptca addon: out of memory"); goto cleanup; }`,
         `  s${i}_buf = s${i}_grown;`,
         `  s${i}_cap = s${i}_next;`,
         `}`,
@@ -114,7 +114,7 @@ function cReadArg(cls: AbiClass, i: number, check: string): string {
 }
 
 /** Builds the per-export wrapper function. Wrappers that allocate use a cleanup label. */
-function cWrapper(e: ScriptcableProfile['exports'][number], prefix: string): string {
+function cWrapper(e: ScriptcaProfile['exports'][number], prefix: string): string {
   // JS-level argument count (a string/bytes param is ONE JS arg but TWO C slots)
   const jsArgc = e.params.length;
   const hasAlloc = e.params.some((p) => p === 'string' || p === 'cstring');
@@ -211,7 +211,7 @@ function cWrapper(e: ScriptcableProfile['exports'][number], prefix: string): str
  * realistically take; if one does, the executive is skipped entirely and
  * clients fall back to their sequential batch loop (they probe with typeof).
  */
-export const BATCH_SYMBOL = '__scriptcable_batch';
+export const BATCH_SYMBOL = '__scriptca_batch';
 
 /**
  * Every C symbol the batch executive defines — the single source of truth
@@ -299,7 +299,7 @@ static int __sc_bres_mem(const void* p, size_t n) {
 export const SHARED_BATCH_SYMBOL = 'scriptc_batch';
 
 /** Run one batch entry of this export: parse slots, call, emit the result. */
-function cBatchEntry(e: ScriptcableProfile['exports'][number], idx: number): string {
+function cBatchEntry(e: ScriptcaProfile['exports'][number], idx: number): string {
   const slotBytes = e.params.length * 8;
   const lines: string[] = [];
   lines.push(`/* batch entry ${idx} — export ${JSON.stringify(e.export)} */`);
@@ -416,11 +416,11 @@ function cBatchEntry(e: ScriptcableProfile['exports'][number], idx: number): str
  * their sequential fallback).
  */
 /** Entry runners shared by the addon executive and the host (.so) TU. */
-function cBatchEntries(profile: ScriptcableProfile): string {
+function cBatchEntries(profile: ScriptcaProfile): string {
   return profile.exports.map((e, idx) => cBatchEntry(e, idx)).join('\n\n');
 }
 
-export function generateBatchExecutiveSource(profile: ScriptcableProfile): string {
+export function generateBatchExecutiveSource(profile: ScriptcaProfile): string {
   if (profile.exports.some((e) => e.export === BATCH_SYMBOL)) return '';
   // Every export also becomes a C wrapper named `__sc_<export>` — if that
   // name would collide with an executive symbol, SKIP the executive rather
@@ -480,7 +480,7 @@ ${dispatch}
       default: napi_throw_range_error(env, NULL, "batch meta export index out of range"); return NULL;
     }
     if (ok == 0) { napi_throw_range_error(env, NULL, "batch wire bounds violation (arg_base or payload offset)"); return NULL; }
-    if (ok < 0) { napi_throw_error(env, NULL, "scriptcable batch: out of memory"); return NULL; }
+    if (ok < 0) { napi_throw_error(env, NULL, "scriptca batch: out of memory"); return NULL; }
   }
   NAPI_CHECK(napi_create_buffer_copy(env, __sc_bres_used, __sc_bres_buf ? __sc_bres_buf : (const uint8_t*)"", NULL, &res));
   return res;
@@ -499,7 +499,7 @@ ${dispatch}
  * until the next batch call on this thread — JS decodes immediately), or
  * negative: -1 wire error, -2 bounds violation, -3 out of memory.
  */
-export function generateSharedBatchSource(profile: ScriptcableProfile): string {
+export function generateSharedBatchSource(profile: ScriptcaProfile): string {
   // The TU defines the same helpers and entry runners as the addon executive
   // — a core symbol colliding with ANY of them (or with the entry symbol) must
   // drop the TU, or the compile failure would hard-fail the whole build
@@ -556,7 +556,7 @@ ${dispatch}
 }
 
 /** Emit the full C source for the typed N-API addon wrapping this profile. */
-export function generateNodeAddonSource(profile: ScriptcableProfile): string {
+export function generateNodeAddonSource(profile: ScriptcaProfile): string {
   const externs = profile.exports.map((e) => `extern ${cSignature(e)};`).join('\n');
   const wrappers = profile.exports.map((e) => cWrapper(e, '__sc_')).join('\n\n');
   const batch = generateBatchExecutiveSource(profile);
@@ -578,13 +578,13 @@ export function generateNodeAddonSource(profile: ScriptcableProfile): string {
     ? `
 #define NAPI_CHECK_GOTO(call) do { \\
   napi_status __st = (call); \\
-  if (__st != napi_ok) { napi_throw_error(env, NULL, "scriptcable addon: " #call " failed"); goto cleanup; } \\
+  if (__st != napi_ok) { napi_throw_error(env, NULL, "scriptca addon: " #call " failed"); goto cleanup; } \\
 } while (0)
 `
     : '';
 
   return `/*
- * Generated by scriptcable — typed N-API direct binding for the "${profile.name}" core.
+ * Generated by scriptca — typed N-API direct binding for the "${profile.name}" core.
  * Each export has a fixed C signature matching the compiled ABI, so calls
  * cross the thinnest possible JS↔native boundary (no dynamic marshalling).
  */
@@ -595,7 +595,7 @@ export function generateNodeAddonSource(profile: ScriptcableProfile): string {
 
 #define NAPI_CHECK(call) do { \\
   napi_status __st = (call); \\
-  if (__st != napi_ok) { napi_throw_error(env, NULL, "scriptcable addon: " #call " failed"); return NULL; } \\
+  if (__st != napi_ok) { napi_throw_error(env, NULL, "scriptca addon: " #call " failed"); return NULL; } \\
 } while (0)
 ${gotoMacro}
 ${externs}
@@ -637,11 +637,11 @@ export type BuildNodeAddonOptions = {
   /** Output directory (the addon lands at <outDir>/<name>.node) */
   outDir: string;
   name: string;
-  profile: ScriptcableProfile;
+  profile: ScriptcaProfile;
 };
 
 /**
- * Compile the typed addon. Throws ScriptcableToolchainError on failure —
+ * Compile the typed addon. Throws ScriptcaToolchainError on failure —
  * callers treat that as "skip the addon" (warn + continue).
  */
 export async function buildNodeAddon(options: BuildNodeAddonOptions): Promise<string> {
@@ -651,17 +651,17 @@ export async function buildNodeAddon(options: BuildNodeAddonOptions): Promise<st
   const include = resolveNodeApiInclude();
 
   const clang = (await which('clang')) ?? (await which('cc'));
-  if (!clang) throw new ScriptcableToolchainError('clang/cc is required for the N-API addon build.');
+  if (!clang) throw new ScriptcaToolchainError('clang/cc is required for the N-API addon build.');
 
   await mkdir(outDir, { recursive: true });
   const wrapperC = join(outDir, `${options.name}-napi.c`);
   await writeFile(wrapperC, generateNodeAddonSource(options.profile));
-  const stubC = join(outDir, 'scriptcable-napi-stubs.c');
-  const stubO = join(outDir, 'scriptcable-napi-stubs.o');
+  const stubC = join(outDir, 'scriptca-napi-stubs.c');
+  const stubO = join(outDir, 'scriptca-napi-stubs.o');
   await writeFile(stubC, STUB_SOURCE);
 
   const c1 = await run(clang, ['-c', stubC, '-o', stubO, '-I', include]);
-  if (c1.code !== 0) throw new ScriptcableToolchainError(`N-API addon stub compile failed:\n${c1.stderr}`);
+  if (c1.code !== 0) throw new ScriptcaToolchainError(`N-API addon stub compile failed:\n${c1.stderr}`);
 
   const args = ['-shared', '-o', outPath, '-I', include, wrapperC, stubO];
   if (process.platform === 'darwin') {
@@ -674,7 +674,7 @@ export async function buildNodeAddon(options: BuildNodeAddonOptions): Promise<st
 
   const link = await run(clang, args);
   if (link.code !== 0) {
-    throw new ScriptcableToolchainError(
+    throw new ScriptcaToolchainError(
       `Failed to link the typed N-API addon:\n${link.stderr}`,
       'The shared library (generic FFI) path is unaffected — clients fall back automatically.',
     );

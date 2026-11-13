@@ -1,5 +1,5 @@
 {
-  "name": "scriptcable",
+  "name": "scriptca",
   "version": "0.1.0",
   "private": true,
   "description": "One TypeScript core (compiled by scriptc) → type-safe clients for Bun, Node, Deno, Tauri, React Native, Lynx, Cloudflare Workers, Vite, and Next.js",
@@ -15,13 +15,13 @@
     "site"
   ],
   "scripts": {
-    "build": "bun run --filter @scriptcable/types --filter @scriptcable/core --filter @scriptcable/node --filter @scriptcable/bun --filter @scriptcable/testing --filter @scriptcable/vite --filter @scriptcable/webpack --filter @scriptcable/next --filter @scriptcable/react-native --filter @scriptcable/tauri --filter @scriptcable/lynx --filter @scriptcable/expo --filter @scriptcable/cli build && bun run --filter '@unikit-bridge/scriptcable' build",
+    "build": "bun run --filter @scriptca/types --filter @scriptca/core --filter @scriptca/node --filter @scriptca/bun --filter @scriptca/testing --filter @scriptca/vite --filter @scriptca/webpack --filter @scriptca/next --filter @scriptca/react-native --filter @scriptca/tauri --filter @scriptca/lynx --filter @scriptca/expo --filter @scriptca/cli build && bun run --filter '@unikit-bridge/scriptca' build",
     "pretest": "bun run build",
     "test": "bun run --filter './packages/*' test",
-    "test:e2e:node": "bun run --filter @scriptcable/example-node-app start",
-    "test:e2e:bun": "bun run --filter @scriptcable/example-bun-app start",
+    "test:e2e:node": "bun run --filter @scriptca/example-node-app start",
+    "test:e2e:bun": "bun run --filter @scriptca/example-bun-app start",
     "typecheck": "bun run --filter './packages/*' typecheck",
-    "clean": "rm -rf packages/*/dist packages/scriptcable/dist packages/*/dist-test examples/*/.scriptcable examples/*/node_modules/.cache",
+    "clean": "rm -rf packages/*/dist packages/scriptca/dist packages/*/dist-test examples/*/.scriptca examples/*/node_modules/.cache",
     "postbuild": "bun install --silent"
   },
   "devDependencies": {

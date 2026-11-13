@@ -3,11 +3,11 @@ import {
   diffContracts,
   formatDiff,
   loadConfig,
-} from '@scriptcable/core';
-import type { ContractSnapshot, ScriptcableConfig } from '@scriptcable/types';
+} from '@scriptca/core';
+import type { ContractSnapshot, ScriptcaConfig } from '@scriptca/types';
 import { readFile } from 'node:fs/promises';
 
-export async function loadProjectConfig(path: string): Promise<ScriptcableConfig> {
+export async function loadProjectConfig(path: string): Promise<ScriptcaConfig> {
   return loadConfig(JSON.parse(await readFile(path, 'utf8')));
 }
 

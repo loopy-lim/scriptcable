@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { rollup } from 'rollup';
 import { transformWithEsbuild } from 'vite';
-import { scriptcable } from './index.js';
+import { scriptca } from './index.js';
 
 const repoRoot = resolve(import.meta.dir, '../../..'); // packages/vite/src → repo root
 const tmpRoots: string[] = [];
@@ -36,17 +36,17 @@ async function makeProject(appSource?: string): Promise<string> {
   const nm = join(root, 'node_modules');
   await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptca'), join(nm, '@unikit-bridge', 'scriptca'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/.bin/scriptc'), join(nm, '.bin', 'scriptc'), 'file');
   return root;
 }
 
 const APP_WITH_DROPIN_ONLY =
-  // getScriptcableClient is drop-in-only (the TS entry doesn't export it) —
+  // getScriptcaClient is drop-in-only (the TS entry doesn't export it) —
   // importing it keeps the assertion tree-shake-proof and proves the
   // redirect actually served the drop-in's module surface.
-  `import { add, getScriptcableClient } from './core';\nconsole.log(add(20, 22), typeof getScriptcableClient());\n`;
+  `import { add, getScriptcaClient } from './core';\nconsole.log(add(20, 22), typeof getScriptcaClient());\n`;
 const APP_PLAIN = `import { add } from './core';\nconsole.log(add(20, 22));\n`;
 
 // Standard rollup companions: transform TS with esbuild, and resolve the
@@ -62,7 +62,7 @@ function rollupTsCompanions() {
           const base = resolve(dirname(importer), source);
           return (await Bun.file(`${base}.ts`).exists()) ? `${base}.ts` : null;
         }
-        if (source.endsWith('.js') && importer?.includes('.scriptcable')) {
+        if (source.endsWith('.js') && importer?.includes('.scriptca')) {
           const candidate = resolve(dirname(importer), `${source.slice(0, -3)}.ts`);
           return (await Bun.file(candidate).exists()) ? candidate : null;
         }
@@ -85,11 +85,11 @@ describe('rollup compatibility', () => {
     const root = await makeProject(APP_WITH_DROPIN_ONLY);
     const bundle = await rollup({
       input: join(root, 'src', 'app.ts'),
-      plugins: [scriptcable({ root }), ...rollupTsCompanions()],
+      plugins: [scriptca({ root }), ...rollupTsCompanions()],
     });
     const { output } = await bundle.generate({ format: 'es' });
     const code = output.map((o) => (o.type === 'chunk' ? o.code : '')).join('\n');
-    assert.ok(code.includes('getScriptcableClient'), 'the drop-in client should be in the bundle');
+    assert.ok(code.includes('getScriptcaClient'), 'the drop-in client should be in the bundle');
     assert.ok(!code.includes('return a + b'), 'the TS entry source should NOT be in the bundle');
   }, 180_000);
 
@@ -97,11 +97,11 @@ describe('rollup compatibility', () => {
     const root = await makeProject(APP_PLAIN);
     const bundle = await rollup({
       input: join(root, 'src', 'app.ts'),
-      plugins: [scriptcable({ root, dropin: false }), ...rollupTsCompanions()],
+      plugins: [scriptca({ root, dropin: false }), ...rollupTsCompanions()],
     });
     const { output } = await bundle.generate({ format: 'es' });
     const code = output.map((o) => (o.type === 'chunk' ? o.code : '')).join('\n');
     assert.ok(code.includes('return a + b'), 'the original TS entry should stay in the bundle');
-    assert.ok(!code.includes('getScriptcableClient'), 'no drop-in in the bundle');
+    assert.ok(!code.includes('getScriptcaClient'), 'no drop-in in the bundle');
   }, 180_000);
 });

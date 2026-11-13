@@ -2,4 +2,4 @@ export {
   generateClients,
   type CodegenTarget,
   type CodegenResult,
-} from '@scriptcable/core/codegen';
+} from '@scriptca/core/codegen';

@@ -1,4 +1,4 @@
-export const metadata = { title: 'scriptcable next-app' };
+export const metadata = { title: 'scriptca next-app' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

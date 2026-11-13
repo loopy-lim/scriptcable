@@ -1,9 +1,9 @@
-import { createBunEngineFromOutDir } from '@unikit-bridge/scriptcable/bun';
+import { createBunEngineFromOutDir } from '@unikit-bridge/scriptca/bun';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const coreRoot = join(dirname(fileURLToPath(import.meta.url)), '../../calculator-core');
-const engine = await createBunEngineFromOutDir(join(coreRoot, '.scriptcable'));
+const engine = await createBunEngineFromOutDir(join(coreRoot, '.scriptca'));
 console.log(JSON.stringify({
   sum: engine.call('add', 20, 22),
   product: engine.call('mul', 6, 7),

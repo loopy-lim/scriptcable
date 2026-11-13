@@ -1,6 +1,6 @@
 /**
  * Drop-in demo module: imports the core entry directly — the TS source, not
- * `@unikit-bridge/scriptcable-client`. With the scriptcable vite plugin registered, this
+ * `@unikit-bridge/scriptca-client`. With the scriptca vite plugin registered, this
  * import is redirected onto the compiled drop-in client at bundle time; the
  * code below never changes.
  */

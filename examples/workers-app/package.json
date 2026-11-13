@@ -1,16 +1,16 @@
 {
-  "name": "@scriptcable/example-workers-app",
+  "name": "@scriptca/example-workers-app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build:core": "scriptcable build --target wasm --hosts workers",
+    "build:core": "scriptca build --target wasm --hosts workers",
     "test": "bun run build:core && bun scripts/smoke.mjs"
   },
   "devDependencies": {
     "scriptc": "^0.4.12",
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
     "wrangler": "^4.151.3",
-    "@unikit-bridge/scriptcable": "workspace:*"
+    "@unikit-bridge/scriptca": "workspace:*"
   }
 }

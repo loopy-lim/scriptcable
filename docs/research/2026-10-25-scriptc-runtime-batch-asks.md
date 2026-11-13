@@ -1,6 +1,6 @@
 # scriptc 런타임에 대한 배치·문자열 요구사항 제안 — 2026-10-25
 
-**작성 계기**: scriptcable의 배치 API 2라운드(2026-10-25, `docs/plans/2026-10-25-batch-api.md` ·
+**작성 계기**: scriptca의 배치 API 2라운드(2026-10-25, `docs/plans/2026-10-25-batch-api.md` ·
 `docs/plans/2026-10-25-so-batch.md`)가 측정으로 확정한 것 — **경계 밖(호스트 JS/C)에서 더
 삭제할 비용은 이제 없다. 남은 per-op 비용의 주범은 scriptc 런타임 내부다.** 이 문서는
 scriptc(컴파일러·`@scriptc/runtime-*`)에 대한 세 가지 요구를 실측 근거와 함께 정리한다.
@@ -33,7 +33,7 @@ scriptc(컴파일러·`@scriptc/runtime-*`)에 대한 세 가지 요구를 실�
 **요청**: 런타임이 `scriptc_batch` 류 export를 제공 — 인덱스 디스패치로 유저 함수를
 경계 안에서 N회 호출.
 
-- scriptcable은 이미 와이어 형식을 갖고 있다(meta Int32Array `[count, (exportIdx, argBase)×]`
+- scriptca은 이미 와이어 형식을 갖고 있다(meta Int32Array `[count, (exportIdx, argBase)×]`
   + args Uint8Array 슬롯/페이로드, 자기서술 결과 블록 — `packages/core/src/batch-wire.ts`
   상단 계약 주석이 스펙). 런타임이 같은 와이어를 그대로 소비하면 JS 측 무변경으로 wasm이
   호스트 실행기와 동등해진다.
@@ -56,12 +56,12 @@ scriptc(컴파일러·`@scriptc/runtime-*`)에 대한 세 가지 요구를 실�
   뷰로 수신(빌림 수명 = 호출 동안), (b) `scriptc_alloc` 영역을 arena로 삼아
   `scriptc_arena_reset` 제공, (c) 결과도 호출자 제공 버퍼에 기록(out-slot 확장).
 - **예상 효과**: 문자열 per-op 하한이 ~842ns → 인코딩/디코딩(~150ns)+실작업 수준까지.
-  이것이 "채터링 문자열 API가 scriptcable에서 이기는" 문의 실질 해법이다. coarse export
+  이것이 "채터링 문자열 API가 scriptca에서 이기는" 문의 실질 해법이다. coarse export
   권장 문구(BENCHMARK §8-9)는 이 요구가 받아들여지기 전까지의 처방.
 
 ## 요구 3 — export 테이블 디스패치(reference-types)
 
-**요청**: 유저 export를 exported funcref table에 올려주면, scriptcable이 (또는 런타임이)
+**요청**: 유저 export를 exported funcref table에 올려주면, scriptca이 (또는 런타임이)
 동반 wasm 실행기 모듈로 `call_indirect` 루프를 돌릴 수 있다 — 런타임 코드젠 변경 없이도
 경계 내 배치가 가능해지는 경량 경로.
 
@@ -70,9 +70,9 @@ scriptc(컴파일러·`@scriptc/runtime-*`)에 대한 세 가지 요구를 실�
 - 우선순위는 요구 1·2에 밀린다(런타임 내부 배치가 더 간단하고 저렴) — 요구 1·2가
   받아들여지기 어려운 경우의 대안으로 기록.
 
-## 부수 정정 (scriptcable 측 — 이미 반영)
+## 부수 정정 (scriptca 측 — 이미 반영)
 
-- 애드온 bool 파라미터가 비존재 `napi_get_value_boolean`을 생성하던 것은 scriptcable
+- 애드온 bool 파라미터가 비존재 `napi_get_value_boolean`을 생성하던 것은 scriptca
   코드젠 결함(정상 심볼 `napi_get_value_bool`) — 2026-10-25 수정.
 - `_Thread_local` 스태틱은 `-fPIC` 없이 컴파일 시 local-exec TLS 재배치로 `-shared` 링크
   실패(R_X86_64_TPOFF32) — link-shared에 `-fPIC` 상시 적용. NDK/zig 드라이버는 PIC 기본이라
@@ -81,7 +81,7 @@ scriptc(컴파일러·`@scriptc/runtime-*`)에 대한 세 가지 요구를 실�
 ## 재현
 
 ```bash
-bun run --filter @scriptcable/example-bench-core build
-bun run --filter @scriptcable/example-bench-core bench   # 배치 표 포함
+bun run --filter @scriptca/example-bench-core build
+bun run --filter @scriptca/example-bench-core bench   # 배치 표 포함
 bun examples/bench-core/scripts/bench-node.ts            # CI에서 Node(V8) 몫
 ```

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { createScriptcableResolveRequest, withScriptcableMetro } from './metro.js';
+import { createScriptcaResolveRequest, withScriptcaMetro } from './metro.js';
 import type { MetroResolveContext, MetroResolution } from './metro.js';
 
 const tmpRoots: string[] = [];
@@ -26,8 +26,8 @@ async function makeProject(opts: { withDropin: boolean }): Promise<string> {
     `/** Adds. */\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n`,
   );
   if (opts.withDropin) {
-    await mkdir(join(root, '.scriptcable', 'generated', 'dropin'), { recursive: true });
-    await writeFile(join(root, '.scriptcable', 'generated', 'dropin', 'react-native.ts'), `export const add = 0;\n`);
+    await mkdir(join(root, '.scriptca', 'generated', 'dropin'), { recursive: true });
+    await writeFile(join(root, '.scriptca', 'generated', 'dropin', 'react-native.ts'), `export const add = 0;\n`);
   }
   return root;
 }
@@ -47,18 +47,18 @@ function ctxOf(origin: string, delegated: MetroResolution[] = []): { context: Me
 describe('metro drop-in resolver', () => {
   it('redirects entry imports onto the generated RN drop-in', async () => {
     const root = await makeProject({ withDropin: true });
-    const resolveRequest = createScriptcableResolveRequest({ cwd: root });
+    const resolveRequest = createScriptcaResolveRequest({ cwd: root });
     assert.ok(resolveRequest, 'resolver must exist for a project with a standard entry');
     const { context, delegated } = ctxOf(join(root, 'src', 'App.tsx'));
     const result = resolveRequest(context, './core', 'ios');
     assert.equal(result?.type, 'sourceFile');
-    assert.equal(result?.filePath, join(root, '.scriptcable', 'generated', 'dropin', 'react-native.ts'));
+    assert.equal(result?.filePath, join(root, '.scriptca', 'generated', 'dropin', 'react-native.ts'));
     assert.deepEqual(delegated, [], 'redirected requests must not hit the default resolution');
   });
 
   it('delegates unrelated requests to the default resolution', async () => {
     const root = await makeProject({ withDropin: true });
-    const resolveRequest = createScriptcableResolveRequest({ cwd: root });
+    const resolveRequest = createScriptcaResolveRequest({ cwd: root });
     assert.ok(resolveRequest);
     const { context, delegated } = ctxOf(join(root, 'src', 'App.tsx'));
     for (const req of ['react-native', './useCable', '../src/core.test.ts']) {
@@ -69,7 +69,7 @@ describe('metro drop-in resolver', () => {
 
   it('delegates even the entry when no drop-in has been built yet', async () => {
     const root = await makeProject({ withDropin: false });
-    const resolveRequest = createScriptcableResolveRequest({ cwd: root });
+    const resolveRequest = createScriptcaResolveRequest({ cwd: root });
     assert.ok(resolveRequest);
     const { context, delegated } = ctxOf(join(root, 'src', 'App.tsx'));
     assert.equal(resolveRequest(context, './core', 'ios')?.filePath, 'default:./core');
@@ -79,21 +79,21 @@ describe('metro drop-in resolver', () => {
   it('returns null for projects without an entry', async () => {
     const root = await mkdtemp(join(tmpdir(), 'sc-metro-empty-'));
     tmpRoots.push(root);
-    assert.equal(createScriptcableResolveRequest({ cwd: root }), null);
+    assert.equal(createScriptcaResolveRequest({ cwd: root }), null);
   });
 
-  it('withScriptcableMetro: the entry redirect WINS over an existing resolver, the rest delegates', async () => {
+  it('withScriptcaMetro: the entry redirect WINS over an existing resolver, the rest delegates', async () => {
     const root = await makeProject({ withDropin: true });
     const existing = (ctx: MetroResolveContext, moduleName: string): MetroResolution | null =>
       moduleName === 'mine' ? { type: 'sourceFile', filePath: 'custom' } : null;
-    const config = withScriptcableMetro({ resolver: { resolveRequest: existing } }, { cwd: root });
+    const config = withScriptcaMetro({ resolver: { resolveRequest: existing } }, { cwd: root });
     const chained = config.resolver?.resolveRequest;
     assert.ok(chained);
     const { context, delegated } = ctxOf(join(root, 'src', 'App.tsx'));
     // An existing resolver (Metro's default config ships one — metro 0.87 /
     // RN 0.88 verified) would resolve the entry itself and swallow the
     // redirect if it ran first. The entry redirect must win…
-    assert.equal(chained(context, './core', 'ios')?.filePath, join(root, '.scriptcable', 'generated', 'dropin', 'react-native.ts'));
+    assert.equal(chained(context, './core', 'ios')?.filePath, join(root, '.scriptca', 'generated', 'dropin', 'react-native.ts'));
     assert.deepEqual(delegated, [], 'the entry must not reach the existing resolver');
     // …and everything else must still reach it.
     assert.equal(chained(context, 'mine', 'ios')?.filePath, 'custom', 'non-entry requests keep the existing resolver');
@@ -101,7 +101,7 @@ describe('metro drop-in resolver', () => {
 
   it('resolves the importing file from originModulePath (metro 0.87 field name)', async () => {
     const root = await makeProject({ withDropin: true });
-    const resolveRequest = createScriptcableResolveRequest({ cwd: root });
+    const resolveRequest = createScriptcaResolveRequest({ cwd: root });
     assert.ok(resolveRequest);
     // metro 0.87 / RN 0.88 expose originModulePath (originPath is undefined)
     const context: MetroResolveContext = {
@@ -109,13 +109,13 @@ describe('metro drop-in resolver', () => {
       resolveRequest: (ctx, moduleName) => ({ type: 'sourceFile', filePath: `default:${moduleName}` }),
     };
     const result = resolveRequest(context, './core', 'ios');
-    assert.equal(result?.filePath, join(root, '.scriptcable', 'generated', 'dropin', 'react-native.ts'));
+    assert.equal(result?.filePath, join(root, '.scriptca', 'generated', 'dropin', 'react-native.ts'));
   });
 
-  it('withScriptcableMetro is a no-op without an entry', async () => {
+  it('withScriptcaMetro is a no-op without an entry', async () => {
     const root = await mkdtemp(join(tmpdir(), 'sc-metro-empty-'));
     tmpRoots.push(root);
     const config = { resolver: {} };
-    assert.equal(withScriptcableMetro(config, { cwd: root }), config);
+    assert.equal(withScriptcaMetro(config, { cwd: root }), config);
   });
 });

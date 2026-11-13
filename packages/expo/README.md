@@ -1,18 +1,18 @@
-# @scriptcable/expo
+# @scriptca/expo
 
-Expo config plugin — wires the generated scriptcable Android bridge into the
+Expo config plugin — wires the generated scriptca Android bridge into the
 prebuilt project automatically. No hand-written native module, no CMake.
 
 ## Usage
 
 ```bash
-scriptcable build --hosts react-native     # JS spec + Kotlin module
-scriptcable build --platform android       # prebuilt bridge .so (android-arm64)
+scriptca build --hosts react-native     # JS spec + Kotlin module
+scriptca build --platform android       # prebuilt bridge .so (android-arm64)
 ```
 
 ```json
 // app.json
-{ "expo": { "plugins": ["@scriptcable/expo"] } }
+{ "expo": { "plugins": ["@scriptca/expo"] } }
 ```
 
 ```bash

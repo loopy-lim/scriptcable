@@ -9,8 +9,8 @@
 ```bash
 bun install
 bun run build
-bun run --filter @scriptcable/example-calculator-core build
-bun run --filter @scriptcable/example-node-app test
+bun run --filter @scriptca/example-calculator-core build
+bun run --filter @scriptca/example-node-app test
 ```
 
 ## Layout
@@ -22,4 +22,4 @@ bun run --filter @scriptcable/example-node-app test
 
 ## Contracts
 
-Breaking export signature changes must fail `scriptcable diff`. Update the committed `.scriptcable/contract.json` deliberately in the same PR when you intend a break (and bump major).
+Breaking export signature changes must fail `scriptca diff`. Update the committed `.scriptca/contract.json` deliberately in the same PR when you intend a break (and bump major).

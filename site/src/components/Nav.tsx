@@ -26,7 +26,7 @@ export function Nav() {
           <span className="flex size-6 items-center justify-center rounded-md bg-foreground font-mono text-xs font-semibold text-background">
             sc
           </span>
-          <span className="font-semibold tracking-tight">scriptcable</span>
+          <span className="font-semibold tracking-tight">scriptca</span>
           <Badge variant="secondary" className="hidden font-mono text-[10px] sm:inline-flex">
             v0.1.1
           </Badge>

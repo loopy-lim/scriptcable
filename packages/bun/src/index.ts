@@ -1,17 +1,17 @@
-/** @scriptcable/bun — Bun host (native via bun:ffi by default; WASM opt-in). */
+/** @scriptca/bun — Bun host (native via bun:ffi by default; WASM opt-in). */
 export {
   createNodeEngine as createBunEngine,
   createNodeEngineFromOutDir as createBunEngineFromOutDir,
   type NodeClientOptions as BunClientOptions,
-} from '@scriptcable/node';
+} from '@scriptca/node';
 export {
   loadNativeLibrary,
   loadNativeFromOutDir,
   type NativeModule,
-} from '@scriptcable/core/native';
+} from '@scriptca/core/native';
 export {
   loadWasmFile,
   loadWasmModule,
   type LoadedModule,
-} from '@scriptcable/core/wasm';
-export { ScriptcableError } from '@scriptcable/types';
+} from '@scriptca/core/wasm';
+export { ScriptcaError } from '@scriptca/types';
