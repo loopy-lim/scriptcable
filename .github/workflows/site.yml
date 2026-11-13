@@ -5,6 +5,7 @@
 #   - CLOUDFLARE_ACCOUNT_ID  — dashboard right sidebar
 # Custom domain scriptca.ll3.kr is bound in the Pages dashboard
 # (project → Custom domains); DNS is on Cloudflare already.
+# Hub alias: https://unikit.ll3.kr/scriptca → this site.
 name: site
 
 on:
@@ -48,7 +49,7 @@ jobs:
         run: |
           curl -fsSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
           echo "$PWD/zig-linux-x86_64-0.13.0" >> $GITHUB_PATH
-      - run: bun install
+      - run: bun install --frozen-lockfile
       # site depends on the assembled @unikit-bridge/scriptca workspace package
       - run: bun run build
       # bin links are only created when dist/index.js exists — re-link after build
@@ -62,4 +63,17 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: site
-          command: pages deploy
+          command: pages deploy dist --project-name=scriptca --branch=main
+      - name: Attach custom domain
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          echo "Attaching custom domain scriptca.ll3.kr to Pages..."
+          curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/scriptca/domains" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data '{"name":"scriptca.ll3.kr"}' | jq . || true
+
+          echo "Querying Pages domains status..."
+          curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/scriptca/domains" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" | jq . || true
