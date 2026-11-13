@@ -3,7 +3,7 @@
  * CLI run, no config file — exports inferred from src/core.ts). Guards the
  * plugin-only failure modes: inferred exports must reach the generated
  * clients, and the native shared library must be loadable through
- * `@scriptcable/client`.
+ * `@unikit-bridge/scriptcable-client`.
  */
 import { describe, it, afterAll } from 'bun:test';
 import assert from 'node:assert/strict';
@@ -28,11 +28,10 @@ async function makeProject(): Promise<string> {
     `/** Adds two numbers. */\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n`,
   );
   const nm = join(root, 'node_modules');
-  await mkdir(join(nm, '@scriptcable'), { recursive: true });
+  await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '@scriptc'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/core'), join(nm, '@scriptcable', 'core'), 'dir');
-  await symlink(resolve(repoRoot, 'packages/types'), join(nm, '@scriptcable', 'types'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/.bin/scriptc'), join(nm, '.bin', 'scriptc'), 'file');
   await symlink(
@@ -48,7 +47,7 @@ afterAll(async () => {
 });
 
 describe('next plugin-only build (integration)', () => {
-  it('infers exports, copies the native artifact, and serves @scriptcable/client', async () => {
+  it('infers exports, copies the native artifact, and serves @unikit-bridge/scriptcable-client', async () => {
     const project = await makeProject();
     const genDir = await scriptcableBuild({ cwd: project });
 
@@ -74,8 +73,8 @@ describe('next plugin-only build (integration)', () => {
 
     // Package manifest + node_modules link
     const clientPkg = JSON.parse(await readFile(join(genDir, 'package.json'), 'utf8'));
-    assert.equal(clientPkg.name, '@scriptcable/client');
-    const linkPath = join(project, 'node_modules', '@scriptcable', 'client');
+    assert.equal(clientPkg.name, '@unikit-bridge/scriptcable-client');
+    const linkPath = join(project, 'node_modules', '@unikit-bridge', 'scriptcable-client');
     assert.equal((await lstat(linkPath)).isSymbolicLink(), true, 'no node_modules link');
 
     // Bare specifier resolves and calls the real core — the exact flow a
@@ -84,7 +83,7 @@ describe('next plugin-only build (integration)', () => {
       cmd: [
         'bun',
         '-e',
-        `const m = await import('@scriptcable/client');
+        `const m = await import('@unikit-bridge/scriptcable-client');
 const c = await m.createClient();
 console.log(JSON.stringify({ add: c.add(2, 3) }));`,
       ],
@@ -171,7 +170,7 @@ console.log(JSON.stringify({ add: c.add(2, 3) }));`,
     assert.equal(cfg.turbopack?.resolveAlias, undefined);
     // The rest of the wiring stays: the compiled client package works under
     // Turbopack via export conditions.
-    assert.ok(cfg.transpilePackages?.includes('@scriptcable/client'));
+    assert.ok(cfg.transpilePackages?.includes('@unikit-bridge/scriptcable-client'));
     assert.equal(typeof cfg.webpack, 'function');
   }, 120_000);
 });

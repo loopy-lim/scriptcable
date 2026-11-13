@@ -8,7 +8,6 @@
     "test": "bun run build:core && bun test src/"
   },
   "dependencies": {
-    "@scriptcable/tauri": "workspace:*",
-    "@scriptcable/types": "workspace:*"
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

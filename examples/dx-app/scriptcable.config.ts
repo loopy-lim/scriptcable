@@ -1,4 +1,4 @@
-import { defineConfig } from '@scriptcable/core';
+import { defineConfig } from '@unikit-bridge/scriptcable/core';
 
 export default defineConfig({
   name: 'dxapp',

@@ -1,9 +1,11 @@
-# Release — 태그 푸시(v*)로 13개 @scriptcable/* 패키지를 npm에 발행한다.
+# Release — 태그 푸시(v*)로 단일 패키지 @unikit-bridge/scriptcable을 npm에 발행한다.
+#
+# 발행물은 packages/scriptcable 하나(13개 내부 workspace 패키지는 private로 조립에만 쓰인다).
 #
 # 전제(운영 시 필요):
 #   - GitHub 시크릿 NPM_TOKEN: npm "Automation" 토큰(npmjs.com → Access Tokens).
-#     @scriptcable 스코프에 대한 발행 권한이 있어야 한다.
-#   - 13개 패키지 버전이 태그와 동일해야 한다(불일치 시 check-release-version이 중단).
+#     @unikit-bridge 조직에 대한 발행 권한이 있어야 한다(조직은 이미 존재 — loopy-lim 소유).
+#   - packages/scriptcable 버전이 태그와 동일해야 한다(불일치 시 check-release-version이 중단).
 #   - 재발행(이미 발행된 버전)은 npm이 거부한다 — 버전을 올린 뒤 새 태그.
 #
 # provenance는 bun 1.4.x publish가 미지원(2026-10-24 기준) — 서명이 필요해지면 npm CLI 경로를
@@ -57,7 +59,7 @@ jobs:
       # bin 링크는 dist/index.js가 있어야 생김 — 빌드 후 재링크(CI 관례와 동일)
       - run: bun install
 
-      - name: Check tag matches package versions
+      - name: Check tag matches package version
         run: bun scripts/check-release-version.ts "${GITHUB_REF_NAME}"
 
       - name: Pack smoke (publish-form gate)
@@ -68,13 +70,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # 의존성이 먼저 등록되도록 순서 발행(types → core → 어댑터 → cli 마지막).
-      # 중간 실패 시 재실행하면 이미 발행된 버전은 npm이 거부하므로 버전을 올리고 새 태그.
-      - name: Publish (dependency order)
-        run: |
-          set -euo pipefail
-          for pkg in types core node bun testing vite webpack next react-native tauri lynx expo cli; do
-            echo "::group::publish @scriptcable/${pkg}"
-            (cd "packages/${pkg}" && bun publish --access public)
-            echo "::endgroup::"
-          done
+      - name: Publish
+        run: bun publish --access public
+        working-directory: packages/scriptcable

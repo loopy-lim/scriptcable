@@ -1,4 +1,4 @@
-import scriptcable from '@scriptcable/vite';
+import scriptcable from '@unikit-bridge/scriptcable/vite';
 import { solidStart } from '@solidjs/start/config';
 import { defineConfig } from 'vite';
 
@@ -12,6 +12,6 @@ export default defineConfig({
     target: 'es2022',
   },
   optimizeDeps: {
-    exclude: ['@scriptcable/core', '@scriptcable/core/wasm', '@scriptcable/core/wasi'],
+    exclude: ['@unikit-bridge/scriptcable/core', '@unikit-bridge/scriptcable/core/wasm', '@unikit-bridge/scriptcable/core/wasi'],
   },
 });

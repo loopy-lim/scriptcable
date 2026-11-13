@@ -1,7 +1,7 @@
 import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createLynxEngine, lynxScriptcableRsbuildPlugin } from '@scriptcable/lynx';
-import { ScriptcableRspackPlugin } from '@scriptcable/webpack';
+import { createLynxEngine, lynxScriptcableRsbuildPlugin } from '@unikit-bridge/scriptcable/lynx';
+import { ScriptcableRspackPlugin } from '@unikit-bridge/scriptcable/webpack';
 
 describe('lynx example', () => {
   it('engine + plugin shapes', async () => {

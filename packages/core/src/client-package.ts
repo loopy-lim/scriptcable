@@ -1,6 +1,6 @@
 /**
  * The generated client as a real package: the build writes a package.json
- * into the generated dir and links it as `node_modules/@scriptcable/client`,
+ * into the generated dir and links it as `node_modules/@unikit-bridge/scriptcable-client`,
  * so every resolver — bundler graphs (Next webpack/Turbopack, Webpack/Rspack,
  * Vite), the Bun runtime, and the editor's TS server — resolves the same bare
  * specifier without any app-side alias or relative path. Export conditions
@@ -24,7 +24,7 @@ import type { ResolvedConfig, ScriptcableProfile } from '@scriptcable/types';
 import { transpileModule, ScriptTarget, ModuleKind } from 'typescript';
 import { generateClients, type CodegenTarget } from './codegen.js';
 
-const PACKAGE_NAME = '@scriptcable/client';
+const PACKAGE_NAME = '@unikit-bridge/scriptcable-client';
 
 /** Export condition and file for each generated flavor. */
 const CONDITION_BY_TARGET: Record<CodegenTarget, { condition: string; file: string }> = {
@@ -136,7 +136,7 @@ export type ClientLinkResult =
   | 'blocked'; // a real file/dir occupies the path, or symlink unsupported
 
 /**
- * True when this project's package.json declares `@scriptcable/client` as a
+ * True when this project's package.json declares `@unikit-bridge/scriptcable-client` as a
  * `file:` dep resolving to genDir. Such a node_modules entry is managed by
  * the package manager (bun materializes file: deps as a real copied
  * directory — a pre-build placeholder copy that shadows the generated
@@ -162,7 +162,7 @@ async function isDeclaredClientFileDep(cwd: string, genDir: string): Promise<boo
 }
 
 /**
- * Ensure `<cwd>/node_modules/@scriptcable/client` resolves to `genDir`.
+ * Ensure `<cwd>/node_modules/@unikit-bridge/scriptcable-client` resolves to `genDir`.
  * Best-effort: never throws. A symlink is repaired in place; a real entry is
  * replaced only when package.json declares it as this project's `file:` dep
  * (package-manager-managed copy) — anything else is the user's own package
@@ -175,8 +175,10 @@ export async function ensureClientPackageLink(cwd: string, genDir: string): Prom
   } catch {
     return 'blocked'; // nothing generated yet
   }
-  const linkDir = join(cwd, 'node_modules', '@scriptcable');
-  const linkPath = join(linkDir, 'client');
+  const [scopeDir, pkgLeaf] = PACKAGE_NAME.split('/');
+  if (!scopeDir || !pkgLeaf) throw new Error(`invalid client package name: ${PACKAGE_NAME}`);
+  const linkDir = join(cwd, 'node_modules', scopeDir);
+  const linkPath = join(linkDir, pkgLeaf);
   const relTarget = relative(linkDir, genDir);
 
   let replaced = false;
@@ -259,14 +261,14 @@ export async function copyWasmToPublicDir(opts: {
  * Single emit point shared by the CLI and the bundler plugins: generate the
  * client flavors, write them (skipping identical content so watchers don't
  * churn), copy build artifacts next to them, and publish the
- * `@scriptcable/client` package (manifest + node_modules link). Returns genDir.
+ * `@unikit-bridge/scriptcable-client` package (manifest + node_modules link). Returns genDir.
  */
 export async function writeGeneratedClients(opts: {
   config: ResolvedConfig;
   targets: CodegenTarget[];
   /** Absolute outDir (e.g. `<project>/.scriptcable`). */
   outDir: string;
-  /** Project root — where `node_modules/@scriptcable/client` is linked. */
+  /** Project root — where `node_modules/@unikit-bridge/scriptcable-client` is linked. */
   cwd: string;
   profile?: ScriptcableProfile;
   wasmFileName?: string;

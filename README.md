@@ -17,7 +17,7 @@ Inspired by [rustra](https://github.com/loopy-lim/rustra) (Rust core → multi-h
 ```bash
 # from this monorepo after bun install && bun run build
 bun packages/cli/dist/index.js init demo --host bun --from .
-# or once published: bunx @scriptcable/cli init demo --host bun
+# or once published: bunx @unikit-bridge/scriptcable init demo --host bun
 
 cd demo
 bun install
@@ -50,7 +50,7 @@ A config file only pins what you want to override — `name` and `entry` are opt
 
 ```ts
 // scriptcable.config.ts — everything optional
-import { defineConfig } from '@scriptcable/core';
+import { defineConfig } from '@unikit-bridge/scriptcable/core';
 export default defineConfig({});            // all inferred
 export default defineConfig({ name: 'mycore' }); // entry still inferred
 ```
@@ -58,16 +58,16 @@ export default defineConfig({ name: 'mycore' }); // entry still inferred
 The Vite / Next.js / Webpack plugins use the same resolution (including `scriptcable.config.ts`), and adapters default to `.scriptcable`:
 
 ```ts
-import { createBunEngineFromOutDir } from '@scriptcable/bun';
+import { createBunEngineFromOutDir } from '@unikit-bridge/scriptcable/bun';
 const engine = await createBunEngineFromOutDir(); // → ./.scriptcable
 ```
 
-## One import: `@scriptcable/client`
+## One import: `@unikit-bridge/scriptcable-client`
 
-Every build publishes the generated clients as a **real package**: `scriptcable build` writes a package manifest into `.scriptcable/generated/` and links it as `node_modules/@scriptcable/client`. App code never references `.scriptcable/` paths:
+Every build publishes the generated clients as a **real package**: `scriptcable build` writes a package manifest into `.scriptcable/generated/` and links it as `node_modules/@unikit-bridge/scriptcable-client`. App code never references `.scriptcable/` paths:
 
 ```ts
-import { createClient } from '@scriptcable/client';
+import { createClient } from '@unikit-bridge/scriptcable-client';
 
 const client = await createClient();
 client.add(20, 22); // 42
@@ -86,9 +86,9 @@ Export conditions resolve the right flavor per environment — no branching in y
 
 The `browser` flavor resolves its WASM automatically: it probes the module-relative location first (works wherever the bundler serves project files, e.g. `vite dev`), then the origin root — the Vite / Next.js / Webpack plugins copy `<name>.wasm` into your static directory (`public/`) on every build, so `createClient()` works in client graphs with no manual copy step. An explicit `createClient({ wasmUrl })` always wins (e.g. behind a base path or on a CDN). Server code needs nothing — the node flavor loads the shared library automatically.
 
-Explicit subpaths pin a flavor: `@scriptcable/client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`, `/deno`, `/workerd`. Editors resolve the same package, so TypeScript works with no `paths` config. The bundler plugins run the same emit: `withScriptcable` (which also adds `transpilePackages` for you) and the Webpack/Rspack plugin link the package during `next dev` / `next build`; on Turbopack, the predev `scriptcableBuild()` call does it.
+Explicit subpaths pin a flavor: `@unikit-bridge/scriptcable-client/node`, `/bun`, `/browser`, `/react-native`, `/lynx`, `/tauri`, `/deno`, `/workerd`. Editors resolve the same package, so TypeScript works with no `paths` config. The bundler plugins run the same emit: `withScriptcable` (which also adds `transpilePackages` for you) and the Webpack/Rspack plugin link the package during `next dev` / `next build`; on Turbopack, the predev `scriptcableBuild()` call does it.
 
-If the link is missing — a fresh checkout before the first build — `scriptcable doctor` reports and repairs it. `scriptcable init` scaffolds CI durability out of the box: it records `"@scriptcable/client": "file:.scriptcable/generated"` in your dependencies together with a placeholder manifest and the gitignore negations that keep `bun install` working before the first build. For projects not created by `init`, `doctor` prints the exact snippet.
+If the link is missing — a fresh checkout before the first build — `scriptcable doctor` reports and repairs it. `scriptcable init` scaffolds CI durability out of the box: it records `"@unikit-bridge/scriptcable-client": "file:.scriptcable/generated"` in your dependencies together with a placeholder manifest and the gitignore negations that keep `bun install` working before the first build. For projects not created by `init`, `doctor` prints the exact snippet.
 
 ### Zero changes: the drop-in
 
@@ -105,14 +105,14 @@ add(20, 22); // 42, native-addon speed
 | **Vite** | automatic — `resolveId` (runs before the builtin resolver) | Vite 6 dev + build (2026-10-21) |
 | **Webpack** | automatic — an `enhanced-resolve` plugin | webpack plugin tests + Next's webpack graph (below) |
 | **Next.js (webpack)** | automatic — client graphs get the browser drop-in, server/edge graphs the node one | Next 16.4.2 `next build --webpack` + `next start` runtime call (2026-10-21) |
-| **Next.js (Turbopack)** | entry drop-in unavailable — Turbopack has no per-graph resolve hook, and `resolveAlias` matches request specifiers, not resolved paths (an absolute-path key does nothing — verified). Use `@scriptcable/client` (export conditions work via `transpilePackages`), or run `next dev/build --webpack` for drop-in imports | Next 16.4.2 turbopack build |
-| **Rspack / Rspeedy (Lynx)** | Rspack's Rust resolver has no JS resolve-plugin hooks (`resolve.plugins` is not in its config schema — a pushed plugin is silently ignored). The plugin still runs the build and links the package; imports resolve through `@scriptcable/client` export conditions | Rspeedy 0.18.2 build (browser client in the bundle) |
-| **React Native (Metro)** | `withScriptcableMetro()` from `@scriptcable/react-native/metro` in `metro.config.js` | Metro 0.87 / RN 0.88 real bundle (2026-10-21) |
+| **Next.js (Turbopack)** | entry drop-in unavailable — Turbopack has no per-graph resolve hook, and `resolveAlias` matches request specifiers, not resolved paths (an absolute-path key does nothing — verified). Use `@unikit-bridge/scriptcable-client` (export conditions work via `transpilePackages`), or run `next dev/build --webpack` for drop-in imports | Next 16.4.2 turbopack build |
+| **Rspack / Rspeedy (Lynx)** | Rspack's Rust resolver has no JS resolve-plugin hooks (`resolve.plugins` is not in its config schema — a pushed plugin is silently ignored). The plugin still runs the build and links the package; imports resolve through `@unikit-bridge/scriptcable-client` export conditions | Rspeedy 0.18.2 build (browser client in the bundle) |
+| **React Native (Metro)** | `withScriptcableMetro()` from `@unikit-bridge/scriptcable/react-native/metro` in `metro.config.js` | Metro 0.87 / RN 0.88 real bundle (2026-10-21) |
 | **Expo** | same `withScriptcableMetro()` — Expo's bundler IS Metro; register it over `@expo/metro-config`'s default config (`app.json`/`metro.config.js`) | Expo 58 real metro config (`getDefaultConfig`) bundle — drop-in bridge in, entry source out (2026-10-22) |
-| **Electron** | main process: `import { createClient } from '@scriptcable/client'` (node conditions — the generated package ships compiled `.js` for the runtime flavors, since Electron's Node can't load `.ts`); renderer: the Vite/Webpack plugin as usual | Electron 33 real runtime: main calls the native core, the vite-built renderer calls the WASM drop-in over a custom protocol (2026-10-22) |
-| **Astro / SvelteKit / Nuxt / Remix (React Router) / SolidStart** | all embed Vite — register `@scriptcable/vite` in their `vite.plugins`. Nuxt 4 moves vite's root to its `srcDir`, so pass the project root explicitly: `scriptcable({ root: import.meta.dirname })` | Astro 5.18, SvelteKit 2, Nuxt 4.6, React Router 8.5 (SPA mode), SolidStart 2.0 (`@solidjs/start` + vite 8) — real builds: drop-in in the client bundle, WASM shipped as a static asset (2026-10-22) |
+| **Electron** | main process: `import { createClient } from '@unikit-bridge/scriptcable-client'` (node conditions — the generated package ships compiled `.js` for the runtime flavors, since Electron's Node can't load `.ts`); renderer: the Vite/Webpack plugin as usual | Electron 33 real runtime: main calls the native core, the vite-built renderer calls the WASM drop-in over a custom protocol (2026-10-22) |
+| **Astro / SvelteKit / Nuxt / Remix (React Router) / SolidStart** | all embed Vite — register `@unikit-bridge/scriptcable/vite` in their `vite.plugins`. Nuxt 4 moves vite's root to its `srcDir`, so pass the project root explicitly: `scriptcable({ root: import.meta.dirname })` | Astro 5.18, SvelteKit 2, Nuxt 4.6, React Router 8.5 (SPA mode), SolidStart 2.0 (`@solidjs/start` + vite 8) — real builds: drop-in in the client bundle, WASM shipped as a static asset (2026-10-22) |
 | **Rollup** | same plugin (`root` option) — `resolveId` is standard rollup hook shape; TypeScript transforms + `.js`→`.ts` sibling resolution are the host's job (pair with your ts/esbuild plugins) | rollup 4 real build — entry import redirected onto the drop-in (2026-10-22) |
-| **Deno** | no plugin — export conditions resolve the `deno` flavor (emitted as compiled `.js`, placed **ahead of `node`** in the manifest because Deno turns the `node` condition on itself); `scriptcable build --target wasm --hosts deno` first (the codegen CLI runs on Bun) | Deno 2.9 real runtime — bare `@scriptcable/client` import + `deno run -A`, no flags or config (2026-10-22) |
+| **Deno** | no plugin — export conditions resolve the `deno` flavor (emitted as compiled `.js`, placed **ahead of `node`** in the manifest because Deno turns the `node` condition on itself); `scriptcable build --target wasm --hosts deno` first (the codegen CLI runs on Bun) | Deno 2.9 real runtime — bare `@unikit-bridge/scriptcable-client` import + `deno run -A`, no flags or config (2026-10-22) |
 | **Cloudflare Workers** | no plugin — wrangler resolves bundles with the `workerd` condition; the workers flavor statically imports the wasm (wrangler's default CompiledWasm rule), so no fetch and no top-level await | wrangler 4.151 — dry-run bundle + a real `wrangler dev` (workerd) HTTP call returning 42 (2026-10-22) |
 
 Drop-in flavors: browser graphs initialize WASM once at module load (top-level await — build for **ES2022+**, e.g. vite `build.target: 'es2022'`); server graphs are **await-free** (`createClientSync()` — safe in CommonJS-output server bundles); Metro creates the bridge client lazily on first call.
@@ -138,7 +138,7 @@ Using scriptcable used to require seven pieces of knowledge; now it requires one
 const engine = await createNodeEngine({ outDir: '.scriptcable' });
 
 // after — identical in Bun, Node, Next server code, and the browser
-import { createClient } from '@scriptcable/client';
+import { createClient } from '@unikit-bridge/scriptcable-client';
 const client = await createClient();
 ```
 
@@ -159,7 +159,7 @@ Default artifact is **native**. Use `"target": "wasm"` or `scriptcable build --t
 ### Config: `scriptcable.config.ts` (typed, recommended)
 
 ```ts
-import { defineConfig } from '@scriptcable/core';
+import { defineConfig } from '@unikit-bridge/scriptcable/core';
 
 export default defineConfig({
   name: 'mycore',   // optional — inferred from package.json
@@ -170,22 +170,25 @@ export default defineConfig({
 
 JSON (`scriptcable.json`) still works for zero-dependency setups, and omitting config entirely works too (see [Zero-config](#zero-config)). The TS config wins when both exist.
 
-## Packages
+## Package
 
-| Package | Role |
+Published as one package — **`@unikit-bridge/scriptcable`** — with host/plugin subpaths (monorepo `@scriptcable/*` packages stay private and are assembled into it):
+
+| Subpath | Role |
 |---------|------|
-| `@scriptcable/cli` | `init` / `build` / `diff` / `doctor` |
-| `@scriptcable/core` | profile, toolchain, WASM loader, contract hash, codegen |
-| `@scriptcable/types` | shared types / errors |
-| `@scriptcable/node` | Node adapter (native shared library; koffi optional) |
-| `@scriptcable/bun` | Bun adapter (bun:ffi native by default) |
-| `@scriptcable/tauri` | Tauri invoke bridge |
-| `@scriptcable/react-native` | RN bridge (mock + host bridge) |
-| `@scriptcable/lynx` | Lynx + Rspeedy helpers |
-| `@scriptcable/vite` | Vite plugin (build + HMR rebuild) |
-| `@scriptcable/next` | Next.js webpack plugin + Turbopack `scriptcableBuild()` |
-| `@scriptcable/webpack` | Webpack / Rspack / Rsbuild plugin |
-| `@scriptcable/testing` | contract assert helpers |
+| `@unikit-bridge/scriptcable` / `/core` | profile, toolchain, WASM loader, contract hash, codegen |
+| `@unikit-bridge/scriptcable/cli` | `init` / `build` / `diff` / `doctor` (also the `scriptcable` bin) |
+| `@unikit-bridge/scriptcable/types` | shared types / errors |
+| `@unikit-bridge/scriptcable/node` | Node adapter (native shared library; koffi optional) |
+| `@unikit-bridge/scriptcable/bun` | Bun adapter (bun:ffi native by default) |
+| `@unikit-bridge/scriptcable/tauri` | Tauri invoke bridge |
+| `@unikit-bridge/scriptcable/react-native` | RN bridge (mock + host bridge) |
+| `@unikit-bridge/scriptcable/lynx` | Lynx + Rspeedy helpers |
+| `@unikit-bridge/scriptcable/vite` | Vite plugin (build + HMR rebuild) |
+| `@unikit-bridge/scriptcable/next` | Next.js webpack plugin + Turbopack `scriptcableBuild()` |
+| `@unikit-bridge/scriptcable/webpack` | Webpack / Rspack / Rsbuild plugin |
+| `@unikit-bridge/scriptcable/expo` | Expo config plugin |
+| `@unikit-bridge/scriptcable/testing` | contract assert helpers |
 
 ## Adapter quickstarts
 
@@ -197,7 +200,7 @@ bun run --filter @scriptcable/example-bun-app start
 ```
 
 ```ts
-import { createBunEngineFromOutDir } from '@scriptcable/bun';
+import { createBunEngineFromOutDir } from '@unikit-bridge/scriptcable/bun';
 const engine = await createBunEngineFromOutDir('.scriptcable');
 engine.call('add', 20, 22); // 42  (native .dylib via bun:ffi)
 ```
@@ -214,7 +217,7 @@ Under Bun (default), native loading uses built-in `bun:ffi`. Under plain Node, i
 
 ```ts
 // vite.config.ts
-import scriptcable from '@scriptcable/vite';
+import scriptcable from '@unikit-bridge/scriptcable/vite';
 export default {
   plugins: [scriptcable()], // imports of ./core resolve to the compiled client
   build: { target: 'es2022' }, // drop-in browser client uses top-level await
@@ -227,7 +230,7 @@ Run vite with `bun --bun vite` so toolchain checks use the Bun runtime.
 
 ```js
 // next.config.mjs — webpack path (drop-in per graph: client → browser, server → node)
-import { withScriptcable } from '@scriptcable/next';
+import { withScriptcable } from '@unikit-bridge/scriptcable/next';
 export default withScriptcable({});
 // run `next build --webpack` / `next dev` for drop-in imports
 ```
@@ -237,13 +240,13 @@ Turbopack (Next 16's default bundler) has no per-graph resolve hook, and its
 absolute-path alias key does nothing (verified against 16.4.2: the TypeScript
 entry stayed in the graph). There is no silent pretend-alias: `withScriptcableAsync()`
 prints that once and leaves the imports alone. App code imports
-`@scriptcable/client`; export conditions still deliver the compiled client in
+`@unikit-bridge/scriptcable-client`; export conditions still deliver the compiled client in
 both graphs:
 
 ```js
 // next.config.mjs — Turbopack path
-import { withScriptcableAsync } from '@scriptcable/next';
-export default await withScriptcableAsync({}); // builds artifacts + links @scriptcable/client
+import { withScriptcableAsync } from '@unikit-bridge/scriptcable/next';
+export default await withScriptcableAsync({}); // builds artifacts + links @unikit-bridge/scriptcable-client
 ```
 
 ### Astro (and other Vite-based frameworks)
@@ -252,7 +255,7 @@ Astro embeds Vite — register the plugin through its vite options (`examples/as
 
 ```js
 // astro.config.mjs
-import scriptcable from '@scriptcable/vite';
+import scriptcable from '@unikit-bridge/scriptcable/vite';
 export default {
   vite: {
     plugins: [scriptcable()],
@@ -265,7 +268,7 @@ SvelteKit, Nuxt, Remix (React Router v7+) and SolidStart 2 embed Vite too — th
 
 ```ts
 // nuxt.config.ts
-import scriptcable from '@scriptcable/vite';
+import scriptcable from '@unikit-bridge/scriptcable/vite';
 export default defineNuxtConfig({
   ssr: false,
   vite: {
@@ -281,7 +284,7 @@ Both run the generated client with **no bundler plugin** — export conditions p
 
 ```bash
 scriptcable build --target wasm --hosts deno    # or --hosts workers
-deno run -A src/main.ts                          # bare import of @scriptcable/client inside
+deno run -A src/main.ts                          # bare import of @unikit-bridge/scriptcable-client inside
 ```
 
 - **Deno** (`examples/deno-app`): the `deno` flavor is emitted as **compiled `.js`** — Deno refuses to strip types under `node_modules` — and the manifest lists the `deno` condition ahead of `node` (which Deno enables itself). The wasm is read directly from the generated directory, so there is no URL probing. Plain `deno run -A` — no flags, no `deno.json`.
@@ -292,7 +295,7 @@ One prerequisite for both: the codegen CLI itself runs on **Bun** (same as every
 ### Tauri
 
 ```ts
-import { createTauriSidecarEngine } from '@scriptcable/tauri';
+import { createTauriSidecarEngine } from '@unikit-bridge/scriptcable/tauri';
 const engine = createTauriSidecarEngine({ invoke, profile });
 ```
 
@@ -305,7 +308,7 @@ No new package needed — Electron is two scriptcable hosts (`examples/electron-
 ```ts
 // main process (Node runtime) — one import, export conditions pick the
 // native node flavor; calls are synchronous
-import { createClient } from '@scriptcable/client';
+import { createClient } from '@unikit-bridge/scriptcable-client';
 const client = await createClient();
 client.add(20, 22); // 42
 
@@ -319,28 +322,28 @@ Two Electron-specific notes: the generated package's `bun`/`node` conditions poi
 
 ```ts
 // 1. Tests / Storybook — no device needed
-import { createReactNativeEngine, createMockBridge } from '@scriptcable/react-native';
+import { createReactNativeEngine, createMockBridge } from '@unikit-bridge/scriptcable/react-native';
 const engine = createReactNativeEngine(createMockBridge({ add: (a, b) => a + b }));
 
 // 2. Device — TurboModule (spec generated by `scriptcable build --hosts react-native`)
-import { createTurboModuleBridge } from '@scriptcable/react-native';
+import { createTurboModuleBridge } from '@unikit-bridge/scriptcable/react-native';
 import NativeCable from '../.scriptcable/generated/NativeCable';
 const engine = createReactNativeEngine(createTurboModuleBridge(NativeCable));
 await engine.invoke('add', [20, 22]); // 42
 
 // 3. Drop-in — metro.config.js: imports of ./core resolve to the compiled
 //    client (keep `scriptcable build --watch` running alongside Metro)
-import { withScriptcableMetro } from '@scriptcable/react-native/metro';
+import { withScriptcableMetro } from '@unikit-bridge/scriptcable/react-native/metro';
 export default withScriptcableMetro(getDefaultConfig(__dirname));
 ```
 
 On device, TurboModule drop-in calls resolve as Promises — same semantics as the bridge client above.
 
-`scriptcable build --hosts react-native` also emits `NativeCable.ts` (TurboModule spec) and `cable.json` (RN CLI codegen config). **On Android the native side is generated AND shipped complete**: `scriptcable build --platform android` cross-compiles the archive for android-arm64 (scriptc's `@scriptc/runtime-android-arm64`) and links it with the generated JNI dispatch into one ready `lib{name}_cable.so` — the Kotlin module (`CableModule.kt` + package) ships beside it. For Expo projects the `@scriptcable/expo` config plugin wires everything during `expo prebuild` — no hand-written native module, no CMake:
+`scriptcable build --hosts react-native` also emits `NativeCable.ts` (TurboModule spec) and `cable.json` (RN CLI codegen config). **On Android the native side is generated AND shipped complete**: `scriptcable build --platform android` cross-compiles the archive for android-arm64 (scriptc's `@scriptc/runtime-android-arm64`) and links it with the generated JNI dispatch into one ready `lib{name}_cable.so` — the Kotlin module (`CableModule.kt` + package) ships beside it. For Expo projects the `@unikit-bridge/scriptcable/expo` config plugin wires everything during `expo prebuild` — no hand-written native module, no CMake:
 
 ```json
 // app.json
-{ "expo": { "plugins": ["@scriptcable/expo"] } }
+{ "expo": { "plugins": ["@unikit-bridge/scriptcable/expo"] } }
 ```
 
 ```bash
@@ -359,13 +362,13 @@ Verified on-device: an Android 14 emulator runs the full chain — RN JS → Tur
 ```js
 // metro.config.js (Expo)
 const { getDefaultConfig } = require('expo/metro-config');
-const { withScriptcableMetro } = require('@scriptcable/react-native/metro');
+const { withScriptcableMetro } = require('@unikit-bridge/scriptcable/react-native/metro');
 module.exports = withScriptcableMetro(getDefaultConfig(__dirname));
 ```
 
 ### Lynx
 
-Use `@scriptcable/webpack`'s `ScriptcableRspackPlugin` inside Rspeedy/Rsbuild, and `scriptcable build --hosts lynx`.
+Use `@unikit-bridge/scriptcable/webpack`'s `ScriptcableRspackPlugin` inside Rspeedy/Rsbuild, and `scriptcable build --hosts lynx`.
 
 ## Watch mode
 
@@ -375,7 +378,7 @@ For hosts without their own watcher (Next.js on Turbopack via a predev script, p
 scriptcable build --watch
 ```
 
-It watches the same inputs the build cache hashes — your core entry, its same-directory siblings, and the config files — and rebuilds (codegen and the `@scriptcable/client` link included) when they change. Errors don't kill the watcher: fix the file and it rebuilds.
+It watches the same inputs the build cache hashes — your core entry, its same-directory siblings, and the config files — and rebuilds (codegen and the `@unikit-bridge/scriptcable-client` link included) when they change. Errors don't kill the watcher: fix the file and it rebuilds.
 
 ## Contract gate (CI)
 
@@ -387,7 +390,7 @@ scriptcable diff --fail-on-breaking   # exit 1 on removals / signature changes
 
 ## Performance
 
-Benchmarks live in `examples/bench-core` (`bun run bench`): native (typed N-API addon / FFI) vs wasm (WASI) call latency/throughput plus cold/warm build times. Headline numbers on an M1 Max: **~24.5 ns/call** via the generated typed N-API addon on Node (~47 ns on Bun, still ahead of bun:ffi), 48 ns browser WASM, cold core build **~1.1 s**, warm (cached) **~166 ms** — **6.4× faster**. The `@scriptcable/client` package adds no call-path cost (flavor selection is import-time resolution). See [BENCHMARK.md](./BENCHMARK.md).
+Benchmarks live in `examples/bench-core` (`bun run bench`): native (typed N-API addon / FFI) vs wasm (WASI) call latency/throughput plus cold/warm build times. Headline numbers on an M1 Max: **~24.5 ns/call** via the generated typed N-API addon on Node (~47 ns on Bun, still ahead of bun:ffi), 48 ns browser WASM, cold core build **~1.1 s**, warm (cached) **~166 ms** — **6.4× faster**. The `@unikit-bridge/scriptcable-client` package adds no call-path cost (flavor selection is import-time resolution). See [BENCHMARK.md](./BENCHMARK.md).
 
 **Boundary costs, honestly** (linux-x64, 2026-10-25): number calls land at **5–20 ns** (Bun fns / typed addon) and string round-trips at **~0.66–1.0 µs** after the marshaling round — Bun now routes string/bytes exports through the addon's C while numbers stay on bun:ffi. A string round-trip still pays one copy + UTF-8 encode/decode, so an API made of *many small string calls* is ~2× slower than plain TypeScript — keep such logic in TS or batch it inside one coarse export. `client.batch([['export', …args], …])` runs N calls across **one** boundary — the generated addon carries a batch executive and host builds (bun:ffi/koffi, no addon needed) link their own; routing picks the winner per composition (string batches −31% via the host executive on bun:ffi; number-only batches stay on direct dispatch where that's faster). The core-side alloc/copy plus one encode/decode remains the per-op floor (BENCHMARK §9). Compiled cores win where one crossing does real work (math, parsing, memory isolation). A `bench-gate` (`examples/bench-core`) guards both contracts against the committed per-platform baseline, and CI measures the Node(V8) tiers (`bench-node.ts`).
 
@@ -407,21 +410,21 @@ Note: `scriptc` must be a trusted dependency so Bun runs its install script (alr
 
 ## Publishing (maintainers)
 
-Releases are tag-driven: push a version tag and CI publishes all 13 `@scriptcable/*` packages.
+Releases are tag-driven: push a version tag and CI publishes the single package **`@unikit-bridge/scriptcable`**.
 
 ```bash
-# 1. set the same version in every packages/*/package.json (they release in lockstep)
+# 1. set version in packages/scriptcable/package.json
 # 2. commit, then tag and push
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
 The `Release` workflow (`.github/workflows/release.yml`) runs the full test suite first (a `test` job with the same toolchain as CI — clang, zig, `bun run test`) and only then:
 
-1. checks the tag matches every package version (`scripts/check-release-version.ts`),
-2. builds and runs the **publish-form gate** (`scripts/pack-smoke.ts`): packs all 13 packages, asserts no `workspace:` protocol survives the rewrite and every `files` artifact is really in the tarball, clean-room-installs them, and imports every public entry (`@scriptcable/core` subpath exports included) plus the CLI bin `--help`,
-3. publishes in dependency order (`bun publish --access public`, `types` first, `cli` last).
+1. checks the tag matches `packages/scriptcable` (`scripts/check-release-version.ts`),
+2. builds and runs the **publish-form gate** (`scripts/pack-smoke.ts`): packs the assembled package, asserts no `workspace:` / `@scriptcable` residue and every `files` / exports artifact is in the tarball, clean-room-installs it, and imports every public subpath plus the CLI bin `--help`,
+3. publishes once (`bun publish --access public` from `packages/scriptcable`).
 
-Requires the `NPM_TOKEN` secret (an npm Automation token with `@scriptcable` publish rights). Re-publishing an existing version is rejected by npm — bump and re-tag. Provenance is pending `bun publish` support.
+Requires the `NPM_TOKEN` secret (an npm Automation token with `@unikit-bridge` publish rights). Re-publishing an existing version is rejected by npm — bump and re-tag. Provenance is pending `bun publish` support.
 
 ## Limitations (from scriptc)
 

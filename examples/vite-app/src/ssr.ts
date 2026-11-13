@@ -1,5 +1,5 @@
 /** SSR / Node path — native shared library */
-import { createNodeEngine } from '@scriptcable/node';
+import { createNodeEngine } from '@unikit-bridge/scriptcable/node';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 

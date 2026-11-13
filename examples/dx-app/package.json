@@ -7,9 +7,7 @@
     "build": "scriptcable build"
   },
   "devDependencies": {
-    "@scriptcable/cli": "workspace:*",
-    "@scriptcable/core": "workspace:*",
-    "@scriptcable/bun": "workspace:*",
-    "scriptc": "^0.4.12"
+    "scriptc": "^0.4.12",
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

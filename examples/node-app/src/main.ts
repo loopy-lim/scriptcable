@@ -1,4 +1,4 @@
-import { createNodeEngineFromOutDir } from '@scriptcable/node';
+import { createNodeEngineFromOutDir } from '@unikit-bridge/scriptcable/node';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 

@@ -10,13 +10,12 @@
     "bench": "bun src/bench.ts"
   },
   "dependencies": {
-    "@scriptcable/core": "workspace:*",
-    "@scriptcable/testing": "workspace:*",
-    "koffi": "^3.3.3"
+    "koffi": "^3.3.3",
+    "@unikit-bridge/scriptcable": "workspace:*"
   },
   "devDependencies": {
-    "@scriptcable/cli": "workspace:*",
     "scriptc": "^0.4.12",
-    "@scriptc/runtime-wasm32-wasi": "^0.4.12"
+    "@scriptc/runtime-wasm32-wasi": "^0.4.12",
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

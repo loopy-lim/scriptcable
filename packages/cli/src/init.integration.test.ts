@@ -1,7 +1,7 @@
 /**
  * Integration test: `scriptcable init` scaffolds a CI-durable client dep —
  * placeholder manifest + package.json dep + gitignore negations — so a fresh
- * clone's `bun install` resolves `@scriptcable/client` before the first build.
+ * clone's `bun install` resolves `@unikit-bridge/scriptcable-client` before the first build.
  * Uses `--from` (local checkout) so the install never touches npm.
  */
 import { describe, it, afterAll } from 'bun:test';
@@ -31,11 +31,11 @@ describe('init CI-durable client dep (integration)', () => {
 
     // package.json carries the file: dep — even under --from overrides
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-    assert.equal(pkg.dependencies['@scriptcable/client'], 'file:.scriptcable/generated');
+    assert.equal(pkg.dependencies['@unikit-bridge/scriptcable-client'], 'file:.scriptcable/generated');
 
     // Placeholder manifest stands in until the first build overwrites it
     const placeholderPkg = JSON.parse(await readFile(join(root, '.scriptcable', 'generated', 'package.json'), 'utf8'));
-    assert.equal(placeholderPkg.name, '@scriptcable/client');
+    assert.equal(placeholderPkg.name, '@unikit-bridge/scriptcable-client');
     await readFile(join(root, '.scriptcable', 'generated', 'placeholder.ts'), 'utf8');
 
     // The two placeholder files are the committed surface of .scriptcable
@@ -49,7 +49,7 @@ describe('init CI-durable client dep (integration)', () => {
 
     // And the bare specifier resolves to the placeholder until the first build
     const probe = Bun.spawnSync({
-      cmd: ['bun', '-e', `import('@scriptcable/client').then((m) => console.log(typeof m.createClient))`],
+      cmd: ['bun', '-e', `import('@unikit-bridge/scriptcable-client').then((m) => console.log(typeof m.createClient))`],
       cwd: root,
       stdout: 'pipe',
       stderr: 'pipe',

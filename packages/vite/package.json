@@ -1,6 +1,7 @@
 {
   "name": "@scriptcable/vite",
   "version": "0.1.0",
+  "private": true,
   "description": "Vite plugin — compile scriptc core on build/HMR",
   "license": "MIT",
   "repository": {
@@ -49,8 +50,5 @@
   },
   "engines": {
     "bun": ">=1.2.0"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

@@ -9,7 +9,7 @@
  * (Storybook / unit tests), so the same hook works everywhere.
  */
 import { useMemo } from 'react';
-import { createReactNativeEngine, createMockBridge, createTurboModuleBridge } from '@scriptcable/react-native';
+import { createReactNativeEngine, createMockBridge, createTurboModuleBridge } from '@unikit-bridge/scriptcable/react-native';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cachedEngine: any = null;

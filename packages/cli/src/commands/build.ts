@@ -88,7 +88,7 @@ async function buildAndEmit(opts: BuildCliOptions, announce: boolean): Promise<v
   console.log(
     clientLink === 'blocked'
       ? `  client:    node_modules link unavailable — run \`scriptcable doctor\` for details`
-      : `  client:    import { createClient } from '@scriptcable/client'`,
+      : `  client:    import { createClient } from '@unikit-bridge/scriptcable-client'`,
   );
   console.log(`  contract:  ${snap.hash}`);
 }

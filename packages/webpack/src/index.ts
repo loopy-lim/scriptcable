@@ -81,7 +81,7 @@ export class ScriptcableWebpackPlugin {
         profile: result.profile,
       });
       if (clientLink === 'blocked') {
-        console.warn('[scriptcable] could not link node_modules/@scriptcable/client — run `scriptcable doctor`');
+        console.warn('[scriptcable] could not link node_modules/@unikit-bridge/scriptcable-client — run `scriptcable doctor`');
       }
       // Drop-in: imports of the entry resolve to the compiled client. Only
       // when the drop-in can provide the entry's whole runtime export surface.
@@ -90,11 +90,11 @@ export class ScriptcableWebpackPlugin {
         // JS plugins) is not in its config schema at all — verified against
         // Rspack 2.2.9, where a pushed plugin is silently ignored. Redirect
         // is a webpack mechanism; under Rspack/Rsbuild/Rspeedy say so and
-        // keep everything else (build, artifacts, @scriptcable/client link).
+        // keep everything else (build, artifacts, @unikit-bridge/scriptcable-client link).
         if ('rspack' in compiler) {
           console.log(
             '[scriptcable] rspack has no JS resolver hooks — entry drop-in unavailable here;' +
-              " use `import { createClient } from '@scriptcable/client'` (export conditions pick the compiled client)",
+              " use `import { createClient } from '@unikit-bridge/scriptcable-client'` (export conditions pick the compiled client)",
           );
         } else {
           const check = await canInterceptEntry(config, root, result.profile);

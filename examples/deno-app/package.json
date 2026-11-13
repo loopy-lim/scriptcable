@@ -8,10 +8,8 @@
     "test": "bun run build:core && deno run -A src/main.ts"
   },
   "devDependencies": {
-    "@scriptcable/cli": "workspace:*",
     "scriptc": "^0.4.12",
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-    "@scriptcable/core": "workspace:*",
-    "@scriptcable/types": "workspace:*"
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

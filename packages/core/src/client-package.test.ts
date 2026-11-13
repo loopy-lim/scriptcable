@@ -58,7 +58,7 @@ describe('clientPackageManifest', () => {
     assert.equal(exports['./bun'], './bun.js');
     assert.equal(exports['./browser'], './browser.ts');
     assert.equal(exports['./*'], './*.ts');
-    assert.equal((m as { name: string }).name, '@scriptcable/client');
+    assert.equal((m as { name: string }).name, '@unikit-bridge/scriptcable-client');
   });
 
   it('with a single flavor, dot resolves to it and only that subpath exists', () => {
@@ -108,7 +108,7 @@ describe('ensureClientPackageLink', () => {
       const genDir = join(dir, '.scriptcable', 'generated');
       await mkdir(genDir, { recursive: true });
       assert.equal(await ensureClientPackageLink(dir, genDir), 'linked');
-      const linkPath = join(dir, 'node_modules', '@scriptcable', 'client');
+      const linkPath = join(dir, 'node_modules', '@unikit-bridge', 'scriptcable-client');
       assert.equal((await lstat(linkPath)).isSymbolicLink(), true);
       assert.equal(resolve(dirname(linkPath), await readlink(linkPath)), resolve(genDir));
       assert.equal(await ensureClientPackageLink(dir, genDir), 'current');
@@ -119,11 +119,11 @@ describe('ensureClientPackageLink', () => {
     await withTmpDir(async (dir) => {
       const genDir = join(dir, '.scriptcable', 'generated');
       await mkdir(genDir, { recursive: true });
-      const linkDir = join(dir, 'node_modules', '@scriptcable');
+      const linkDir = join(dir, 'node_modules', '@unikit-bridge');
       await mkdir(linkDir, { recursive: true });
-      await symlink(join(dir, 'gone'), join(linkDir, 'client'), 'dir');
+      await symlink(join(dir, 'gone'), join(linkDir, 'scriptcable-client'), 'dir');
       assert.equal(await ensureClientPackageLink(dir, genDir), 'repaired');
-      assert.equal(resolve(dirname(join(linkDir, 'client')), await readlink(join(linkDir, 'client'))), resolve(genDir));
+      assert.equal(resolve(dirname(join(linkDir, 'scriptcable-client')), await readlink(join(linkDir, 'scriptcable-client'))), resolve(genDir));
     });
   });
 
@@ -131,7 +131,7 @@ describe('ensureClientPackageLink', () => {
     await withTmpDir(async (dir) => {
       const genDir = join(dir, '.scriptcable', 'generated');
       await mkdir(genDir, { recursive: true });
-      const real = join(dir, 'node_modules', '@scriptcable', 'client');
+      const real = join(dir, 'node_modules', '@unikit-bridge', 'scriptcable-client');
       await mkdir(real, { recursive: true });
       await writeFile(join(real, 'keep.txt'), 'mine');
       assert.equal(await ensureClientPackageLink(dir, genDir), 'blocked');
@@ -149,18 +149,18 @@ describe('ensureClientPackageLink', () => {
         join(dir, 'package.json'),
         JSON.stringify({
           name: 'demo',
-          dependencies: { '@scriptcable/client': 'file:.scriptcable/generated' },
+          dependencies: { '@unikit-bridge/scriptcable-client': 'file:.scriptcable/generated' },
         }),
       );
-      const managed = join(dir, 'node_modules', '@scriptcable', 'client');
+      const managed = join(dir, 'node_modules', '@unikit-bridge', 'scriptcable-client');
       await mkdir(managed, { recursive: true });
       await writeFile(
         join(managed, 'package.json'),
-        JSON.stringify({ name: '@scriptcable/client', exports: { '.': './placeholder.ts' } }),
+        JSON.stringify({ name: '@unikit-bridge/scriptcable-client', exports: { '.': './placeholder.ts' } }),
       );
       await writeFile(join(managed, 'placeholder.ts'), 'export const stub = true;\n');
       assert.equal(await ensureClientPackageLink(dir, genDir), 'repaired');
-      const linkPath = join(dir, 'node_modules', '@scriptcable', 'client');
+      const linkPath = join(dir, 'node_modules', '@unikit-bridge', 'scriptcable-client');
       assert.equal((await lstat(linkPath)).isSymbolicLink(), true);
       assert.equal(resolve(dirname(linkPath), await readlink(linkPath)), resolve(genDir));
     });
@@ -175,10 +175,10 @@ describe('ensureClientPackageLink', () => {
         join(dir, 'package.json'),
         JSON.stringify({
           name: 'demo',
-          dependencies: { '@scriptcable/client': 'file:../other/generated' },
+          dependencies: { '@unikit-bridge/scriptcable-client': 'file:../other/generated' },
         }),
       );
-      const real = join(dir, 'node_modules', '@scriptcable', 'client');
+      const real = join(dir, 'node_modules', '@unikit-bridge', 'scriptcable-client');
       await mkdir(real, { recursive: true });
       await writeFile(join(real, 'keep.txt'), 'mine');
       assert.equal(await ensureClientPackageLink(dir, genDir), 'blocked');

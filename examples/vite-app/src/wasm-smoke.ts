@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { createMinimalWasi } from '@scriptcable/core/wasi';
-import { loadWasmModule } from '@scriptcable/core/wasm';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import { createMinimalWasi } from '@unikit-bridge/scriptcable/core/wasi';
+import { loadWasmModule } from '@unikit-bridge/scriptcable/core/wasm';
+import type { ScriptcableProfile } from '@unikit-bridge/scriptcable/types';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const profile = JSON.parse(await readFile(join(root, '.scriptcable/profile.json'), 'utf8')) as ScriptcableProfile;

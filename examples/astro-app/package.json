@@ -9,11 +9,10 @@
     "test": "bun run build && bun scripts/assert-dist.mjs"
   },
   "dependencies": {
-    "@scriptcable/example-calculator-core": "workspace:*",
-    "@scriptcable/types": "workspace:*"
+    "@unikit-bridge/scriptcable": "workspace:*"
   },
   "devDependencies": {
-    "@scriptcable/vite": "workspace:*",
-    "astro": "^5.0.0"
+    "astro": "^5.0.0",
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

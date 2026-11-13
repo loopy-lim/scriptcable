@@ -1,8 +1,8 @@
-import { createClient } from '@scriptcable/client';
+import { createClient } from '@unikit-bridge/scriptcable-client';
 import { dropinAnswers } from './dropin-app';
 
 const out = document.getElementById('out')!;
-out.textContent = 'loading core via @scriptcable/client…';
+out.textContent = 'loading core via @unikit-bridge/scriptcable-client…';
 
 async function main() {
   // Browser graph → browser flavor (WASM); no paths, no WASI adapter needed.

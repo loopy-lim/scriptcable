@@ -77,7 +77,7 @@ async function runScriptcableBuild(
     profile: result.profile,
   });
   if (clientLink === 'blocked') {
-    console.warn('[scriptcable] could not link node_modules/@scriptcable/client — run `scriptcable doctor`');
+    console.warn('[scriptcable] could not link node_modules/@unikit-bridge/scriptcable-client — run `scriptcable doctor`');
   }
   // Drop-in: imports of the entry resolve to the compiled client. Only when
   // the drop-in can provide the entry's whole runtime export surface.
@@ -135,13 +135,13 @@ export function withScriptcable(
     ...nextConfig,
     // The generated client package ships plain .ts — both webpack and
     // Turbopack need it transpiled. Honors packages the app already lists.
-    transpilePackages: [...new Set([...(nextConfig.transpilePackages ?? []), '@scriptcable/client'])],
+    transpilePackages: [...new Set([...(nextConfig.transpilePackages ?? []), '@unikit-bridge/scriptcable-client'])],
     webpack(config: any, ctx: any) {
       // Per-graph drop-in flavor: client components bundle for the browser
       // (top-level-await init); nodejs server graphs stay await-free. The
       // edge runtime has no node:fs/node:module — the node drop-in cannot
       // load there, so it stays off (imports fall through to
-      // `@scriptcable/client`, whose wasm fallback still applies).
+      // `@unikit-bridge/scriptcable-client`, whose wasm fallback still applies).
       const isEdge = ctx?.isServer && ctx?.nextRuntime === 'edge';
       const flavor: 'browser' | 'node' | false = !dropinEnabled
         ? false
@@ -187,13 +187,13 @@ export function withScriptcable(
 /**
  * Async variant (`next.config.mjs` supports top-level await): runs the same
  * build as `withScriptcable` at config time so artifacts and the
- * `@scriptcable/client` package exist before compiling, under either bundler.
+ * `@unikit-bridge/scriptcable-client` package exist before compiling, under either bundler.
  *
  * Turbopack note (verified against Next 16): Turbopack has no per-graph
  * resolve hook, and `turbopack.resolveAlias` matches request specifiers —
  * an absolute-path alias key does NOT redirect relative entry imports (it
  * silently does nothing). So entry drop-in is a webpack-path feature; under
- * Turbopack the app's `@scriptcable/client` import still resolves the
+ * Turbopack the app's `@unikit-bridge/scriptcable-client` import still resolves the
  * compiled client via export conditions. This helper states that once,
  * instead of setting a dead alias.
  */
@@ -212,7 +212,7 @@ export async function withScriptcableAsync(
     if (check.ok) {
       console.log(
         '[scriptcable] turbopack: entry drop-in not available (no resolve hook) —' +
-          ' use @scriptcable/client, or run next with --webpack for drop-in imports',
+          ' use @unikit-bridge/scriptcable-client, or run next with --webpack for drop-in imports',
       );
     } else {
       console.warn(`[scriptcable] drop-in disabled — ${check.reasons.join('; ')}`);

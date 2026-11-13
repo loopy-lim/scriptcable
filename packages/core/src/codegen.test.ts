@@ -205,7 +205,7 @@ describe('batch surface', () => {
 
   it('node flavor wires the addon executive into batch() with a sequential fallback', () => {
     const src = generateClients(CONFIG, ['node'], { profile: PROFILE }).files['node.ts']!;
-    assert.match(src, /import \{ createBatchWire \} from '@scriptcable\/core\/batch';/);
+    assert.match(src, /import \{ createBatchWire \} from '@unikit-bridge\/scriptcable\/core\/batch';/);
     assert.match(src, /const __wire = createBatchWire\(PROFILE\);/, 'one wire per client module');
     assert.match(
       src,
@@ -261,7 +261,7 @@ describe('batch surface', () => {
 
   it('ScriptcableClient declares batch(entries)', () => {
     const types = generateClients(CONFIG, ['node'], { profile: PROFILE }).files['types.ts']!;
-    assert.match(types, /import type \{ BatchEntry \} from '@scriptcable\/types';/);
+    assert.match(types, /import type \{ BatchEntry \} from '@unikit-bridge\/scriptcable\/types';/);
     assert.match(types, /batch\(entries: ReadonlyArray<BatchEntry>\): unknown\[\];/);
   });
 });

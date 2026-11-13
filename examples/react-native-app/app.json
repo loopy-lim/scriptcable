@@ -7,7 +7,7 @@
       "package": "com.scriptcable.rnexample"
     },
     "plugins": [
-      "@scriptcable/expo"
+      "@unikit-bridge/scriptcable/expo"
     ]
   }
 }

@@ -11,12 +11,8 @@
     "contract:check": "scriptcable diff"
   },
   "devDependencies": {
-    "@scriptcable/cli": "workspace:*",
     "scriptc": "^0.4.12",
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-    "@scriptcable/core": "workspace:*",
-    "@scriptcable/types": "workspace:*",
-    "@scriptcable/bun": "workspace:*",
-    "@scriptcable/node": "workspace:*"
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

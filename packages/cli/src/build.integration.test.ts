@@ -52,11 +52,10 @@ async function makeProject(): Promise<string> {
   );
   // Make the workspace resolvable from the temp project
   const nm = join(root, 'node_modules');
-  await mkdir(join(nm, '@scriptcable'), { recursive: true });
+  await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '@scriptc'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/core'), join(nm, '@scriptcable', 'core'), 'dir');
-  await symlink(resolve(repoRoot, 'packages/types'), join(nm, '@scriptcable', 'types'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(
     resolve(repoRoot, 'node_modules/.bin/scriptc'),
@@ -95,11 +94,11 @@ describe('zero-config build (integration)', () => {
     const generated = await Array.fromAsync(new Bun.Glob('.scriptcable/generated/*.ts').scan({ cwd: project }));
     assert.ok(generated.some((g) => g.endsWith('node.ts')), `no generated client in ${generated.join(', ')}`);
 
-    // @scriptcable/client package: manifest written, link present
+    // @unikit-bridge/scriptcable-client package: manifest written, link present
     const clientPkg = JSON.parse(await Bun.file(join(project, '.scriptcable', 'generated', 'package.json')).text());
-    assert.equal(clientPkg.name, '@scriptcable/client');
-    const linkPath = join(project, 'node_modules', '@scriptcable', 'client');
-    assert.equal((await lstat(linkPath)).isSymbolicLink(), true, 'no node_modules/@scriptcable/client link');
+    assert.equal(clientPkg.name, '@unikit-bridge/scriptcable-client');
+    const linkPath = join(project, 'node_modules', '@unikit-bridge', 'scriptcable-client');
+    assert.equal((await lstat(linkPath)).isSymbolicLink(), true, 'no node_modules/@unikit-bridge/scriptcable-client link');
 
     // Typed N-API direct binding: built into outDir and copied next to the
     // clients. Soft-fail by design — Windows doesn't build the addon yet
@@ -116,7 +115,7 @@ describe('zero-config build (integration)', () => {
       cmd: [
         'bun',
         '-e',
-        `const m = await import('@scriptcable/client');
+        `const m = await import('@unikit-bridge/scriptcable-client');
 const c = await m.createClient();
 console.log(JSON.stringify({
   add: c.add(20, 22),
@@ -145,7 +144,7 @@ console.log(JSON.stringify({
       cmd: [
         'bun',
         '-e',
-        `const m = await import('@scriptcable/client');
+        `const m = await import('@unikit-bridge/scriptcable-client');
 const c = await m.createClient({ preferWasm: true });
 console.log(JSON.stringify({
   add: c.add(20, 22),

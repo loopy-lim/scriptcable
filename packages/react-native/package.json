@@ -1,6 +1,7 @@
 {
   "name": "@scriptcable/react-native",
   "version": "0.1.0",
+  "private": true,
   "description": "React Native adapter — typed bridge to a scriptcable native module",
   "license": "MIT",
   "repository": {
@@ -42,8 +43,5 @@
   },
   "engines": {
     "bun": ">=1.2.0"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

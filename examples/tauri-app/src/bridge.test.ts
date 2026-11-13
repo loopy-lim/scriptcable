@@ -1,7 +1,7 @@
 import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createTauriSidecarEngine } from '@scriptcable/tauri';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import { createTauriSidecarEngine } from '@unikit-bridge/scriptcable/tauri';
+import type { ScriptcableProfile } from '@unikit-bridge/scriptcable/types';
 
 const profile: ScriptcableProfile = {
   profile_format: 1,

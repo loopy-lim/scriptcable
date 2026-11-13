@@ -7,11 +7,11 @@
  *   fib(30)       — CPU-heavy iterative loop
  *   repeat(s,100) — string marshal round-trip (alloc + copy both ways)
  */
-import { bench, formatTable, formatComparison, type BenchResult, type CompareRow } from '@scriptcable/testing';
-import { loadNativeFromOutDir } from '@scriptcable/core/native';
-import { loadWasmModule } from '@scriptcable/core/wasm';
-import { createMinimalWasi } from '@scriptcable/core/wasi';
-import { createBatchWire } from '@scriptcable/core/batch';
+import { bench, formatTable, formatComparison, type BenchResult, type CompareRow } from '@unikit-bridge/scriptcable/testing';
+import { loadNativeFromOutDir } from '@unikit-bridge/scriptcable/core/native';
+import { loadWasmModule } from '@unikit-bridge/scriptcable/core/wasm';
+import { createMinimalWasi } from '@unikit-bridge/scriptcable/core/wasi';
+import { createBatchWire } from '@unikit-bridge/scriptcable/core/batch';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';

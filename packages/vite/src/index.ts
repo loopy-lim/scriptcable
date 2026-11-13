@@ -178,7 +178,7 @@ async function rebuild(
     dropin.enabled = false;
   }
   if (clientLink === 'blocked') {
-    console.warn('[scriptcable] could not link node_modules/@scriptcable/client — run `scriptcable doctor`');
+    console.warn('[scriptcable] could not link node_modules/@unikit-bridge/scriptcable-client — run `scriptcable doctor`');
   }
   return { genDir, config };
 }
@@ -241,7 +241,7 @@ export function scriptcable(options: ScriptcableViteOptions = {}): VitePlugin {
       // see them.
       order: 'pre',
       async handler(id, importer) {
-        if (id === virtualId || id === '@scriptcable/client') {
+        if (id === virtualId || id === '@unikit-bridge/scriptcable-client') {
           // Resolve to the real browser client so it stays inside vite's module
           // graph and gets transformed. (A virtual re-export of its absolute
           // path serves raw, untransformed TS to the browser.)

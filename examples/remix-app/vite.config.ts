@@ -1,5 +1,5 @@
 import { reactRouter } from '@react-router/dev/vite';
-import scriptcable from '@scriptcable/vite';
+import scriptcable from '@unikit-bridge/scriptcable/vite';
 import { defineConfig } from 'vite';
 
 // React Router v8 embeds Vite — the scriptcable plugin registers like any
@@ -11,6 +11,6 @@ export default defineConfig({
     target: 'es2022',
   },
   optimizeDeps: {
-    exclude: ['@scriptcable/core', '@scriptcable/core/wasm', '@scriptcable/core/wasi'],
+    exclude: ['@unikit-bridge/scriptcable/core', '@unikit-bridge/scriptcable/core/wasm', '@unikit-bridge/scriptcable/core/wasi'],
   },
 });

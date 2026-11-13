@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import scriptcable from '@scriptcable/vite';
+import scriptcable from '@unikit-bridge/scriptcable/vite';
 
 export default defineConfig({
   plugins: [sveltekit(), scriptcable()],
@@ -9,6 +9,6 @@ export default defineConfig({
     target: 'es2022',
   },
   optimizeDeps: {
-    exclude: ['@scriptcable/core', '@scriptcable/core/wasm', '@scriptcable/core/wasi'],
+    exclude: ['@unikit-bridge/scriptcable/core', '@unikit-bridge/scriptcable/core/wasm', '@unikit-bridge/scriptcable/core/wasi'],
   },
 });

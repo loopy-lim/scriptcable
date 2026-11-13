@@ -32,10 +32,9 @@ async function makeProject(withTsConfig: boolean): Promise<string> {
     );
   }
   const nm = join(root, 'node_modules');
-  await mkdir(join(nm, '@scriptcable'), { recursive: true });
+  await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/core'), join(nm, '@scriptcable', 'core'), 'dir');
-  await symlink(resolve(repoRoot, 'packages/types'), join(nm, '@scriptcable', 'types'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/.bin/scriptc'), join(nm, '.bin', 'scriptc'), 'file');
   return root;

@@ -8,13 +8,11 @@
     "test": "bun run build:core && bun test src/"
   },
   "dependencies": {
-    "@scriptcable/lynx": "workspace:*",
-    "@scriptcable/webpack": "workspace:*"
+    "@unikit-bridge/scriptcable": "workspace:*"
   },
   "devDependencies": {
     "@lynx-js/rspeedy": "^0.18.2",
     "@rspack/core": "^2.2.9",
-    "@scriptcable/core": "workspace:*",
-    "@scriptcable/types": "workspace:*"
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

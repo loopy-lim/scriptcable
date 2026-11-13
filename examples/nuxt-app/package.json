@@ -9,12 +9,11 @@
     "test": "bun run build && bun scripts/assert-output.mjs"
   },
   "dependencies": {
-    "@scriptcable/example-calculator-core": "workspace:*",
-    "@scriptcable/types": "workspace:*"
+    "@unikit-bridge/scriptcable": "workspace:*"
   },
   "devDependencies": {
-    "@scriptcable/vite": "workspace:*",
     "nuxt": "^4.6.2",
-    "vue": "^3.5.0"
+    "vue": "^3.5.0",
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

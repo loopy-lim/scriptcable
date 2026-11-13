@@ -1,4 +1,4 @@
-import { createBunEngineFromOutDir } from '@scriptcable/bun';
+import { createBunEngineFromOutDir } from '@unikit-bridge/scriptcable/bun';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

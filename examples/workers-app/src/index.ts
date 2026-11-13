@@ -5,7 +5,7 @@
  *   scriptcable build --target wasm --hosts workers
  *   wrangler dev
  */
-import { createClient } from '@scriptcable/client';
+import { createClient } from '@unikit-bridge/scriptcable-client';
 
 let clientPromise: ReturnType<typeof createClient> | null = null;
 function client(): ReturnType<typeof createClient> {

@@ -13,16 +13,12 @@
     "test:dropin": "bun src/dropin-smoke.ts"
   },
   "dependencies": {
-    "@scriptcable/core": "workspace:*",
-    "@scriptcable/node": "workspace:*",
-    "@scriptcable/example-calculator-core": "workspace:*",
-    "@scriptcable/types": "workspace:*"
+    "@unikit-bridge/scriptcable": "workspace:*"
   },
   "devDependencies": {
-    "@scriptcable/cli": "workspace:*",
-    "@scriptcable/vite": "workspace:*",
     "scriptc": "^0.4.12",
     "@scriptc/runtime-wasm32-wasi": "^0.4.12",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

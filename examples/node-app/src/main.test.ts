@@ -1,10 +1,10 @@
 import { describe, it, beforeAll } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createNodeEngineFromOutDir } from '@scriptcable/node';
+import { createNodeEngineFromOutDir } from '@unikit-bridge/scriptcable/node';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { access } from 'node:fs/promises';
-import { sharedLibraryFileName } from '@scriptcable/core';
+import { sharedLibraryFileName } from '@unikit-bridge/scriptcable/core';
 
 const outDir = join(dirname(fileURLToPath(import.meta.url)), '../../calculator-core/.scriptcable');
 

@@ -33,11 +33,10 @@ async function makeProject(coreSource?: string): Promise<string> {
     coreSource ?? `/** Adds two numbers. */\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n`,
   );
   const nm = join(root, 'node_modules');
-  await mkdir(join(nm, '@scriptcable'), { recursive: true });
+  await mkdir(join(nm, '@unikit-bridge'), { recursive: true });
   await mkdir(join(nm, '@scriptc'), { recursive: true });
   await mkdir(join(nm, '.bin'), { recursive: true });
-  await symlink(resolve(repoRoot, 'packages/core'), join(nm, '@scriptcable', 'core'), 'dir');
-  await symlink(resolve(repoRoot, 'packages/types'), join(nm, '@scriptcable', 'types'), 'dir');
+  await symlink(resolve(repoRoot, 'packages/scriptcable'), join(nm, '@unikit-bridge', 'scriptcable'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/scriptc'), join(nm, 'scriptc'), 'dir');
   await symlink(resolve(repoRoot, 'node_modules/.bin/scriptc'), join(nm, '.bin', 'scriptc'), 'file');
   await symlink(
@@ -80,7 +79,7 @@ describe('webpack plugin-only build', () => {
     const nodeSrc = await readFile(join(genDir, 'node.ts'), 'utf8');
     assert.match(nodeSrc, /add\(a: number, b: number\): number/);
     const clientPkg = JSON.parse(await readFile(join(genDir, 'package.json'), 'utf8'));
-    assert.equal(clientPkg.name, '@scriptcable/client');
+    assert.equal(clientPkg.name, '@unikit-bridge/scriptcable-client');
 
     // Browser wasm ensured + copied to public/ — no manual step
     await access(join(root, 'public', 'webpack_plugin_it.wasm'));

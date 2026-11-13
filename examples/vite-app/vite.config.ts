@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import scriptcable from '@scriptcable/vite';
+import scriptcable from '@unikit-bridge/scriptcable/vite';
 
 export default defineConfig({
   plugins: [scriptcable()],
@@ -13,6 +13,6 @@ export default defineConfig({
   // Avoid prebundling the Node toolchain entries — core and its subpaths
   // must go through vite's normal transform, not the dep optimizer.
   optimizeDeps: {
-    exclude: ['@scriptcable/core', '@scriptcable/core/wasm', '@scriptcable/core/wasi'],
+    exclude: ['@unikit-bridge/scriptcable/core', '@unikit-bridge/scriptcable/core/wasm', '@unikit-bridge/scriptcable/core/wasi'],
   },
 });

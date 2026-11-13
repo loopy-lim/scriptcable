@@ -1,6 +1,6 @@
 import { describe, it } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createMockBridge, createReactNativeEngine, createTurboModuleBridge } from '@scriptcable/react-native';
+import { createMockBridge, createReactNativeEngine, createTurboModuleBridge } from '@unikit-bridge/scriptcable/react-native';
 
 describe('rn example', () => {
   it('mock bridge', async () => {

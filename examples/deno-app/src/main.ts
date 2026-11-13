@@ -7,7 +7,7 @@
  *
  * Same API as every other flavor: createClient(), then typed calls.
  */
-import { createClient } from '@scriptcable/client';
+import { createClient } from '@unikit-bridge/scriptcable-client';
 
 const client = await createClient();
 

@@ -29,7 +29,7 @@ export type ToolchainInfo = {
   clangPath?: string;
   ccPath?: string;
   denoPath?: string;
-  /** State of the `node_modules/@scriptcable/client` link — absent when nothing was generated yet. */
+  /** State of the `node_modules/@unikit-bridge/scriptcable-client` link — absent when nothing was generated yet. */
   clientLink?: 'current' | 'linked' | 'repaired' | 'blocked';
 };
 
@@ -172,7 +172,7 @@ export async function doctor(cwd = process.cwd(), opts: { skipRuntimeGate?: bool
   const denoPath = (await which('deno')) ?? undefined;
 
   // Doctor doubles as the link repairer: if a previous build generated
-  // clients, make sure `@scriptcable/client` resolves (no-op when current).
+  // clients, make sure `@unikit-bridge/scriptcable-client` resolves (no-op when current).
   let clientLink: ToolchainInfo['clientLink'];
   const genDir = join(cwd, '.scriptcable', 'generated');
   try {

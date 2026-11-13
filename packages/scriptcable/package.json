@@ -1,0 +1,152 @@
+{
+  "name": "@unikit-bridge/scriptcable",
+  "version": "0.1.0",
+  "description": "One TypeScript core (compiled by scriptc) → type-safe clients for Bun, Node, Deno, Tauri, React Native, Lynx, Cloudflare Workers, Vite, and Next.js — single package with per-host subpath exports",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "scriptcable": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./core/batch": {
+      "types": "./dist/core/batch-wire.d.ts",
+      "import": "./dist/core/batch-wire.js"
+    },
+    "./core/codegen": {
+      "types": "./dist/core/codegen.d.ts",
+      "import": "./dist/core/codegen.js"
+    },
+    "./core/contract": {
+      "types": "./dist/core/contract.d.ts",
+      "import": "./dist/core/contract.js"
+    },
+    "./core/link": {
+      "types": "./dist/core/link-shared.d.ts",
+      "import": "./dist/core/link-shared.js"
+    },
+    "./core/native": {
+      "types": "./dist/core/native-loader.d.ts",
+      "import": "./dist/core/native-loader.js"
+    },
+    "./core/profile": {
+      "types": "./dist/core/profile.d.ts",
+      "import": "./dist/core/profile.js"
+    },
+    "./core/toolchain": {
+      "types": "./dist/core/toolchain.d.ts",
+      "import": "./dist/core/toolchain.js"
+    },
+    "./core/wasi": {
+      "types": "./dist/core/wasi-polyfill.d.ts",
+      "import": "./dist/core/wasi-polyfill.js"
+    },
+    "./core/wasm": {
+      "types": "./dist/core/wasm-loader.d.ts",
+      "import": "./dist/core/wasm-loader.js"
+    },
+    "./bun": {
+      "types": "./dist/bun/index.d.ts",
+      "import": "./dist/bun/index.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "import": "./dist/cli/index.js"
+    },
+    "./cli/codegen": {
+      "types": "./dist/cli/codegen/index.d.ts",
+      "import": "./dist/cli/codegen/index.js"
+    },
+    "./expo": {
+      "import": "./dist/expo/app.plugin.js"
+    },
+    "./lynx": {
+      "types": "./dist/lynx/index.d.ts",
+      "import": "./dist/lynx/index.js"
+    },
+    "./next": {
+      "types": "./dist/next/index.d.ts",
+      "import": "./dist/next/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js"
+    },
+    "./react-native": {
+      "types": "./dist/react-native/index.d.ts",
+      "import": "./dist/react-native/index.js"
+    },
+    "./react-native/metro": {
+      "types": "./dist/react-native/metro.d.ts",
+      "import": "./dist/react-native/metro.js"
+    },
+    "./tauri": {
+      "types": "./dist/tauri/index.d.ts",
+      "import": "./dist/tauri/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite/index.d.ts",
+      "import": "./dist/vite/index.js"
+    },
+    "./webpack": {
+      "types": "./dist/webpack/index.d.ts",
+      "import": "./dist/webpack/index.js"
+    }
+  },
+  "dependencies": {
+    "@babel/runtime": "^8.0.0",
+    "node-api-headers": "^1.9.0",
+    "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "expo": ">=52",
+    "vite": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "expo": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "bun": ">=1.2.0",
+    "node": ">=24"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun scripts/assemble.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopy-lim/scriptcable.git",
+    "directory": "packages/scriptcable"
+  },
+  "bugs": {
+    "url": "https://github.com/loopy-lim/scriptcable/issues"
+  },
+  "homepage": "https://github.com/loopy-lim/scriptcable#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

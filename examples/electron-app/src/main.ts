@@ -1,7 +1,7 @@
 /**
  * Electron main process — the desktop host smoke:
  *
- *   1. `createClient()` from `@scriptcable/client` — export conditions pick
+ *   1. `createClient()` from `@unikit-bridge/scriptcable-client` — export conditions pick
  *      the node flavor, which loads the compiled core inside Electron's own
  *      Node runtime (typed N-API addon first, shared-library fallback).
  *   2. The renderer, built by vite, runs the browser drop-in (WASM). Its
@@ -13,7 +13,7 @@
  */
 import { app, BrowserWindow, protocol } from 'electron';
 import { readFile } from 'node:fs/promises';
-import { createClient } from '@scriptcable/client';
+import { createClient } from '@unikit-bridge/scriptcable-client';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

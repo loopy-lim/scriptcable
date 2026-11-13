@@ -9,16 +9,15 @@
     "test": "bun run build && bun scripts/assert-output.mjs"
   },
   "dependencies": {
-    "@scriptcable/example-calculator-core": "workspace:*",
-    "@scriptcable/types": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router": "^8.5.0",
-    "isbot": "^5"
+    "isbot": "^5",
+    "@unikit-bridge/scriptcable": "workspace:*"
   },
   "devDependencies": {
     "@react-router/dev": "^8.5.0",
-    "@scriptcable/vite": "workspace:*",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "@unikit-bridge/scriptcable": "workspace:*"
   }
 }

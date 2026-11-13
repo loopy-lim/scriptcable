@@ -39,7 +39,7 @@ function docComment(e: ScriptcableProfile['exports'][number]): string {
 function genTypes(profile: ScriptcableProfile): string {
   const lines: string[] = [
     header('types'),
-    `import type { BatchEntry } from '@scriptcable/types';`,
+    `import type { BatchEntry } from '@unikit-bridge/scriptcable/types';`,
     `export type ScriptcableClient = {`,
   ];
   for (const e of profile.exports) {
@@ -185,10 +185,10 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { WASI } from 'node:wasi';
-import { loadNativeLibrary, loadNativeLibrarySync } from '@scriptcable/core/native';
-import { loadWasmModule } from '@scriptcable/core/wasm';
-import { createBatchWire } from '@scriptcable/core/batch';
-import type { ScriptcableProfile, BatchEntry } from '@scriptcable/types';
+import { loadNativeLibrary, loadNativeLibrarySync } from '@unikit-bridge/scriptcable/core/native';
+import { loadWasmModule } from '@unikit-bridge/scriptcable/core/wasm';
+import { createBatchWire } from '@unikit-bridge/scriptcable/core/batch';
+import type { ScriptcableProfile, BatchEntry } from '@unikit-bridge/scriptcable/types';
 import type { ScriptcableClient } from './types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -442,9 +442,9 @@ function genBrowserClient(profile: ScriptcableProfile, wasmRelPath: string): str
   const methods = wasmMethods(profile);
 
   return `${header('browser')}
-import { loadWasmModule, type LoadedModule } from '@scriptcable/core/wasm';
-import { createMinimalWasi } from '@scriptcable/core/wasi';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import { loadWasmModule, type LoadedModule } from '@unikit-bridge/scriptcable/core/wasm';
+import { createMinimalWasi } from '@unikit-bridge/scriptcable/core/wasi';
+import type { ScriptcableProfile } from '@unikit-bridge/scriptcable/types';
 import type { ScriptcableClient } from './types.js';
 
 const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
@@ -588,13 +588,13 @@ export type { ScriptcableClient } from './types.js';
  * directly from disk next to this file — deno: URLs aren't fetchable and
  * probing a dev origin makes no sense in a CLI runtime. The build emits this
  * flavor as compiled .js (Deno doesn't strip types under node_modules), so
- * `import { createClient } from '@scriptcable/client'` runs as-is.
+ * `import { createClient } from '@unikit-bridge/scriptcable-client'` runs as-is.
  */
 function genDenoClient(profile: ScriptcableProfile, wasmRelPath: string): string {
   return `${header('deno')}
-import { loadWasmModule, type LoadedModule } from '@scriptcable/core/wasm';
-import { createMinimalWasi } from '@scriptcable/core/wasi';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import { loadWasmModule, type LoadedModule } from '@unikit-bridge/scriptcable/core/wasm';
+import { createMinimalWasi } from '@unikit-bridge/scriptcable/core/wasi';
+import type { ScriptcableProfile } from '@unikit-bridge/scriptcable/types';
 import type { ScriptcableClient } from './types.js';
 
 const PROFILE = ${JSON.stringify(profile, null, 2)} as ScriptcableProfile;
@@ -617,9 +617,9 @@ ${wasmFlavorTail(wasmMethods(profile))}
  */
 function genWorkersClient(profile: ScriptcableProfile, wasmRelPath: string): string {
   return `${header('workers (Cloudflare workerd)')}
-import { loadWasmModule, type LoadedModule } from '@scriptcable/core/wasm';
-import { createMinimalWasi } from '@scriptcable/core/wasi';
-import type { ScriptcableProfile } from '@scriptcable/types';
+import { loadWasmModule, type LoadedModule } from '@unikit-bridge/scriptcable/core/wasm';
+import { createMinimalWasi } from '@unikit-bridge/scriptcable/core/wasi';
+import type { ScriptcableProfile } from '@unikit-bridge/scriptcable/types';
 import type { ScriptcableClient } from './types.js';
 // Bundled as CompiledWasm by wrangler's default rule — the import IS the
 // compiled module.
@@ -674,13 +674,13 @@ ${profile.exports
 function genReactNativeClient(profile: ScriptcableProfile): string {
   return `${header('react-native')}
 import type { ScriptcableClient } from './types.js';
-import type { BatchEntry } from '@scriptcable/types';
+import type { BatchEntry } from '@unikit-bridge/scriptcable/types';
 
 /**
  * React Native adapter.
  *
  * Pass a bridge backed by your TurboModule:
- *   import { createTurboModuleBridge } from '@scriptcable/react-native';
+ *   import { createTurboModuleBridge } from '@unikit-bridge/scriptcable/react-native';
  *   const bridge = createTurboModuleBridge(NativeCable);
  * For tests / Storybook use createMockBridge({ ... }).
  */
@@ -1334,7 +1334,7 @@ import type { ScriptcableClient } from '../types.js';
  * Drop-in client (browser / web graphs). Initialized once at module load
  * via top-level await — every call afterwards is synchronous WASM at full
  * speed. Hosts without top-level-await support should not redirect here
- * (use the async createClient() from '@scriptcable/client' instead).
+ * (use the async createClient() from '@unikit-bridge/scriptcable-client' instead).
  */
 const client: ScriptcableClient = await createClient();
 
@@ -1373,7 +1373,7 @@ ${dropinExportBlock(profile, 'client')}
 function genReactNativeDropin(profile: ScriptcableProfile): string {
   return `${header('react-native drop-in')}
 import { createClient } from '../react-native.js';
-import { createTurboModuleBridge } from '@scriptcable/react-native';
+import { createTurboModuleBridge } from '@unikit-bridge/scriptcable/react-native';
 import NativeCable from '../NativeCable.js';
 import type { ScriptcableClient } from '../types.js';
 
@@ -1381,7 +1381,7 @@ import type { ScriptcableClient } from '../types.js';
  * Drop-in client (Metro graphs). The bridge client is created lazily on
  * first call — no top-level await needed. On device, TurboModule calls
  * resolve as Promises (same semantics as createClient(bridge) — see
- * @scriptcable/react-native); the mock bridge is synchronous.
+ * @unikit-bridge/scriptcable/react-native); the mock bridge is synchronous.
  */
 let cached: ScriptcableClient | null = null;
 function client(): ScriptcableClient {

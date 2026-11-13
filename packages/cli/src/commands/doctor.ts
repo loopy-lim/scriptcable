@@ -62,12 +62,12 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
     }
     if (info.clientLink) {
       if (info.clientLink === 'blocked') {
-        console.log('  client:   @scriptcable/client link UNAVAILABLE');
-        console.log('    Fix: rerun `scriptcable build`, or add `"@scriptcable/client": "file:.scriptcable/generated"`');
+        console.log('  client:   @unikit-bridge/scriptcable-client link UNAVAILABLE');
+        console.log('    Fix: rerun `scriptcable build`, or add `"@unikit-bridge/scriptcable-client": "file:.scriptcable/generated"`');
         console.log('    to dependencies and reinstall for a CI-durable link.');
       } else {
         const verb = info.clientLink === 'current' ? '✓' : '✓ (repaired)';
-        console.log(`  client:   @scriptcable/client → node_modules ${verb}`);
+        console.log(`  client:   @unikit-bridge/scriptcable-client → node_modules ${verb}`);
         // CI durability: the file: dep only survives when its placeholder
         // manifest is committed, so report rather than auto-write — `init`
         // scaffolds the dep + placeholder + gitignore negations as a set.
@@ -76,10 +76,10 @@ export async function runDoctor(cwd = process.cwd()): Promise<number> {
             dependencies?: Record<string, string>;
             devDependencies?: Record<string, string>;
           };
-          const declared = { ...pkg.dependencies, ...pkg.devDependencies }['@scriptcable/client'];
+          const declared = { ...pkg.dependencies, ...pkg.devDependencies }['@unikit-bridge/scriptcable-client'];
           if (declared !== 'file:.scriptcable/generated') {
             console.log('  client-dep: not CI-durable — add to package.json to survive re-installs:');
-            console.log('              "@scriptcable/client": "file:.scriptcable/generated"  (init scaffolds this)');
+            console.log('              "@unikit-bridge/scriptcable-client": "file:.scriptcable/generated"  (init scaffolds this)');
           }
         } catch {
           /* no package.json here — nothing to advise */

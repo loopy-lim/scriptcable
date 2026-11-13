@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import scriptcable from '@scriptcable/vite';
+import scriptcable from '@unikit-bridge/scriptcable/vite';
 
 // Nuxt embeds Vite — the scriptcable plugin registers like any vite plugin.
 // SPA mode (ssr: false): the client graph is the one the drop-in serves.
@@ -14,7 +14,7 @@ export default defineNuxtConfig({
       target: 'es2022',
     },
     optimizeDeps: {
-      exclude: ['@scriptcable/core', '@scriptcable/core/wasm', '@scriptcable/core/wasi'],
+      exclude: ['@unikit-bridge/scriptcable/core', '@unikit-bridge/scriptcable/core/wasm', '@unikit-bridge/scriptcable/core/wasi'],
     },
   },
 });
