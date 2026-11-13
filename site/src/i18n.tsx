@@ -40,7 +40,7 @@ bun run doctor && bun run build && bun start
       sourceFile: 'src/core.ts',
       sourceCode: 'export function add(a: number, b: number): number',
       compilerLabel: 'scriptc + scriptca build',
-      compilerDetail: 'ABI 추론 · 계약 해시 · 호스트별 클라이언트 생성',
+      compilerDetail: '한 코어 → 호스트별 클라이언트',
       targetLabel: '타깃 호스트 선택',
       artifactLabel: '생성 산출물',
       wiringLabel: '연결 방식',
@@ -86,21 +86,57 @@ add(20, 22); // 42`,
   demo: {
     eyebrow: '라이브 데모',
     title: '이 페이지 자체가 데모입니다',
-    sub: '이 사이트의 src/core.ts를 WASM으로 컴파일해 실행합니다. 호출 코드는 일반 import 그대로입니다.',
-    badge: '브라우저 WASM 실행 중',
+    sub: '이 사이트의 src/core.ts를 WASM으로 컴파일해 브라우저에서 실행합니다.',
+    badge: '브라우저 WASM',
     sourceTitle: 'src/core.ts',
-    abiLabel: '추론 ABI',
-    importNote: "import { add, fib, repeat, sumBytes } from '../core'",
+    importNote: "import { sumRange, boxBlurRgba, add } from '../core'",
     run: '실행',
-    result: '실행 결과',
-    wasmTime: '컴파일된 코어 (WASM)',
-    jsTime: '동일 로직의 순수 JS',
-    avgOf: '라운드 절사평균 · 워밍업 후 실측',
+    result: '결과',
+    wasmTime: 'WASM',
+    jsTime: '순수 JS',
+    avgOf: '평균',
     callsUnit: '회',
     tabs: {
+      coarse: {
+        label: 'sumRange',
+        desc: '같은 합산을 N번 호출과 한 번 호출로 비교합니다.',
+        abi: 'N×add vs 1×sumRange',
+        code: `// N번 호출
+let sum = 0;
+for (let i = 0; i < n; i++) sum = add(sum, i);
+
+// 한 번 호출
+sumRange(n);`,
+        n: 'n (1k–500k)',
+        chattyLabel: 'WASM · N× add',
+        chattyHint: 'N번',
+        coarseLabel: 'WASM · sumRange',
+        coarseHint: '1번',
+        jsHint: 'JS',
+        perOp: '원소당',
+      },
+      image: {
+        label: 'image',
+        desc: '이미지 버퍼를 한 번에 넘겨 필터를 돌립니다.',
+        abi: 'RGBA → blur / resize / sobel',
+        code: `grayscaleRgba(rgba)
+boxBlurRgba(rgba, w, h)
+resizeNearestRgba(rgba, w, h, w/2, h/2)
+sobelRgba(rgba, w, h)`,
+        size: '크기 (128 / 256 / 512)',
+        filter: '필터',
+        filterLabels: {
+          grayscale: 'grayscale',
+          blur: 'box blur',
+          resize: 'resize ½',
+          sobel: 'sobel',
+        },
+        before: '입력',
+        after: '출력',
+      },
       add: {
         label: 'add',
-        desc: '두 숫자를 더합니다(number 왕복).',
+        desc: '가벼운 숫자 더하기 — WASM이 JS보다 느려 보일 수 있습니다.',
         abi: '(f64, f64) → f64',
         code: `export function add(a: number, b: number): number {
   return a + b;
@@ -110,7 +146,7 @@ add(20, 22); // 42`,
       },
       fib: {
         label: 'fib',
-        desc: '반복 피보나치, 숫자 연산 왕복.',
+        desc: '반복 피보나치.',
         abi: '(f64) → f64',
         code: `export function fib(n: number): number {
   let a = 0, b = 1;
@@ -125,7 +161,7 @@ add(20, 22); // 42`,
       },
       repeat: {
         label: 'repeat',
-        desc: '문자열 결합, 경계를 넘는 string 왕복.',
+        desc: '문자열을 넘나드는 호출 — 짧은 문자열을 자주 부르면 느립니다.',
         abi: '(utf8, f64) → utf8',
         code: `export function repeat(text: string, times: number): string {
   const parts: string[] = [];
@@ -137,25 +173,25 @@ add(20, 22); // 42`,
       },
       bytes: {
         label: 'sumBytes',
-        desc: '무작위 바이트 버퍼 합산, Uint8Array 마셜링.',
+        desc: '버퍼를 한 번에 넘겨 합산합니다.',
         abi: '(bytes) → f64',
         code: `export function sumBytes(data: Uint8Array): number {
   let sum = 0;
   for (let i = 0; i < data.length; i++) sum += data[i];
   return sum;
 }`,
-        size: '버퍼 크기 (바이트)',
+        size: '버퍼 크기',
       },
     },
     errorTitle: '데모 코어를 불러오지 못했습니다',
-    errorBody: 'WASM 모듈 초기화에 실패했습니다. 콘솔을 확인하거나 아래 버튼으로 다시 시도하세요.',
+    errorBody: 'WASM 모듈 초기화에 실패했습니다. 콘솔을 확인하거나 다시 시도하세요.',
     retry: '다시 시도',
-    loading: '데모 코어 로딩 중',
+    loading: '데모 로딩 중',
   },
   hosts: {
-    eyebrow: '호스트 매트릭스',
+    eyebrow: '호스트',
     title: '앱이 도는 곳 어디서나',
-    sub: '번들러 플러그인 또는 패키지 export 조건으로 호스트별 클라이언트를 자동 연결합니다.',
+    sub: '번들러 플러그인 또는 export 조건으로 호스트별 클라이언트를 연결합니다.',
     filters: [
       { id: 'all' as HostCategory, label: '전체 (11)' },
       { id: 'dropin' as HostCategory, label: '번들러 드롭인 (6)' },
@@ -180,26 +216,26 @@ add(20, 22); // 42`,
   bench: {
     eyebrow: '성능',
     title: '측정된 수치',
-    sub: 'examples/bench-core 실측 수치 (M1 Max / linux-x64).',
+    sub: 'examples/bench-core 실측 (M1 Max / linux-x64).',
     tiles: [
-      { value: '~24.5 ns', label: '타입 N-API 애드온 (Node) · 호출당', tag: 'native' },
-      { value: '~47 ns', label: 'Bun (bun:ffi보다 앞섬) · 호출당', tag: 'native' },
+      { value: '~24.5 ns', label: 'Node 애드온 · 호출당', tag: 'native' },
+      { value: '~47 ns', label: 'Bun · 호출당', tag: 'native' },
       { value: '48 ns', label: '브라우저 WASM · 호출당', tag: 'wasm' },
       { value: '1.1 s → 166 ms', label: '콜드 → 웜 빌드 (6.4×)', tag: 'cache' },
     ],
-    boundaryTitle: '경계를 넘는 비용',
+    boundaryTitle: '호출 비용',
     boundaryColumns: { op: '연산', cost: '비용 (linux-x64)', note: '메모' },
     boundaryRows: [
-      { op: 'number 호출', cost: '5–20 ns', note: 'Bun fns / 타입 애드온' },
-      { op: 'string 왕복', cost: '~0.66–1.0 µs', note: '복사 1회 + UTF-8 인/디코드' },
-      { op: 'string 배치', cost: '−31%', note: 'client.batch()로 경계 1회에 N 호출' },
-      { op: '작은 string 다발', cost: '≈ 2× 지연', note: '큰 단위로 묶거나 TS에 두는 편이 유리' },
+      { op: 'number 호출', cost: '5–20 ns', note: '직접 바인딩 / 타입 애드온' },
+      { op: 'string 왕복', cost: '~0.66–1.0 µs', note: '복사 + UTF-8' },
+      { op: 'string 배치', cost: '−31%', note: 'batch()로 N개를 한 번에' },
+      { op: '작은 string 다발', cost: '≈ 2× 지연', note: '묶거나 TS에 두기' },
     ],
-    calloutTitle: '경계 설계 기준',
-    calloutBody: '경계 한 번에 충분한 연산을 태울 때 유리합니다.',
+    calloutTitle: '한 줄 요약',
+    calloutBody: '호출 한 번에 할 일이 많을수록 컴파일된 코어가 유리합니다.',
     calloutPoints: [
-      '숫자 루프·버퍼·굵은 export는 네이티브/WASM 속도 그대로.',
-      '짧은 문자열 반복은 client.batch() 또는 TS 유지.',
+      '숫자 루프·이미지·큰 버퍼는 네이티브/WASM에 맡기세요.',
+      '짧은 문자열을 자주 부르면 batch()하거나 TS에 두세요.',
     ],
   },
   beforeAfter: {
@@ -287,7 +323,7 @@ bun run doctor && bun run build && bun start
       sourceFile: 'src/core.ts',
       sourceCode: 'export function add(a: number, b: number): number',
       compilerLabel: 'scriptc + scriptca build',
-      compilerDetail: 'ABI inferred · contract hash · per-host client emit',
+      compilerDetail: 'one core → per-host clients',
       targetLabel: 'Select target host',
       artifactLabel: 'Emitted artifact',
       wiringLabel: 'Resolution',
@@ -333,21 +369,57 @@ add(20, 22); // 42`,
   demo: {
     eyebrow: 'Live demo',
     title: 'This page is the demo',
-    sub: 'Compiles this site’s src/core.ts to WASM and runs it directly. App code keeps plain imports.',
-    badge: 'running compiled WASM',
+    sub: 'Compiles this site’s src/core.ts to WASM and runs it in the browser.',
+    badge: 'browser WASM',
     sourceTitle: 'src/core.ts',
-    abiLabel: 'Inferred ABI',
-    importNote: "import { add, fib, repeat, sumBytes } from '../core'",
+    importNote: "import { sumRange, boxBlurRgba, add } from '../core'",
     run: 'Run',
     result: 'Result',
-    wasmTime: 'compiled core (WASM)',
-    jsTime: 'same logic in plain JS',
-    avgOf: 'round trimmed mean · warmed',
+    wasmTime: 'WASM',
+    jsTime: 'plain JS',
+    avgOf: 'avg',
     callsUnit: 'calls',
     tabs: {
+      coarse: {
+        label: 'sumRange',
+        desc: 'Same sum — N calls versus one call.',
+        abi: 'N×add vs 1×sumRange',
+        code: `// N calls
+let sum = 0;
+for (let i = 0; i < n; i++) sum = add(sum, i);
+
+// one call
+sumRange(n);`,
+        n: 'n (1k–500k)',
+        chattyLabel: 'WASM · N× add',
+        chattyHint: 'N×',
+        coarseLabel: 'WASM · sumRange',
+        coarseHint: '1×',
+        jsHint: 'JS',
+        perOp: 'per element',
+      },
+      image: {
+        label: 'image',
+        desc: 'Pass an image buffer once and run a filter.',
+        abi: 'RGBA → blur / resize / sobel',
+        code: `grayscaleRgba(rgba)
+boxBlurRgba(rgba, w, h)
+resizeNearestRgba(rgba, w, h, w/2, h/2)
+sobelRgba(rgba, w, h)`,
+        size: 'size (128 / 256 / 512)',
+        filter: 'filter',
+        filterLabels: {
+          grayscale: 'grayscale',
+          blur: 'box blur',
+          resize: 'resize ½',
+          sobel: 'sobel',
+        },
+        before: 'input',
+        after: 'output',
+      },
       add: {
         label: 'add',
-        desc: 'Adds two numbers (a number round-trip).',
+        desc: 'A tiny add — WASM can look slower than plain JS.',
         abi: '(f64, f64) → f64',
         code: `export function add(a: number, b: number): number {
   return a + b;
@@ -357,7 +429,7 @@ add(20, 22); // 42`,
       },
       fib: {
         label: 'fib',
-        desc: 'Iterative fibonacci, a number-crunching round-trip.',
+        desc: 'Iterative fibonacci.',
         abi: '(f64) → f64',
         code: `export function fib(n: number): number {
   let a = 0, b = 1;
@@ -372,7 +444,7 @@ add(20, 22); // 42`,
       },
       repeat: {
         label: 'repeat',
-        desc: 'Joins copies of a string, a string round-trip over the boundary.',
+        desc: 'String round-trips — many short strings get expensive.',
         abi: '(utf8, f64) → utf8',
         code: `export function repeat(text: string, times: number): string {
   const parts: string[] = [];
@@ -384,32 +456,32 @@ add(20, 22); // 42`,
       },
       bytes: {
         label: 'sumBytes',
-        desc: 'Sums a random byte buffer, Uint8Array marshaling.',
+        desc: 'Pass the whole buffer once and sum inside.',
         abi: '(bytes) → f64',
         code: `export function sumBytes(data: Uint8Array): number {
   let sum = 0;
   for (let i = 0; i < data.length; i++) sum += data[i];
   return sum;
 }`,
-        size: 'buffer size (bytes)',
+        size: 'buffer size',
       },
     },
     errorTitle: 'Could not load the demo core',
     errorBody: 'WASM module initialization failed. Check the console, or retry below.',
     retry: 'Retry',
-    loading: 'Loading the demo core',
+    loading: 'Loading the demo',
   },
   hosts: {
-    eyebrow: 'Host matrix',
+    eyebrow: 'Hosts',
     title: 'Runs wherever your app runs',
-    sub: 'Bundler plugins or package export conditions wire the compiled client automatically.',
+    sub: 'Bundler plugins or export conditions wire the compiled client.',
     filters: [
       { id: 'all' as HostCategory, label: 'All (11)' },
       { id: 'dropin' as HostCategory, label: 'Bundler drop-in (6)' },
       { id: 'conditions' as HostCategory, label: 'Conditions path (4)' },
       { id: 'native' as HostCategory, label: 'Native runtime (1)' },
     ],
-    columns: { host: 'Host', how: 'How interception wires up', verified: 'Verified against' },
+    columns: { host: 'Host', how: 'How it wires up', verified: 'Verified against' },
     rows: [
       { host: 'Vite', category: 'dropin' as const, how: 'automatic drop-in: resolveId runs before the builtin resolver', verified: 'Vite 6 dev + build' },
       { host: 'Next.js (webpack)', category: 'dropin' as const, how: 'client graphs get the browser drop-in, server the node client', verified: 'Next 16.4.2' },
@@ -429,24 +501,24 @@ add(20, 22); // 42`,
     title: 'The numbers',
     sub: 'Measured in examples/bench-core (M1 Max / linux-x64).',
     tiles: [
-      { value: '~24.5 ns', label: 'typed N-API addon (Node) · per call', tag: 'native' },
-      { value: '~47 ns', label: 'Bun (still ahead of bun:ffi) · per call', tag: 'native' },
+      { value: '~24.5 ns', label: 'Node addon · per call', tag: 'native' },
+      { value: '~47 ns', label: 'Bun · per call', tag: 'native' },
       { value: '48 ns', label: 'browser WASM · per call', tag: 'wasm' },
       { value: '1.1 s → 166 ms', label: 'cold → warm build (6.4×)', tag: 'cache' },
     ],
-    boundaryTitle: 'What a crossing costs',
+    boundaryTitle: 'Call cost',
     boundaryColumns: { op: 'Operation', cost: 'Cost (linux-x64)', note: 'Note' },
     boundaryRows: [
-      { op: 'number calls', cost: '5–20 ns', note: 'Bun fns / typed addon' },
-      { op: 'string round-trip', cost: '~0.66–1.0 µs', note: 'one copy + UTF-8 encode/decode' },
-      { op: 'string batch', cost: '−31%', note: 'client.batch(): N calls across one boundary' },
-      { op: 'many small strings', cost: '≈ 2× slower', note: 'batch coarse work or keep in TS' },
+      { op: 'number calls', cost: '5–20 ns', note: 'direct binding / typed addon' },
+      { op: 'string round-trip', cost: '~0.66–1.0 µs', note: 'copy + UTF-8' },
+      { op: 'string batch', cost: '−31%', note: 'batch() packs N into one call' },
+      { op: 'many small strings', cost: '≈ 2× slower', note: 'batch or keep in TS' },
     ],
-    calloutTitle: 'Boundary rule of thumb',
-    calloutBody: 'Compiled cores win when each crossing carries real work.',
+    calloutTitle: 'In short',
+    calloutBody: 'Compiled cores win when each call carries real work.',
     calloutPoints: [
-      'Number loops, byte buffers, and coarse exports run at full native/WASM speed.',
-      'For chatty small strings, group with client.batch() or keep in TS.',
+      'Number loops, images, and large buffers belong in native/WASM.',
+      'For chatty short strings, use batch() or keep them in TS.',
     ],
   },
   beforeAfter: {

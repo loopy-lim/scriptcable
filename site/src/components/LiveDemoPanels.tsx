@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
 
 import { Button, Input, Label, Tabs, TabsContent, TabsList, TabsTrigger } from '@unikit-bridge/ui';
@@ -10,11 +10,22 @@ import { Button, Input, Label, Tabs, TabsContent, TabsList, TabsTrigger } from '
 // This module is loaded via React.lazy so the WASM top-level-await lives in
 // its own chunk: the page renders first, and a failed init is isolated by
 // the error boundary in LiveDemo.tsx instead of blanking the site.
-import { add, fib, repeat, sumBytes } from '../core';
+import {
+  add,
+  boxBlurRgba,
+  fib,
+  grayscaleRgba,
+  repeat,
+  resizeNearestRgba,
+  sobelRgba,
+  sumBytes,
+  sumRange,
+} from '../core';
 
 import { useI18n } from '../i18n';
 
-type DemoTabKey = 'add' | 'fib' | 'repeat' | 'bytes';
+type DemoTabKey = 'coarse' | 'image' | 'add' | 'fib' | 'repeat' | 'bytes';
+type ImageFilter = 'grayscale' | 'blur' | 'resize' | 'sobel';
 
 const SAMPLE_ROUNDS = 5;
 const TARGET_SAMPLE_MS = 14;
@@ -121,6 +132,170 @@ const jsSumBytes = (data: Uint8Array): number => {
   for (let i = 0; i < data.length; i++) sum += data[i];
   return sum;
 };
+const jsSumRange = (count: number): number => {
+  let sum = 0;
+  for (let i = 0; i < count; i++) sum += i;
+  return sum;
+};
+
+/** JS twins of the image kernels — same arithmetic as site/src/core.ts. */
+const jsGrayscaleRgba = (data: Uint8Array): Uint8Array => {
+  for (let i = 0; i < data.length; i += 4) {
+    const y = (data[i] * 77 + data[i + 1] * 150 + data[i + 2] * 29) >> 8;
+    data[i] = y;
+    data[i + 1] = y;
+    data[i + 2] = y;
+  }
+  return data;
+};
+
+const jsBoxBlurRgba = (data: Uint8Array, width: number, height: number): Uint8Array => {
+  const w = width | 0;
+  const h = height | 0;
+  const out = new Uint8Array(data.length);
+  const radius = 2;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      let n = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        let sy = y + dy;
+        if (sy < 0) sy = 0;
+        else if (sy >= h) sy = h - 1;
+        const row = sy * w;
+        for (let dx = -radius; dx <= radius; dx++) {
+          let sx = x + dx;
+          if (sx < 0) sx = 0;
+          else if (sx >= w) sx = w - 1;
+          const i = (row + sx) << 2;
+          r += data[i];
+          g += data[i + 1];
+          b += data[i + 2];
+          a += data[i + 3];
+          n++;
+        }
+      }
+      const o = (y * w + x) << 2;
+      out[o] = (r / n) | 0;
+      out[o + 1] = (g / n) | 0;
+      out[o + 2] = (b / n) | 0;
+      out[o + 3] = (a / n) | 0;
+    }
+  }
+  return out;
+};
+
+const jsResizeNearestRgba = (
+  data: Uint8Array,
+  srcW: number,
+  srcH: number,
+  dstW: number,
+  dstH: number,
+): Uint8Array => {
+  const sw = srcW | 0;
+  const sh = srcH | 0;
+  const dw = dstW | 0;
+  const dh = dstH | 0;
+  const out = new Uint8Array(dw * dh * 4);
+  for (let y = 0; y < dh; y++) {
+    const sy = ((y * sh) / dh) | 0;
+    const srcRow = sy * sw;
+    const dstRow = y * dw;
+    for (let x = 0; x < dw; x++) {
+      const sx = ((x * sw) / dw) | 0;
+      const si = (srcRow + sx) << 2;
+      const di = (dstRow + x) << 2;
+      out[di] = data[si];
+      out[di + 1] = data[si + 1];
+      out[di + 2] = data[si + 2];
+      out[di + 3] = data[si + 3];
+    }
+  }
+  return out;
+};
+
+const jsSobelRgba = (data: Uint8Array, width: number, height: number): Uint8Array => {
+  const w = width | 0;
+  const h = height | 0;
+  const out = new Uint8Array(data.length);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let gx = 0;
+      let gy = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        let sy = y + dy;
+        if (sy < 0) sy = 0;
+        else if (sy >= h) sy = h - 1;
+        const row = sy * w;
+        for (let dx = -1; dx <= 1; dx++) {
+          let sx = x + dx;
+          if (sx < 0) sx = 0;
+          else if (sx >= w) sx = w - 1;
+          const i = (row + sx) << 2;
+          const luma = (data[i] * 77 + data[i + 1] * 150 + data[i + 2] * 29) >> 8;
+          const kx = dx === 0 ? 0 : dx * (2 - (dy === 0 ? 0 : 1));
+          const ky = dy === 0 ? 0 : dy * (2 - (dx === 0 ? 0 : 1));
+          gx += luma * kx;
+          gy += luma * ky;
+        }
+      }
+      let mag = gx < 0 ? -gx : gx;
+      mag += gy < 0 ? -gy : gy;
+      if (mag > 255) mag = 255;
+      const o = (y * w + x) << 2;
+      out[o] = mag;
+      out[o + 1] = mag;
+      out[o + 2] = mag;
+      out[o + 3] = data[o + 3];
+    }
+  }
+  return out;
+};
+
+function synthRgba(w: number, h: number, seed: number): Uint8Array {
+  const out = new Uint8Array(w * h * 4);
+  const cx0 = w / 2;
+  const cy0 = h / 2;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) << 2;
+      const dx = x - cx0;
+      const dy = y - cy0;
+      const d2 = dx * dx + dy * dy;
+      out[i] = (x * 3 + seed) & 255;
+      out[i + 1] = (y * 5 + seed * 2) & 255;
+      out[i + 2] = (((d2 / (w + 1)) | 0) + seed) & 255;
+      out[i + 3] = 255;
+      if (d2 < w * w * 0.05) {
+        out[i] = 240;
+        out[i + 1] = 90;
+        out[i + 2] = 70;
+      } else if ((x ^ y ^ seed) & 16) {
+        out[i] = (out[i] + 40) & 255;
+      }
+    }
+  }
+  return out;
+}
+
+function paintRgba(
+  canvas: HTMLCanvasElement | null,
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+): void {
+  if (!canvas) return;
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const copy = new Uint8ClampedArray(pixels.length);
+  copy.set(pixels);
+  ctx.putImageData(new ImageData(copy, width, height), 0, 0);
+}
 
 function randomBytes(size: number): Uint8Array {
   const data = new Uint8Array(size);
@@ -208,6 +383,161 @@ function RunButton({ onRun }: { onRun: () => void }) {
         {t.demo.run}
       </span>
     </Button>
+  );
+}
+
+type BoundaryResult = {
+  value: string;
+  n: number;
+  chatty: number;
+  coarse: number;
+  js: number;
+};
+
+function BoundaryResultView({ result }: { result: BoundaryResult }) {
+  const { t } = useI18n();
+  const maxTime = Math.max(result.chatty, result.coarse, result.js, 0.001);
+  const pct = (v: number) => Math.max(4, Math.min(100, Math.round((v / maxTime) * 100)));
+  const rows = [
+    {
+      key: 'chatty',
+      label: t.demo.tabs.coarse.chattyLabel,
+      hint: t.demo.tabs.coarse.chattyHint,
+      micros: result.chatty,
+      bar: 'bg-muted-foreground/50',
+    },
+    {
+      key: 'coarse',
+      label: t.demo.tabs.coarse.coarseLabel,
+      hint: t.demo.tabs.coarse.coarseHint,
+      micros: result.coarse,
+      bar: 'bg-foreground',
+    },
+    {
+      key: 'js',
+      label: t.demo.jsTime,
+      hint: t.demo.tabs.coarse.jsHint,
+      micros: result.js,
+      bar: 'bg-muted-foreground/35',
+    },
+  ] as const;
+
+  return (
+    <div className="mt-6 grid gap-3">
+      <div className="rounded-lg border border-border bg-muted/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-mono text-xs text-muted-foreground">{t.demo.result}</p>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            n = {result.n.toLocaleString()} · {t.demo.tabs.coarse.perOp}
+          </p>
+        </div>
+        <p className="mt-1.5 truncate font-mono text-xl font-semibold" title={result.value}>
+          → {result.value}
+        </p>
+      </div>
+
+      {rows.map((row) => (
+        <div key={row.key} className="rounded-lg border border-border p-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs text-muted-foreground">{row.label}</p>
+            <p className="font-mono text-[11px] tabular-nums text-muted-foreground">{row.hint}</p>
+          </div>
+          <p className="mt-1 font-mono text-lg font-medium tabular-nums">
+            {formatDuration(row.micros)}
+          </p>
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className={`h-full rounded-full ${row.bar}`} style={{ width: `${pct(row.micros)}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CoarsePanel() {
+  const { t } = useI18n();
+  const [n, setN] = useState('50000');
+  const [result, setResult] = useState<BoundaryResult | null>(null);
+
+  const run = useCallback(() => {
+    const count = Math.min(500_000, Math.max(1_000, Math.floor(Number(n) || 50_000)));
+    setN(String(count));
+
+    // Warm both paths so the first timed sample is not a cold JIT hit.
+    benchSink += add(1, 1);
+    benchSink += sumRange(256);
+    benchSink += jsSumRange(256);
+
+    const chattySamples: number[] = [];
+    const coarseSamples: number[] = [];
+    const jsSamples: number[] = [];
+
+    for (let r = 0; r < SAMPLE_ROUNDS; r++) {
+      const order = r % 3;
+      const measureChatty = () => {
+        const t0 = performance.now();
+        let sum = 0;
+        for (let i = 0; i < count; i++) sum = add(sum, i);
+        const t1 = performance.now();
+        benchSink += sum;
+        chattySamples.push(((t1 - t0) * 1000) / count);
+      };
+      const measureCoarse = () => {
+        const t0 = performance.now();
+        const sum = sumRange(count);
+        const t1 = performance.now();
+        benchSink += sum;
+        coarseSamples.push(((t1 - t0) * 1000) / count);
+      };
+      const measureJs = () => {
+        const t0 = performance.now();
+        const sum = jsSumRange(count);
+        const t1 = performance.now();
+        benchSink += sum;
+        jsSamples.push(((t1 - t0) * 1000) / count);
+      };
+
+      if (order === 0) {
+        measureChatty();
+        measureCoarse();
+        measureJs();
+      } else if (order === 1) {
+        measureCoarse();
+        measureJs();
+        measureChatty();
+      } else {
+        measureJs();
+        measureChatty();
+        measureCoarse();
+      }
+    }
+
+    setResult({
+      value: sumRange(count).toLocaleString(),
+      n: count,
+      chatty: trimmedMean(chattySamples),
+      coarse: trimmedMean(coarseSamples),
+      js: trimmedMean(jsSamples),
+    });
+  }, [n]);
+
+  return (
+    <div>
+      <p className="text-sm text-muted-foreground">{t.demo.tabs.coarse.desc}</p>
+      <div className="mt-4 grid gap-2">
+        <Label nativeID="demo-coarse-n-label">{t.demo.tabs.coarse.n}</Label>
+        <Input
+          nativeID="demo-coarse-n"
+          accessibilityLabelledBy="demo-coarse-n-label"
+          value={n}
+          onChangeText={setN}
+          inputMode="numeric"
+          className="max-w-40 font-mono"
+        />
+      </div>
+      <RunButton onRun={run} />
+      {result ? <BoundaryResultView result={result} /> : null}
+    </div>
   );
 }
 
@@ -430,20 +760,156 @@ function BytesPanel() {
   );
 }
 
+function ImagePanel() {
+  const { t } = useI18n();
+  const [size, setSize] = useState('256');
+  const [filter, setFilter] = useState<ImageFilter>('blur');
+  const [result, setResult] = useState<Result | null>(null);
+  const [meta, setMeta] = useState<string>('');
+  const beforeRef = useRef<HTMLCanvasElement>(null);
+  const afterRef = useRef<HTMLCanvasElement>(null);
+
+  const filters: ImageFilter[] = ['grayscale', 'blur', 'resize', 'sobel'];
+
+  const run = useCallback(() => {
+    const side = Math.min(512, Math.max(128, Math.floor(Number(size) || 256)));
+    // Snap to common demo sizes so pixel counts stay predictable.
+    const w = side <= 160 ? 128 : side <= 320 ? 256 : 512;
+    setSize(String(w));
+    const h = w;
+    const dstW = filter === 'resize' ? w >> 1 : w;
+    const dstH = filter === 'resize' ? h >> 1 : h;
+
+    const srcA = synthRgba(w, h, 11);
+    const srcB = synthRgba(w, h, 29);
+    paintRgba(beforeRef.current, srcA, w, h);
+
+    const runWasm = (pixels: Uint8Array): Uint8Array => {
+      const copy = pixels.slice();
+      if (filter === 'grayscale') return grayscaleRgba(copy);
+      if (filter === 'blur') return boxBlurRgba(copy, w, h);
+      if (filter === 'resize') return resizeNearestRgba(copy, w, h, dstW, dstH);
+      return sobelRgba(copy, w, h);
+    };
+    const runJs = (pixels: Uint8Array): Uint8Array => {
+      const copy = pixels.slice();
+      if (filter === 'grayscale') return jsGrayscaleRgba(copy);
+      if (filter === 'blur') return jsBoxBlurRgba(copy, w, h);
+      if (filter === 'resize') return jsResizeNearestRgba(copy, w, h, dstW, dstH);
+      return jsSobelRgba(copy, w, h);
+    };
+
+    const preview = runWasm(srcA);
+    paintRgba(afterRef.current, preview, dstW, dstH);
+
+    const stats = measurePair(
+      (count) => {
+        let sink = 0;
+        for (let i = 0; i < count; i++) {
+          const out = runWasm((i & 1) === 0 ? srcA : srcB);
+          sink += out[0] + out[out.length >> 1] + out[out.length - 1];
+        }
+        return sink;
+      },
+      (count) => {
+        let sink = 0;
+        for (let i = 0; i < count; i++) {
+          const out = runJs((i & 1) === 0 ? srcA : srcB);
+          sink += out[0] + out[out.length >> 1] + out[out.length - 1];
+        }
+        return sink;
+      },
+      {
+        minBatch: 1,
+        maxBatch: filter === 'blur' ? 16 : 64,
+      },
+    );
+
+    setMeta(
+      filter === 'resize'
+        ? `${w}×${h} → ${dstW}×${dstH}`
+        : `${w}×${h} · ${(w * h).toLocaleString()} px`,
+    );
+    setResult({
+      value: t.demo.tabs.image.filterLabels[filter],
+      ...stats,
+    });
+  }, [filter, size, t.demo.tabs.image.filterLabels]);
+
+  return (
+    <div>
+      <p className="text-sm text-muted-foreground">{t.demo.tabs.image.desc}</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label nativeID="demo-image-size-label">{t.demo.tabs.image.size}</Label>
+          <Input
+            nativeID="demo-image-size"
+            accessibilityLabelledBy="demo-image-size-label"
+            value={size}
+            onChangeText={setSize}
+            inputMode="numeric"
+            className="max-w-40 font-mono"
+          />
+        </div>
+        <div className="grid gap-2">
+          <p className="text-sm font-medium leading-none">{t.demo.tabs.image.filter}</p>
+          <div className="flex flex-wrap gap-2">
+            {filters.map((key) => (
+              <Button
+                key={key}
+                variant={filter === key ? 'default' : 'outline'}
+                size="sm"
+                onPress={() => setFilter(key)}
+              >
+                {t.demo.tabs.image.filterLabels[key]}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <RunButton onRun={run} />
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="min-w-0">
+          <p className="mb-2 font-mono text-[11px] text-muted-foreground">
+            {t.demo.tabs.image.before}
+          </p>
+          <canvas
+            ref={beforeRef}
+            className="max-h-56 w-full rounded-md border border-border bg-muted object-contain"
+            aria-label={t.demo.tabs.image.before}
+          />
+        </div>
+        <div className="min-w-0">
+          <p className="mb-2 font-mono text-[11px] text-muted-foreground">
+            {t.demo.tabs.image.after}
+            {meta ? ` · ${meta}` : ''}
+          </p>
+          <canvas
+            ref={afterRef}
+            className="max-h-56 w-full rounded-md border border-border bg-muted object-contain"
+            aria-label={t.demo.tabs.image.after}
+          />
+        </div>
+      </div>
+
+      {result ? <ResultView result={result} /> : null}
+    </div>
+  );
+}
+
 /** The tabbed demo panels — imports the compiled core; lazy-loaded. */
 export default function DemoPanels() {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<DemoTabKey>('add');
+  const [activeTab, setActiveTab] = useState<DemoTabKey>('coarse');
   const activeMeta = t.demo.tabs[activeTab];
 
   return (
     <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
       <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-muted/30 lg:col-span-5">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/50 px-3.5 py-2">
-          <span className="font-mono text-xs text-foreground">{activeMeta.label}()</span>
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {t.demo.abiLabel}: {activeMeta.abi}
-          </span>
+          <span className="font-mono text-xs text-foreground">{activeMeta.label}</span>
+          <span className="font-mono text-[11px] text-muted-foreground">{activeMeta.abi}</span>
         </div>
         <pre className="overflow-x-auto p-4 font-mono text-xs leading-relaxed text-foreground">
           <code>{activeMeta.code}</code>
@@ -458,11 +924,19 @@ export default function DemoPanels() {
       <div className="min-w-0 lg:col-span-7">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DemoTabKey)}>
           <TabsList>
+            <TabsTrigger value="coarse">{t.demo.tabs.coarse.label}</TabsTrigger>
+            <TabsTrigger value="image">{t.demo.tabs.image.label}</TabsTrigger>
             <TabsTrigger value="add">{t.demo.tabs.add.label}</TabsTrigger>
             <TabsTrigger value="fib">{t.demo.tabs.fib.label}</TabsTrigger>
             <TabsTrigger value="repeat">{t.demo.tabs.repeat.label}</TabsTrigger>
             <TabsTrigger value="bytes">{t.demo.tabs.bytes.label}</TabsTrigger>
           </TabsList>
+          <TabsContent value="coarse" className="mt-5">
+            <CoarsePanel />
+          </TabsContent>
+          <TabsContent value="image" className="mt-5">
+            <ImagePanel />
+          </TabsContent>
           <TabsContent value="add" className="mt-5">
             <AddPanel />
           </TabsContent>

@@ -96,7 +96,7 @@ export function LiveDemo() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="font-mono text-base">{t.demo.sourceTitle}</CardTitle>
             <CardDescription className="font-mono text-xs">
-              add · fib · repeat · sumBytes
+              sumRange · image · add · fib · repeat · sumBytes
             </CardDescription>
           </div>
         </CardHeader>
