@@ -3,7 +3,7 @@
 # One-time setup (repo settings → Secrets and variables → Actions):
 #   - CLOUDFLARE_API_TOKEN   — Pages: Edit permission (Account / Pages / Edit template)
 #   - CLOUDFLARE_ACCOUNT_ID  — dashboard right sidebar
-# Custom domain scriptable.ll3.kr is bound in the Pages dashboard
+# Custom domain scriptca.ll3.kr is bound in the Pages dashboard
 # (project → Custom domains); DNS is on Cloudflare already.
 name: site
 

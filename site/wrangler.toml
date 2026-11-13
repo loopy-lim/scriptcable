@@ -1,7 +1,7 @@
 # Cloudflare Pages project for the scriptcable intro site.
 # Deploy: `.github/workflows/site.yml` (wrangler-action) — needs the
 # CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID repo secrets.
-# Custom domain (scriptable.ll3.kr) is bound in the Pages dashboard:
+# Custom domain (scriptca.ll3.kr) is bound in the Pages dashboard:
 # project → Custom domains → Set up a custom domain.
 name = "scriptcable"
 compatibility_date = "2026-11-13"

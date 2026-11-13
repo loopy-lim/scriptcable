@@ -17,7 +17,7 @@ bun run --filter @scriptcable/site typecheck
 
 - `.github/workflows/site.yml` builds and deploys to **Cloudflare Pages** on pushes to `main` touching `site/**`.
 - Requires repo secrets `CLOUDFLARE_API_TOKEN` (Pages: Edit) and `CLOUDFLARE_ACCOUNT_ID`.
-- Custom domain `scriptable.ll3.kr` is bound in the Pages dashboard. Note the spelling: the domain reads *scriptable*, the project is *scriptcable* — kept verbatim as requested; change `SITE_URL` in `src/site.ts` if that settles differently.
+- Custom domain `scriptca.ll3.kr` is bound in the Pages dashboard.
 
 ## Structure
 
